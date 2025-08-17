@@ -1,0 +1,1 @@
+Här ligger bara app som kopplar ihop allt som behövs. den avlastar Main.cpp där i princip ingenting läggs.

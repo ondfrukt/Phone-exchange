@@ -1,0 +1,1 @@
+I drivers läggs funktioner som startar upp saker och ting. Exemelvis definitioner av pins (om de ska vara output/inputs) uppstart av MCP-enheter. All hårdvaru init-funktiner dvs.
