@@ -6,3 +6,7 @@ void MCPDriver::begin() {
   mcpSlic1.begin_I2C(cfg::mcp::MCP_SLIC1_ADDRESS);
   mcpSlic2.begin_I2C(cfg::mcp::MCP_SLIC2_ADDRESS);
 }
+
+void MCPDriver::readHookPin(){
+  //Här låter vi funktionaliteten för att läsa av HOOK-pins ligga och debouncingen av det
+}
