@@ -1,5 +1,6 @@
 #include "MCPDriver.h"
-using cfg::mcp
+#include "config.h"
+using cfg::mcp;
 
 void MCPDriver::begin() {
   mcpMain.begin_I2C(cfg::mcp::MCP_ADDRESS);
@@ -7,4 +8,3 @@ void MCPDriver::begin() {
   mcpSlic1.begin_I2C(cfg::mcp::MCP_SLIC1_ADDRESS);
   mcpSlic2.begin_I2C(cfg::mcp::MCP_SLIC2_ADDRESS);
 };
-
