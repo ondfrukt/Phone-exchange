@@ -1,9 +1,13 @@
 // Här inkluderas gemensamma hårdvaru-konstatner som ska användas lite överallt.
 // config.h inkuderas sedan i varje fil som behöver det.
 // Här läggs inte stora bibliotek in
+#pragma once
+#include <cstdint>
+#include <Arduino.h>
 
 
 namespace cfg {
+
 
   constexpr uint8_t ACTIVE_LINES = 4; // Antal aktiva linjer
 
@@ -45,7 +49,7 @@ namespace cfg {
     bool    initial; // gäller bara om OUTPUT
     };
 
-    inline constexpr PinModeEntry MCP_MAIN[16] = {
+    constexpr PinModeEntry MCP_MAIN[16] = {
       /*0*/  {OUTPUT, LOW},   // GPA0  LED_L7
       /*1*/  {OUTPUT, LOW},   // GPA1  LED_L6
       /*2*/  {OUTPUT, LOW},   // GPA2  LED_L5
@@ -64,7 +68,7 @@ namespace cfg {
       /*15*/ {INPUT, 0},      // GPB7  Q1 (MT8870)
     };
 
-    inline constexpr PinModeEntry MCP_MT8816[16] = {
+    constexpr PinModeEntry MCP_MT8816[16] = {
       /*0*/  {OUTPUT, LOW},  // GPA0 -> RESET (MT8816)
       /*1*/  {OUTPUT, LOW},  // GPA1 -> DATA
       /*2*/  {OUTPUT, LOW},  // GPA2 -> STROBE
@@ -83,7 +87,7 @@ namespace cfg {
       /*15*/ {OUTPUT, LOW},  // GPB7 Not in use
     };
 
-    inline constexpr PinModeEntry MCP_SLIC[16] = {
+    constexpr PinModeEntry MCP_SLIC[16] = {
       /*0*/ {OUTPUT, LOW},     // GPA0 Not in use
       /*1*/ {OUTPUT, LOW},     // GPA1 Not in use
       /*2*/ {OUTPUT, LOW},     // GPA2 FR_1/5
