@@ -1,22 +1,28 @@
 #pragma once
-
-#include <Adafruit_MCP23X17.h>
 #include "config.h"
+#include <Adafruit_MCP23X17.h>
+
 
 class MCPDriver {
-  public:
-    void begin();
-    // Getters till de olika MCP:erna
-    Adafruit_MCP23X17& mainDev()  { return mcpMain;  }
-    Adafruit_MCP23X17& mt8816Dev(){ return mcpMT8816;}
-    Adafruit_MCP23X17& slic1Dev(){ return mcpSlic1; }
-    Adafruit_MCP23X17& slic2Dev(){ return mcpSlic2; }
-    void setPin(uint8_t addr, uint8_t pin, bool state);
-    void readPin(uint8_t addr, uint8_t pin);
+public:
+  // Publikt API: bara en funktion
+  bool begin();
 
-  private:
-    Adafruit_MCP23X17 mcpMain;
-    Adafruit_MCP23X17 mcpMT8816;
-    Adafruit_MCP23X17 mcpSlic1;
-    Adafruit_MCP23X17 mcpSlic2;
+private:
+  // Instanser för alla MCP-enheter
+  Adafruit_MCP23X17 mcpMain;
+  Adafruit_MCP23X17 mcpMT8816;
+  Adafruit_MCP23X17 mcpSlic1;
+  Adafruit_MCP23X17 mcpSlic2;
+
+  // Hjälpfunktioner som bara används internt
+  void SetMCPPinModes(Adafruit_MCP23X17& mcp,
+                      const cfg::mcp::PinModeEntry (&list)[16]);
+  bool setupMain();
+  bool setupMT8816();
+  bool setupSlics();
+
+  void enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp);   // per-pin ints (CHANGE)
+  int8_t mapShkIndex_(uint8_t mcpPin) const;              // MCP-pin -> SHK-index 0..3
+  void handleSlicInt_();
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include "config.h"
+#include <Wire.h>
 // #include "services/LineManager.h"
 #include "MCPDriver.h"
 // #include "drivers/ToneOut.h"

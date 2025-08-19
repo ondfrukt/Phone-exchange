@@ -1,14 +1,10 @@
 #include "app/App.h"
+using namespace cfg;
 
 void App::begin() {
 
-    // Initialize MCP driver
-    // This will set up the MCP23X17 devices with their respective I2C addresses
+    Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
     mcpDriver_.begin();
-
-
-
-    
 
 }
 void App::loop() {
