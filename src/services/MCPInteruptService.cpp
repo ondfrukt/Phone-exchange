@@ -19,8 +19,7 @@ void MCPInterruptService::configureChipInterrupts(bool mirror, bool openDrain, u
 void MCPInterruptService::attachEspInterrupt(uint8_t espGpio, int edgeMode) {
   _espIntGpio = espGpio;
   pinMode(_espIntGpio, INPUT_PULLUP);
-  s_instance = this;
-  attachInterrupt(digitalPinToInterrupt(_espIntGpio), MCPInterruptService::isrThunk, edgeMode);
+  attachInterruptArg(_espIntGpio, &MCPInterruptService::isrThunk, this, edgeMode);
 }
 
 void MCPInterruptService::attachInput(uint8_t mcpPin, bool pullup, uint8_t intMode, bool notifyInitial) {
@@ -32,12 +31,12 @@ void MCPInterruptService::attachInput(uint8_t mcpPin, bool pullup, uint8_t intMo
 
 void MCPInterruptService::setCallback(Callback cb) { _cb = cb; }
 
-void IRAM_ATTR MCPInterruptService::isrThunk() {
-  if (s_instance) s_instance->onIsr();
+void IRAM_ATTR MCPInterruptService::isrThunk(void* arg) {
+  static_cast<MCPInterruptService*>(arg)->onIsr();
 }
 
 void IRAM_ATTR MCPInterruptService::onIsr() {
-  _intFlag = true; // minimal ISR
+  _intFlag = true;  // minimalt i ISR
 }
 
 uint8_t MCPInterruptService::stableLevel(uint8_t pin) const {
