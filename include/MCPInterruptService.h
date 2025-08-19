@@ -51,7 +51,7 @@ private:
   };
 
   static MCPInterruptService* s_instance; // för ISR-thunk (en instans)
-  static void IRAM_ATTR isrThunk();
+  static void IRAM_ATTR isrThunk(void* arg);
   void IRAM_ATTR onIsr();                 // sätter endast _intFlag
 
   static inline bool timeReached(uint32_t now, uint32_t t) {
