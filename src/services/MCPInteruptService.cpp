@@ -1,7 +1,5 @@
 #include "MCPInterruptService.h"
 
-MCPInterruptService* MCPInterruptService::s_instance = nullptr;
-
 MCPInterruptService::MCPInterruptService(Adafruit_MCP23X17& mcp, uint32_t debounceMs)
 : _mcp(mcp), _debounceMs(debounceMs), _pendingCount(0), _intFlag(false), _espIntGpio(0xFF), _cb(nullptr) {
   for (uint8_t i = 0; i < 16; ++i) {
