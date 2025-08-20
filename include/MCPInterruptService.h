@@ -11,12 +11,13 @@ public:
   MCPInterruptService(int gpio_pin, int mode = FALLING)
   : pin_(gpio_pin), mode_(mode) {}
 
-  bool begin();  // kopplar in interrupt
+  bool begin();              // kopplar in interrupt
+  void clearFlag();          // nollställer flaggan
 
   volatile bool flag_ = false;   // sätts TRUE av ISR
 
 private:
-  static void IRAM_ATTR isrThunk(void* arg);
+  static void IRAM_ATTR isrThunk(void* arg); // ISR-trampolin
 
   const int pin_;
   const int mode_;
