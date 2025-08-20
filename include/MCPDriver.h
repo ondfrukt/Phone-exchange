@@ -1,32 +1,52 @@
 #pragma once
-#include "config.h"
+#include <Arduino.h>
+#include <Wire.h>
 #include <Adafruit_MCP23X17.h>
 
+// Framåtdeklaration (för att slippa cirkelberoende i headers)
+class MCPInterruptService;
+
+namespace mcp_reg {
+// MCP23X17 registeradresser (Bank=0, standard)
+static constexpr uint8_t INTF_A   = 0x0E;
+static constexpr uint8_t INTF_B   = 0x0F;
+static constexpr uint8_t INTCAP_A = 0x10;
+static constexpr uint8_t INTCAP_B = 0x11;
+}
+
+// Resultat från en samlad INT-hantering
+struct IntResult {
+  bool    hasEvent = false; // true om någon källa hittades
+  uint8_t pin      = 0;     // 0..15 (MCP-pinindex)
+  bool    level    = false; // nivå vid event (latched/last enligt API)
+};
 
 class MCPDriver {
 public:
-  // Publikt API: bara en funktion
+  // Init av dina MCP:er (anpassa efter din befintliga kod)
   bool begin();
-  void ackMainInt();     // kvittera INT från mcpMain
-  void ackMT8816Int();   // kvittera INT från mcpMT8816 (om du använder dess INT)
-  void ackSlic1Int();    // kvittera INT från mcpSlic1
-  void ackSlic2Int();    // kvittera INT från mcpSlic1
+
+  // Samlade entry-points – en per MCP du lyssnar på
+  IntResult handleMainInterrupt(MCPInterruptService& isrSvc);
+  IntResult handleSlic1Interrupt(MCPInterruptService& isrSvc);
+  IntResult handleMT8816Interrupt(MCPInterruptService& isrSvc);
 
 private:
-  // Instanser för alla MCP-enheter
+  // Gemensam intern hanterare (för att undvika duplikatkod)
+  IntResult handleInterrupt_(MCPInterruptService& isrSvc,
+                             Adafruit_MCP23X17& mcp,
+                             uint8_t i2c_addr);
+
+  // Fallback om ditt Adafruit-lib saknar getLastInterruptPin()
+  IntResult readIntfIntcap_(uint8_t i2c_addr);
+
+  // Low-level I2C helpers
+  uint8_t  readReg8_(uint8_t i2c_addr, uint8_t reg);
+  void     readRegPair16_(uint8_t i2c_addr, uint8_t regA, uint16_t& out16);
+
+private:
+  // Dina MCP-instansobjekt (anpassa namn efter din kod)
   Adafruit_MCP23X17 mcpMain;
-  Adafruit_MCP23X17 mcpMT8816;
   Adafruit_MCP23X17 mcpSlic1;
-  Adafruit_MCP23X17 mcpSlic2;
-
-  // Hjälpfunktioner som bara används internt
-  void SetMCPPinModes(Adafruit_MCP23X17& mcp,
-                      const cfg::mcp::PinModeEntry (&list)[16]);
-  bool setupMain();
-  bool setupMT8816();
-  bool setupSlics();
-
-  void enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp);   // per-pin ints (CHANGE)
-  int8_t mapShkIndex_(uint8_t mcpPin) const;              // MCP-pin -> SHK-index 0..3
-  void handleSlicInt_();
+  Adafruit_MCP23X17 mcpMT8816;
 };
