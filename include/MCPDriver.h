@@ -7,6 +7,10 @@ class MCPDriver {
 public:
   // Publikt API: bara en funktion
   bool begin();
+  void ackMainInt();     // kvittera INT från mcpMain
+  void ackMT8816Int();   // kvittera INT från mcpMT8816 (om du använder dess INT)
+  void ackSlic1Int();    // kvittera INT från mcpSlic1
+  void ackSlic2Int();    // kvittera INT från mcpSlic1
 
 private:
   // Instanser för alla MCP-enheter
