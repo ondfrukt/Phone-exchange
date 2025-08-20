@@ -1,25 +1,23 @@
 #pragma once
 #include <Arduino.h>
-#include <Adafruit_MCP23X17.h>
-#include "config.h"
+
+// Minimal interrupt-service för ESP32.
+// - Stödjer flera instanser via attachInterruptArg().
+// - Använder alltid INPUT (du har extern pull-up).
+// - ISR sätter endast flag_ = true.
 
 class MCPInterruptService {
 public:
-  MCPInterruptService();
+  MCPInterruptService(int gpio_pin, int mode = FALLING)
+  : pin_(gpio_pin), mode_(mode) {}
 
-  // Initiera service: koppla ISR till ESP32-pinnen för SLIC1
-  void begin(Adafruit_MCP23X17& slic1);
+  bool begin();  // kopplar in interrupt
 
-  // Körs i loop() för att processa interrupt
-  void poll();
+  volatile bool flag_ = false;   // sätts TRUE av ISR
 
 private:
-  Adafruit_MCP23X17* slic1_ = nullptr;
-  volatile bool slic1Flag_ = false;
+  static void IRAM_ATTR isrThunk(void* arg);
 
-  // statisk ISR-trampolin
-  static void IRAM_ATTR isrSlic1_();
-
-  // global pekare till instansen
-  static MCPInterruptService* instance_;
+  const int pin_;
+  const int mode_;
 };
