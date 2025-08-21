@@ -49,6 +49,23 @@ namespace cfg {
     bool    initial; // gäller bara om OUTPUT
     };
 
+    // MCP MAIN
+    constexpr uint8_t Q1 = 15;
+    constexpr uint8_t Q2 = 14;
+    constexpr uint8_t Q3 = 13;
+    constexpr uint8_t Q4 = 12;
+    constexpr uint8_t STD = 11;
+    constexpr uint8_t PWDN_MT8870 = 10;
+    constexpr uint8_t TEST_BUTTON = 9;
+    constexpr uint8_t LED_0 = 7;
+    constexpr uint8_t LED_1 = 6;
+    constexpr uint8_t LED_2 = 5;
+    constexpr uint8_t LED_3 = 4;
+    constexpr uint8_t LED_4 = 3;
+    constexpr uint8_t LED_5 = 2;
+    constexpr uint8_t LED_6 = 1;
+    constexpr uint8_t LED_7 = 0;
+
     constexpr PinModeEntry MCP_MAIN[16] = {
       /*0*/  {OUTPUT, LOW},   // GPA0  LED_L7
       /*1*/  {OUTPUT, LOW},   // GPA1  LED_L6
@@ -68,6 +85,25 @@ namespace cfg {
       /*15*/ {INPUT, 0},      // GPB7  Q1 (MT8870)
     };
 
+
+    // MCP MT8816
+    constexpr uint8_t RESET = 0;
+    constexpr uint8_t DATA = 1;
+    constexpr uint8_t STROBE = 2;
+    constexpr uint8_t CS = 3;
+    constexpr uint8_t EX1 = 4;
+    constexpr uint8_t EX2 = 5;
+    constexpr uint8_t EX3 = 6;
+    constexpr uint8_t EX4 = 7;
+    constexpr uint8_t AX0 = 8;
+    constexpr uint8_t AX1 = 9;
+    constexpr uint8_t AX2 = 10;
+    constexpr uint8_t AX3 = 11;
+    constexpr uint8_t AY0 = 12;
+    constexpr uint8_t AY1 = 13;
+    constexpr uint8_t AY2 = 14;
+    constexpr uint8_t EX5 = 15;
+
     constexpr PinModeEntry MCP_MT8816[16] = {
       /*0*/  {OUTPUT, LOW},  // GPA0 -> RESET (MT8816)
       /*1*/  {OUTPUT, LOW},  // GPA1 -> DATA
@@ -86,6 +122,21 @@ namespace cfg {
       /*14*/ {OUTPUT, LOW},  // GPB6 -> EX4
       /*15*/ {OUTPUT, LOW},  // GPB7 Not in use
     };
+
+    // MCP SLIC
+
+    constexpr uint8_t FR_15 = 2;
+    constexpr uint8_t RM_15 = 3;
+    constexpr uint8_t SHK_15 = 4;
+    constexpr uint8_t SHK_04 = 5;
+    constexpr uint8_t RM_04 = 6;
+    constexpr uint8_t FR_04 = 7;
+    constexpr uint8_t SHK_26 = 8;
+    constexpr uint8_t RM_26 = 9;
+    constexpr uint8_t FR_04 = 10;
+    constexpr uint8_t SHK_37 = 11;
+    constexpr uint8_t RM_37 = 12;
+    constexpr uint8_t FR_37 = 13;
 
     constexpr PinModeEntry MCP_SLIC[16] = {
       /*0*/ {OUTPUT, LOW},     // GPA0 Not in use

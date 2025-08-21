@@ -39,6 +39,8 @@ public:
 
     LineHandler(int line);
 
+    void setLineStatus(LineStatus newStatus);
+
     void newDigitReceived(char digit);
     void resetDialedDigits();
     void lineIdle();
