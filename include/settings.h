@@ -4,28 +4,23 @@
 
 class Settings {
 public:
-    // ---- Konstruktor ----
-    Settings();
+    // ---- Konstruktorn ----
+    Settings() { resetDefaults(); }
 
-    // ---- Offentliga metoder ----
-    void resetDefaults();                // återställ standardvärden
-    bool load(const char* ns = "app");   // läs från NVS, default om saknas
-    void save(const char* ns = "app") const;
+    // ---- API ----
+    void resetDefaults();
+    bool load();         // laddar från NVS, skriver defaults om inget finns
+    void save() const;   // sparar till NVS
 
-    // ---- Getters / setters ----
-    uint16_t debounceMs() const { return debounceMs_; }
-    void setDebounceMs(uint16_t ms) { debounceMs_ = ms; }
-
-    bool logging() const { return logging_; }
-    void setLogging(bool on) { logging_ = on; }
-
-    uint8_t volume() const { return volume_; }
-    void setVolume(uint8_t v) { volume_ = v; }
+    // ---- Publika fält ----
+    uint16_t debounceMs;
+    bool     logging;
+    uint8_t  volume;
 
 private:
-    static constexpr uint16_t kVersion = 1;
+    // Namespace för NVS
+    static constexpr const char* kNamespace = "myapp";
 
-    uint16_t debounceMs_;
-    bool     logging_;
-    uint8_t  volume_;
+    // Version (öka om du ändrar structens layout)
+    static constexpr uint16_t kVersion = 1;
 };
