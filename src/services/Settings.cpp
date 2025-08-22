@@ -1,49 +1,44 @@
 #include "Settings.h"
 
-// ---- Konstruktor ----
-Settings::Settings() {
-    resetDefaults();  // initiera med defaultvärden
-}
-
 // ---- Defaults ----
 void Settings::resetDefaults() {
-    debounceMs_ = 25;
-    logging_    = true;
-    volume_     = 5;
+    debounceMs = 25;
+    logging    = true;
+    volume     = 5;
 }
 
 // ---- Load ----
-bool Settings::load(const char* ns) {
+bool Settings::load() {
     Preferences prefs;
-    if (!prefs.begin(ns, /*readOnly=*/true)) {
+    if (!prefs.begin(kNamespace, /*readOnly=*/true)) {
         return false;
     }
 
     uint16_t ver = prefs.getUShort("ver", 0);
     bool hasData = (ver == kVersion);
     if (hasData) {
-        debounceMs_ = prefs.getUShort("debounceMs", debounceMs_);
-        logging_    = prefs.getBool ("logging",    logging_);
-        volume_     = prefs.getUChar("volume",     volume_);
+        debounceMs = prefs.getUShort("debounceMs", debounceMs);
+        logging    = prefs.getBool ("logging",    logging);
+        volume     = prefs.getUChar("volume",     volume);
     }
     prefs.end();
 
     if (!hasData) {
-        // om inget fanns → skriv in defaults
-        save(ns);
+        // skriv defaults första gången
+        save();
     }
     return hasData;
 }
 
 // ---- Save ----
-void Settings::save(const char* ns) const {
+void Settings::save() const {
     Preferences prefs;
-    if (!prefs.begin(ns, /*readOnly=*/false)) {
+    if (!prefs.begin(kNamespace, /*readOnly=*/false)) {
         return;
     }
     prefs.putUShort("ver",        kVersion);
-    prefs.putUShort("debounceMs", debounceMs_);
-    prefs.putBool ("logging",     logging_);
-    prefs.putUChar("volume",      volume_);
+    prefs.putUShort("debounceMs", debounceMs);
+    prefs.putBool ("logging",     logging);
+    prefs.putUChar("volume",      volume);
     prefs.end();
 }
