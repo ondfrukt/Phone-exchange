@@ -1,0 +1,1 @@
+extern Settings settings;
