@@ -33,8 +33,6 @@ namespace cfg {
 
   namespace mcp {
 
-    constexpr int TEST_BUTTON= 9; // GPB1
-
     constexpr int MCP_MAIN_INT_PIN = 18;
     constexpr int MCP_SLIC_INT_1_PIN = 11;
     constexpr int MCP_SLIC_INT_2_PIN = 14;
@@ -133,7 +131,7 @@ namespace cfg {
     constexpr uint8_t FR_04 = 7;
     constexpr uint8_t SHK_26 = 8;
     constexpr uint8_t RM_26 = 9;
-    constexpr uint8_t FR_04 = 10;
+    constexpr uint8_t FR_26 = 10;
     constexpr uint8_t SHK_37 = 11;
     constexpr uint8_t RM_37 = 12;
     constexpr uint8_t FR_37 = 13;

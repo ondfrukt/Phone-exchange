@@ -1,4 +1,3 @@
-
 #include "LineHandler.h"
 
 // Constructor
