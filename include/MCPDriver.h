@@ -20,6 +20,7 @@ namespace cfg { namespace mcp {
 // ======= Returnpaket för interrupt-händelser =======
 struct IntResult {
   bool    hasEvent = false;  // om något fanns att hämta
+  uint8_t line     = 255;    // 0..7, 255 = okänd linje
   uint8_t pin      = 255;    // 0..15, 255 = ogiltig
   bool    level    = false;  // nivå enligt INTCAP/getLastInterruptValue()
   uint8_t i2c_addr = 0x00;   // vilken MCP
@@ -82,4 +83,6 @@ private:
   volatile bool mainIntFlag_   = false;
   volatile bool slic1IntFlag_  = false;
   volatile bool mt8816IntFlag_ = false;
+
+  int8_t mapSlicPinToLine_(uint8_t pin) const;
 };

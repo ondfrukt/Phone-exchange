@@ -155,7 +155,7 @@ namespace cfg {
       /*15*/{OUTPUT, LOW},     // GPB7 Not in use
     };
 
-    constexpr uint8_t SHK_PINS[8] = {
+    constexpr uint8_t SHK_PINS[4] = {
       4,   // Line 0 & 4: MCP_SLIC1, GPA4
       5,   // Line 1 & 5: MCP_SLIC1, GPA5
       8,   // Line 2 & 6: MCP_SLIC1, GPB0

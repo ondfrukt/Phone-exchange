@@ -8,6 +8,8 @@ void App::begin() {
 
 }
 void App::loop() {
-    // Main application loop
-    // Handle events, update states, etc.
+
+    for ()
+
+
 }

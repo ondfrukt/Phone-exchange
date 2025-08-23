@@ -125,6 +125,11 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
     r.level    = (intcap & (1u<<pin)) != 0;
     r.hasEvent = true;
 
+    if (addr == cfg::mcp::MCP_SLIC1_ADDRESS) {
+      int8_t line = mapSlicPinToLine_(r.pin);
+      r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
+    }
+
     return r;
   }
 
@@ -171,6 +176,17 @@ void MCPDriver::readRegPair16_(uint8_t addr, uint8_t regA, uint16_t& out16) {
   uint8_t b = Wire.available() ? Wire.read() : 0;
   out16 = (uint16_t)a | ((uint16_t)b<<8);
 }
+
+int8_t MCPDriver::mapSlicPinToLine_(uint8_t pin) const {
+  // Vi utgår från att SHK_PINS beskriver vilka MCP-pins som är kopplade till linjerna
+  // i ordning line 0..ACTIVE_LINES-1.
+  for (uint8_t line = 0; line < cfg::ACTIVE_LINES; ++line) {
+    if (cfg::mcp::SHK_PINS[line] == pin) return line;
+  }
+  return -1; // okänd
+}
+
+
 
 bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]) {
   // Sätt lägen
