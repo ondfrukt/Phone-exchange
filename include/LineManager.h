@@ -1,10 +1,11 @@
 #pragma once
 #include <vector>
 #include "LineHandler.h"
+#include "settings_global.h"
 
 class LineManager {
   public:
-    LineManager(int acriveLines);
+    LineManager();
     void begin();
     void update();
     LineHandler& getLine(int index); // Hämtar en specifik linje

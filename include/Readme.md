@@ -24,4 +24,12 @@ Wire aktiveras på annat håll och behöver inte has med i klassen utan kan betr
 
  SHKDebouncing är en klass som hanterar debouncing av SHK-pinnar på MCU-gpio. klassen ska ta emot värden från en GPIO som har ändrats och lagra detta genom att 
  
- 
+ ## LineHandler ##
+
+ LineHandler är en klass som skapar Line-objekt. Dessa objekt håller respektive linjes egenskaper såsom, telefonnummer, om luren är på eller av, siffror som slagits in, linjens status osv.
+
+ ## LineManager ##
+ LineManager är en klass som håller koll på alla LineHandler-objekt och utför metoder på dessa. Det exempelvis objektet av denna klass som scannar igenom alla linjer för att se om något har förändrats på något utav dem och vid behov initierar rätt metoder.
+
+ ## Settings ##
+ Settings håller och tillhandahåller alla golbala variabler och sparar även dessa, även om ESP:n skulle starta om.

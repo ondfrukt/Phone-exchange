@@ -4,18 +4,21 @@
 
 class Settings {
 public:
-    // ---- Konstruktorn ----
+    // Constructor
+    // resetDefaults() in the constructor ensure that we have values on every variable, even if load is not used in setup()
     Settings() { resetDefaults(); }
 
-    // ---- API ----
+    // Golabal members
     void resetDefaults();
     bool load();         // laddar från NVS, skriver defaults om inget finns
     void save() const;   // sparar till NVS
 
     // ---- Publika fält ----
+    uint8_t activeLines;
     uint16_t debounceMs;
     bool     logging;
     uint8_t  volume;
+    
 
 private:
     // Namespace för NVS

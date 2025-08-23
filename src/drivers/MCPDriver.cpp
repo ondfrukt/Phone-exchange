@@ -20,9 +20,7 @@ static constexpr uint8_t REG_GPPUA     = 0x0C;
 static constexpr uint8_t REG_GPPUB     = 0x0D;
 
 // Helpers för att plocka ut mode/initial från dina arrayer
-static void splitPinTable(const cfg::mcp::PinModeEntry (&tbl)[16],
-                          uint8_t (&modes)[16],
-                          bool (&initial)[16]) {
+static void splitPinTable(const cfg::mcp::PinModeEntry (&tbl)[16], uint8_t (&modes)[16], bool (&initial)[16]) {
   for (int i=0;i<16;i++){ modes[i]=tbl[i].mode; initial[i]=tbl[i].initial; }
 }
 
@@ -174,9 +172,7 @@ void MCPDriver::readRegPair16_(uint8_t addr, uint8_t regA, uint16_t& out16) {
   out16 = (uint16_t)a | ((uint16_t)b<<8);
 }
 
-bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp,
-                               const uint8_t (&modes)[16],
-                               const bool (&initial)[16]) {
+bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]) {
   // Sätt lägen
   for (uint8_t p=0;p<16;p++) {
     switch (modes[p]) {

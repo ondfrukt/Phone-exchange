@@ -11,15 +11,17 @@ public:
 
     // Line variables
     int lineNumber;                     // Identifier for the line (0-7)
-    String phoneNumber;
-    LineStatus currentLineStatus;     // Current status of the line
-    LineStatus previousLineStatus;    // Previous status for the line
+    bool lineActive;                    // Is the line active or not
+    String phoneNumber;                 // Phone number for the line    
+    LineStatus currentLineStatus;       // Current status of the line
+    LineStatus previousLineStatus;      // Previous status for the line
 
     int incomingFrom;                   // Incoming call from
     int outgoingTo;                     // Outgoing call to
 
     // SHK variables
-    HookStatus hookStatus;            // Status of the hook (hook on/off)
+    HookStatus currentHookStatus;       // Status of the hook (hook on/off)
+    HookStatus previousHookStatus;      // Previous status of the hook
     bool SHK;                           // Current state of the SHK pin (0 = hook on, 1 = hook off)
     unsigned long lastDebounceTime;     // Last time the SHK pin changed state
     bool lastDebounceValue;             // Last value of the SHK pin

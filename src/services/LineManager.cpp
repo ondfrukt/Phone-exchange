@@ -1,10 +1,18 @@
 #include "LineManager.h"
+#include "settings_global.h"
+
 
 // Konstruktor. Skapar en vektor med LineHandler-objekt
-LineManager::LineManager(int activeLines) {
-  lines.reserve(activeLines);
-  for (int i = 0; i < activeLines; ++i) {
+LineManager::LineManager() {
+  lines.reserve(8);
+  for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);  // Skapar en ny LineHandler i slutet av vektorn
+    bool isActive = (settings.activeLines >> i) & 0x01; // Kontrollera om linjen är aktiv
+
+    // Markerar linjen som aktiv om den är det i inställningarna
+    if (isActive) {
+      lines.back().lineActive = true;
+    }
   }
 }
 
@@ -16,14 +24,11 @@ void LineManager::begin() {
 }
 
 LineHandler& LineManager::getLine(int index) {
-  // Säker indexhantering (clamp)
-  if (lines.empty()) {
-    // Skapa en default-linje om inget finns (bälte & hängslen)
-    lines.emplace_back(0);
-    lines.back().lineIdle();
+  if (index >= static_cast<int>(lines.size())) {
+      Serial.print("Index not valid: ");
+      Serial.println(index);
+      return;
   }
-  if (index < 0) index = 0;
-  if (index >= static_cast<int>(lines.size())) index = static_cast<int>(lines.size()) - 1;
   return lines[static_cast<size_t>(index)];
 }
 

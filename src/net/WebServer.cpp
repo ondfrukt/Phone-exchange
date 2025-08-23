@@ -1,9 +1,15 @@
 #include "Webserver.h"
-#include "services/LineManager.h"
+#include "LineManager.h"
+
+#include "WebServer.h"
+#include "LineManager.h"
+
+WebServer::WebServer(LineManager& lineManager) : lineMgr_(lineManager) {}
 
 void WebServer::start() {
-  // Här inne kan jag använda lineMgr_ för att interagera med LineManager
-  //if (lineMgr_.isBusy(0)) {
-        // Skicka status till webben
-  //}
+  // startlogik här vid behov
+}
+
+void WebServer::handleClient() {
+  // hantering av klienter här vid behov
 }
