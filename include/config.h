@@ -37,9 +37,9 @@ namespace cfg {
     constexpr int MCP_SLIC_INT_1_PIN = 11;
     constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    constexpr uint8_t MCP_MAIN_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
-    constexpr uint8_t MCP_MT8816_ADDRESS = 0x21; //BEHÖVER ÄNDRAS!
-    constexpr uint8_t MCP_SLIC1_ADDRESS = 0x22; //BEHÖVER ÄNDRAS!
+    constexpr uint8_t MCP_MAIN_ADDRESS = 0x24; //BEHÖVER ÄNDRAS!
+    constexpr uint8_t MCP_MT8816_ADDRESS = 0x25; //BEHÖVER ÄNDRAS!
+    constexpr uint8_t MCP_SLIC1_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
     constexpr uint8_t MCP_SLIC2_ADDRESS = 0x23; //BEHÖVER ÄNDRAS!
 
     struct PinModeEntry {

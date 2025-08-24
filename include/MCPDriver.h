@@ -64,11 +64,6 @@ private:
   uint8_t  readReg8_(uint8_t i2c_addr, uint8_t reg);
   void     readRegPair16_(uint8_t i2c_addr, uint8_t regA, uint16_t& out16);
 
-  // Setup-steg
-  bool setupMain_();
-  bool setupSlics_();
-  bool setupMT8816_();
-
   // Aktivera INT på SLIC-SHK-pinnarna, CHANGE-trigger
   void enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp);
 
@@ -85,4 +80,14 @@ private:
   volatile bool mt8816IntFlag_ = false;
 
   int8_t mapSlicPinToLine_(uint8_t pin) const;
+
+  bool haveMain_   = false;
+  bool haveSlic1_  = false;
+  bool haveMT8816_ = false;
+
+  // === [NYTT] Säkra I2C-hjälpare (deklarationer) ===
+  bool writeReg8_(uint8_t addr, uint8_t reg, uint8_t val);
+  bool readReg8_OK_(uint8_t addr, uint8_t reg, uint8_t& out);
+  bool readRegPair16_OK_(uint8_t addr, uint8_t regA, uint16_t& out16);
+
 };

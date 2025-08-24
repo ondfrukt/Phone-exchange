@@ -24,87 +24,190 @@ static void splitPinTable(const cfg::mcp::PinModeEntry (&tbl)[16], uint8_t (&mod
   for (int i=0;i<16;i++){ modes[i]=tbl[i].mode; initial[i]=tbl[i].initial; }
 }
 
-bool MCPDriver::begin() {
-  // 1) Hitta/enabla alla MCP:er via begin_I2C
-  bool ok = true;
-  ok &= mcpMain_.begin_I2C (mcp::MCP_MAIN_ADDRESS);
-  ok &= mcpSlic1_.begin_I2C(mcp::MCP_SLIC1_ADDRESS);
-  ok &= mcpMT8816_.begin_I2C(mcp::MCP_MT8816_ADDRESS);
-  if (!ok) return false;  // ”Hitta och returnera true om MCP hittades” uppfylls här. :contentReference[oaicite:1]{index=1}
+// ===== [NYTT] Säkra I2C-hjälpare som returnerar bool =====
+bool MCPDriver::writeReg8_(uint8_t addr, uint8_t reg, uint8_t val) {
+  Wire.beginTransmission(addr);
+  Wire.write(reg); Wire.write(val);
+  return Wire.endTransmission() == 0; // 0 = success
+}
+bool MCPDriver::readReg8_OK_(uint8_t addr, uint8_t reg, uint8_t& out) {
+  Wire.beginTransmission(addr);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom((int)addr, 1) != 1) return false;
+  out = Wire.read();
+  return true;
+}
+bool MCPDriver::readRegPair16_OK_(uint8_t addr, uint8_t regA, uint16_t& out16) {
+  Wire.beginTransmission(addr);
+  Wire.write(regA);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom((int)addr, 2) != 2) return false;
+  uint8_t a = Wire.read();
+  uint8_t b = Wire.read();
+  out16 = (uint16_t)a | ((uint16_t)b<<8);
+  return true;
+}
 
-  // 2) Ställ in GPIO-egenskaper för alla enligt config.h-tabeller
-  {
-    uint8_t modes[16]; bool initial[16];
-    splitPinTable(mcp::MCP_MAIN, modes, initial);
-    if (!applyPinModes_(mcpMain_, modes, initial)) return false;  // MAIN  :contentReference[oaicite:2]{index=2}
-    splitPinTable(mcp::MCP_SLIC, modes, initial);
-    if (!applyPinModes_(mcpSlic1_, modes, initial)) return false; // SLIC1 :contentReference[oaicite:3]{index=3}
-    splitPinTable(mcp::MCP_MT8816, modes, initial);
-    if (!applyPinModes_(mcpMT8816_, modes, initial)) return false;// MT8816 :contentReference[oaicite:4]{index=4}
+// ===== [KVAR] Original enkla helpers (behålls för kompatibilitet internt) =====
+uint8_t MCPDriver::readReg8_(uint8_t addr, uint8_t reg) {
+  Wire.beginTransmission(addr);
+  Wire.write(reg);
+  Wire.endTransmission(false);
+  Wire.requestFrom((int)addr, 1);
+  return Wire.available() ? Wire.read() : 0;
+}
+void MCPDriver::readRegPair16_(uint8_t addr, uint8_t regA, uint16_t& out16) {
+  Wire.beginTransmission(addr);
+  Wire.write(regA);
+  Wire.endTransmission(false);
+  Wire.requestFrom((int)addr, 2);
+  uint8_t a = Wire.available() ? Wire.read() : 0;
+  uint8_t b = Wire.available() ? Wire.read() : 0;
+  out16 = (uint16_t)a | ((uint16_t)b<<8);
+}
+
+bool MCPDriver::begin() {
+  // Kort I2C-timeout så vi inte låser oss
+  Wire.setTimeOut(50);
+
+  // 1) Försök hitta alla MCP:er
+  haveMain_   = mcpMain_.begin_I2C (mcp::MCP_MAIN_ADDRESS);
+  haveSlic1_  = mcpSlic1_.begin_I2C(mcp::MCP_SLIC1_ADDRESS);
+  haveMT8816_ = mcpMT8816_.begin_I2C(mcp::MCP_MT8816_ADDRESS);
+
+  Serial.println(F("MCP init:"));
+  if (haveMain_)   Serial.println(F(" - MCP_MAIN   hittad")); else Serial.println(F(" - MCP_MAIN   saknas"));
+  if (haveSlic1_)  Serial.println(F(" - MCP_SLIC1  hittad")); else Serial.println(F(" - MCP_SLIC1  saknas"));
+  if (haveMT8816_) Serial.println(F(" - MCP_MT8816 hittad")); else Serial.println(F(" - MCP_MT8816 saknas"));
+
+  if (!(haveMain_ || haveSlic1_ || haveMT8816_)) {
+    Serial.println(F("Ingen MCP hittades, avbryter."));
+    return false;
   }
 
-  // 3) INT-egenskaper: INTA/INTB ihop (MIRROR) + open drain (ODR)
-  // Adafruit-biblioteket har setMirror/setOpenDrain/setIntPolarity etc på nyare versioner,
-  // men för portabelhet sätter vi IOCON direkt: ODR=1, MIRROR=1, INT active low.
+  // 2) Sätt pin-lägen utifrån dina tabeller + grundläggande IOCON
   auto programIOCON = [&](uint8_t addr){
-    // Bit: BANK=0/MIRROR=1/SEQOP=1(behåll)/DISSLW=0/HAEN=0/ODR=1/INTPOL=0
-    uint8_t iocon = 0b01001010; // MIRROR=1, ODR=1, övriga rimliga default
-    Wire.beginTransmission(addr);
-    Wire.write(REG_IOCON); Wire.write(iocon); Wire.endTransmission();
-    Wire.beginTransmission(addr);
-    Wire.write(REG_IOCON+1); Wire.write(iocon); Wire.endTransmission(); // dublett
+    // Rimlig default: MIRROR=1, ODR=1, (SEQOP=1 ok). Skriv båda IOCON-reg.
+    const uint8_t iocon = 0x4A; // 0b01001010
+    return writeReg8_(addr, REG_IOCON, iocon) && writeReg8_(addr, REG_IOCON+1, iocon);
   };
-  programIOCON(mcp::MCP_MAIN_ADDRESS);
-  programIOCON(mcp::MCP_SLIC1_ADDRESS);
-  programIOCON(mcp::MCP_MT8816_ADDRESS);
 
-  // 4) Aktivera INT på valda GPIO (SLIC SHK-pinnarna) och CHANGE-trigger
-  enableSlicShkInterrupts_(mcpSlic1_); // använder cfg::mcp::SHK_PINS[] :contentReference[oaicite:5]{index=5}
+  if (haveMain_) {
+    uint8_t modes[16]; bool initial[16];
+    splitPinTable(mcp::MCP_MAIN, modes, initial);
+    if (!applyPinModes_(mcpMain_, modes, initial)) return false;
+    (void)programIOCON(mcp::MCP_MAIN_ADDRESS);
+  }
 
-  // 5) ESP32-GPIO för INT-ingångar + attachInterrupt (fallande flank)
-  pinMode(mcp::MCP_MAIN_INT_PIN,   INPUT_PULLUP);
-  pinMode(mcp::MCP_SLIC_INT_1_PIN, INPUT_PULLUP);
-  pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP); // om du använder den  :contentReference[oaicite:6]{index=6}
+  if (haveSlic1_) {
+    uint8_t modes[16]; bool initial[16];
+    splitPinTable(mcp::MCP_SLIC, modes, initial);
+    if (!applyPinModes_(mcpSlic1_, modes, initial)) return false;
+    // Vi kommer strax överskriva IOCON för SLIC1 mer strikt (0x44).
+  }
 
-  attachInterruptArg(digitalPinToInterrupt(mcp::MCP_MAIN_INT_PIN),
-                     &MCPDriver::isrMainThunk,  this, FALLING);
-  attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_1_PIN),
-                     &MCPDriver::isrSlic1Thunk, this, FALLING);
-  attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
-                     &MCPDriver::isrMT8816Thunk, this, FALLING);
+  if (haveMT8816_) {
+    uint8_t modes[16]; bool initial[16];
+    splitPinTable(mcp::MCP_MT8816, modes, initial);
+    if (!applyPinModes_(mcpMT8816_, modes, initial)) return false;
+    (void)programIOCON(mcp::MCP_MT8816_ADDRESS);
+  }
+
+  // 3) SLIC1: Tvångssätt IOCON (BANK-säkert) + enable SHK-INT + rensa latch
+  if (haveSlic1_) {
+    // a) Sätt IOCON exakt = 0x44 (MIRROR=1, ODR=1). Skriv båda adresserna!
+    writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_IOCON,     0x44);
+    writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_IOCON + 1, 0x44);
+
+    // b) Enable:a alla dina SHK-pinnar (CHANGE + pull-ups) via din helper
+    enableSlicShkInterrupts_(mcpSlic1_);
+
+    // c) Rensa ev. latched status så INT re-armas från ren start
+    uint16_t dummy;
+    (void)readRegPair16_OK_(mcp::MCP_SLIC1_ADDRESS, REG_INTCAPA, dummy); // läs INTCAP A/B
+    (void)readRegPair16_OK_(mcp::MCP_SLIC1_ADDRESS, REG_GPIOA,   dummy); // extra kvittens
+  }
+
+  // 4) Koppla ESP32-interrupts (fallande flank) endast för kretsar som finns
+  if (haveMain_) {
+    pinMode(mcp::MCP_MAIN_INT_PIN, INPUT_PULLUP);
+    attachInterruptArg(digitalPinToInterrupt(mcp::MCP_MAIN_INT_PIN),
+                       &MCPDriver::isrMainThunk, this, FALLING);
+  }
+  if (haveSlic1_) {
+    pinMode(mcp::MCP_SLIC_INT_1_PIN, INPUT_PULLUP);
+    attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_1_PIN),
+                       &MCPDriver::isrSlic1Thunk, this, FALLING);
+  }
+  if (haveMT8816_) {
+    pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
+    attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
+                       &MCPDriver::isrMT8816Thunk, this, FALLING);
+  }
 
   return true;
 }
 
 // ===== Basala GPIO-funktioner =====
 bool MCPDriver::digitalWriteMCP(uint8_t addr, uint8_t pin, bool value) {
+  // [NYTT] Respektera närvaro — undvik I2C-timeouts mot saknade chips
+  if (addr==mcp::MCP_MAIN_ADDRESS   && !haveMain_)   return false;
+  if (addr==mcp::MCP_SLIC1_ADDRESS  && !haveSlic1_)  return false;
+  if (addr==mcp::MCP_MT8816_ADDRESS && !haveMT8816_) return false;
+
   Adafruit_MCP23X17* m = nullptr;
-  if (addr==mcp::MCP_MAIN_ADDRESS)   m=&mcpMain_;
+  if (addr==mcp::MCP_MAIN_ADDRESS)        m=&mcpMain_;
   else if (addr==mcp::MCP_SLIC1_ADDRESS)  m=&mcpSlic1_;
   else if (addr==mcp::MCP_MT8816_ADDRESS) m=&mcpMT8816_;
   else return false;
+
   m->digitalWrite(pin, value);
   return true;
 }
 bool MCPDriver::digitalReadMCP(uint8_t addr, uint8_t pin, bool& out) {
+  // [NYTT] Respektera närvaro
+  if (addr==mcp::MCP_MAIN_ADDRESS   && !haveMain_)   return false;
+  if (addr==mcp::MCP_SLIC1_ADDRESS  && !haveSlic1_)  return false;
+  if (addr==mcp::MCP_MT8816_ADDRESS && !haveMT8816_) return false;
+
   Adafruit_MCP23X17* m = nullptr;
-  if (addr==mcp::MCP_MAIN_ADDRESS)   m=&mcpMain_;
+  if (addr==mcp::MCP_MAIN_ADDRESS)        m=&mcpMain_;
   else if (addr==mcp::MCP_SLIC1_ADDRESS)  m=&mcpSlic1_;
   else if (addr==mcp::MCP_MT8816_ADDRESS) m=&mcpMT8816_;
   else return false;
+
   out = m->digitalRead(pin);
   return true;
 }
 
 // ===== ISR-thunks =====
-void IRAM_ATTR MCPDriver::isrMainThunk(void* arg)  { reinterpret_cast<MCPDriver*>(arg)->mainIntFlag_  = true; }
-void IRAM_ATTR MCPDriver::isrSlic1Thunk(void* arg){ reinterpret_cast<MCPDriver*>(arg)->slic1IntFlag_ = true; }
-void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg){reinterpret_cast<MCPDriver*>(arg)->mt8816IntFlag_= true; }
+void IRAM_ATTR MCPDriver::isrMainThunk(void* arg)   { reinterpret_cast<MCPDriver*>(arg)->mainIntFlag_   = true; }
+void IRAM_ATTR MCPDriver::isrSlic1Thunk(void* arg)  { reinterpret_cast<MCPDriver*>(arg)->slic1IntFlag_  = true; }
+void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg) { reinterpret_cast<MCPDriver*>(arg)->mt8816IntFlag_ = true; }
 
 // ===== Loop-hanterare =====
-IntResult MCPDriver::handleMainInterrupt()   { return handleInterrupt_(mainIntFlag_,   mcpMain_,   mcp::MCP_MAIN_ADDRESS); }
-IntResult MCPDriver::handleSlic1Interrupt()  { return handleInterrupt_(slic1IntFlag_,  mcpSlic1_,  mcp::MCP_SLIC1_ADDRESS); }
-IntResult MCPDriver::handleMT8816Interrupt() { return handleInterrupt_(mt8816IntFlag_, mcpMT8816_, mcp::MCP_MT8816_ADDRESS); }
+IntResult MCPDriver::handleMainInterrupt()   {
+  if (!haveMain_) return {}; // [NYTT]
+  return handleInterrupt_(mainIntFlag_,   mcpMain_,   mcp::MCP_MAIN_ADDRESS);
+}
+IntResult MCPDriver::handleSlic1Interrupt()  {
+  if (!haveSlic1_) return {};
+  IntResult r = handleInterrupt_(slic1IntFlag_,  mcpSlic1_,  mcp::MCP_SLIC1_ADDRESS);
+  if (r.hasEvent) {
+    Serial.print("SHK event: line=");
+    Serial.print(r.line);
+    Serial.print(" pin=");
+    Serial.print(r.pin);
+    Serial.print(" level=");
+    Serial.println(r.level ? "HIGH" : "LOW");
+  }
+  return r;
+}
+IntResult MCPDriver::handleMT8816Interrupt() {
+  if (!haveMT8816_) return {}; // [NYTT]
+  return handleInterrupt_(mt8816IntFlag_, mcpMT8816_, mcp::MCP_MT8816_ADDRESS);
+}
 
 IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mcp, uint8_t addr) {
   // Ta en atomisk snapshot av flaggan
@@ -121,7 +224,8 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
 
     // Läs INTCAP för att få värdet och samtidigt kvittera
     uint16_t intcap=0;
-    readRegPair16_(addr, REG_INTCAPA, intcap);
+    // [NYTT] robust läsning; om I2C fel -> avbryt snyggt
+    if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r;
     r.level    = (intcap & (1u<<pin)) != 0;
     r.hasEvent = true;
 
@@ -129,7 +233,6 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
       int8_t line = mapSlicPinToLine_(r.pin);
       r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
     }
-
     return r;
   }
 
@@ -141,8 +244,10 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
 IntResult MCPDriver::readIntfIntcapFallback_(uint8_t addr) {
   IntResult r; r.i2c_addr = addr;
   uint16_t intf=0, intcap=0;
-  readRegPair16_(addr, REG_INTFA, intf);     // INTFA/INTFB
-  readRegPair16_(addr, REG_INTCAPA, intcap); // INTCAPA/INTCAPB (läser och kvitterar)
+
+  // [NYTT] robust läsning
+  if (!readRegPair16_OK_(addr, REG_INTFA,   intf))   return r; // INTFA/INTFB
+  if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r; // INTCAPA/INTCAPB (läser och kvitterar)
   if (intf==0) return r;
 
   // Ta första satta biten (om flera samtidigt – förenklad hantering)
@@ -154,27 +259,9 @@ IntResult MCPDriver::readIntfIntcapFallback_(uint8_t addr) {
       break;
     }
   }
-  // Extra: läs GPIO för säker kvittens
-  (void)readRegPair16_(addr, REG_GPIOA, intcap);
+  // Extra: läs GPIO för säker kvittens (best-effort)
+  (void)readRegPair16_OK_(addr, REG_GPIOA, intcap);
   return r;
-}
-
-uint8_t MCPDriver::readReg8_(uint8_t addr, uint8_t reg) {
-  Wire.beginTransmission(addr);
-  Wire.write(reg);
-  Wire.endTransmission(false);
-  Wire.requestFrom((int)addr, 1);
-  return Wire.available() ? Wire.read() : 0;
-}
-
-void MCPDriver::readRegPair16_(uint8_t addr, uint8_t regA, uint16_t& out16) {
-  Wire.beginTransmission(addr);
-  Wire.write(regA);
-  Wire.endTransmission(false);
-  Wire.requestFrom((int)addr, 2);
-  uint8_t a = Wire.available() ? Wire.read() : 0;
-  uint8_t b = Wire.available() ? Wire.read() : 0;
-  out16 = (uint16_t)a | ((uint16_t)b<<8);
 }
 
 int8_t MCPDriver::mapSlicPinToLine_(uint8_t pin) const {
@@ -185,8 +272,6 @@ int8_t MCPDriver::mapSlicPinToLine_(uint8_t pin) const {
   }
   return -1; // okänd
 }
-
-
 
 bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]) {
   // Sätt lägen
@@ -217,11 +302,14 @@ void MCPDriver::enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp) {
   // Samtidigt: om någon SHK är INPUT utan pullup, på med pullup för stabilitet.
   uint8_t gpintena=0, gpintenb=0;
   uint8_t intcona=0, intconb=0; // 0 = jämför med föregående (CHANGE)
-  uint8_t gppua= readReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUA);
-  uint8_t gppub= readReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUB);
+
+  // [NYTT] Läs befintliga pullups robust
+  uint8_t gppua=0, gppub=0;
+  (void)readReg8_OK_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUA, gppua);
+  (void)readReg8_OK_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUB, gppub);
 
   for (uint8_t i=0; i<sizeof(mcp::SHK_PINS)/sizeof(mcp::SHK_PINS[0]); ++i) {
-    uint8_t p = mcp::SHK_PINS[i]; // 0..15  :contentReference[oaicite:7]{index=7}
+    uint8_t p = mcp::SHK_PINS[i]; // 0..15
     if (p<8) gpintena |= (1u<<p);
     else     gpintenb |= (1u<<(p-8));
     // Sätt pull-up (aktiv låg SHK enligt din kommentar)
@@ -229,37 +317,22 @@ void MCPDriver::enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp) {
   }
 
   // Skriv INTCON=0 för båda portar (CHANGE)
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_INTCONA); Wire.write(intcona);
-  Wire.endTransmission();
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_INTCONB); Wire.write(intconb);
-  Wire.endTransmission();
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_INTCONA, intcona);
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_INTCONB, intconb);
 
   // DEFVAL ointressant för CHANGE, men nollställ för tydlighet
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_DEFVALA); Wire.write(0x00);
-  Wire.endTransmission();
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_DEFVALB); Wire.write(0x00);
-  Wire.endTransmission();
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_DEFVALA, 0x00);
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_DEFVALB, 0x00);
 
   // Pullups
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_GPPUA); Wire.write(gppua);
-  Wire.endTransmission();
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_GPPUB); Wire.write(gppub);
-  Wire.endTransmission();
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUA, gppua);
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUB, gppub);
 
   // Slå på GPINTEN
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_GPINTENA); Wire.write(gpintena);
-  Wire.endTransmission();
-  Wire.beginTransmission(mcp::MCP_SLIC1_ADDRESS);
-  Wire.write(REG_GPINTENB); Wire.write(gpintenb);
-  Wire.endTransmission();
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPINTENA, gpintena);
+  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPINTENB, gpintenb);
 
   // Läs INTCAP för att rensa ev. gamla tillstånd
   (void)mcp.readGPIOAB();
 }
+
