@@ -14,6 +14,7 @@ public:
 
 private:
     MCPDriver mcpDriver_;
+    
 // Här skapar jag olika objekt av mina klasser som jag behöver i appen
 // LineManager lineManager_;
 // MT8816Driver mt8816Driver_;

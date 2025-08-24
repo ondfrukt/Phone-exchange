@@ -27,7 +27,7 @@ LineHandler& LineManager::getLine(int index) {
   if (index >= static_cast<int>(lines.size())) {
       Serial.print("Index not valid: ");
       Serial.println(index);
-      return;
+      throw std::out_of_range("Invalid index in getLine");
   }
   return lines[static_cast<size_t>(index)];
 }

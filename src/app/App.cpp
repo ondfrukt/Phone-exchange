@@ -9,7 +9,5 @@ void App::begin() {
 }
 void App::loop() {
 
-    for ()
-
 
 }
