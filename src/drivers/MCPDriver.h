@@ -2,20 +2,8 @@
 #include <Arduino.h>
 #include <Wire.h> 
 #include <Adafruit_MCP23X17.h>
-
-
-
-// Framåtdeklaration av config-namespace.
-// Själva definierade värdena (adresser, ESP-GPIO) kommer från din config.h i .cpp-filen.
-namespace cfg { namespace mcp {
-  extern const uint8_t MCP_MAIN_ADDRESS;
-  extern const uint8_t MCP_SLIC1_ADDRESS;
-  extern const uint8_t MCP_MT8816_ADDRESS;
-
-  extern const int MCP_MAIN_INT_PIN;     // ESP32-GPIO som läser INT från "Main"-MCP
-  extern const int MCP_SLIC_INT_1_PIN;   // ESP32-GPIO som läser INT från SLIC-MCP
-  extern const int MCP_SLIC_INT_2_PIN;   // Ifall du har en tredje INT-lina (ex. MT8816)
-}}
+#include "settings/settings.h"
+#include "config.h"
 
 // ======= Returnpaket för interrupt-händelser =======
 struct IntResult {
@@ -37,6 +25,8 @@ public:
   // ===== Basala GPIO-funktioner =====
   bool digitalWriteMCP(uint8_t i2c_addr, uint8_t pin, bool value);
   bool digitalReadMCP (uint8_t i2c_addr, uint8_t pin, bool& out);
+
+  bool readGpioAB16(uint8_t i2c_addr, uint16_t& out16);
 
   // Snabbhjälp för kända kretsar
   inline Adafruit_MCP23X17& mainChip()   { return mcpMain_;   }
@@ -73,6 +63,7 @@ private:
 private:
   Adafruit_MCP23X17 mcpMain_;
   Adafruit_MCP23X17 mcpSlic1_;
+  Adafruit_MCP23X17 mcpSlic2_;
   Adafruit_MCP23X17 mcpMT8816_;
 
   volatile bool mainIntFlag_   = false;
@@ -81,13 +72,17 @@ private:
 
   int8_t mapSlicPinToLine_(uint8_t pin) const;
 
-  bool haveMain_   = false;
-  bool haveSlic1_  = false;
-  bool haveMT8816_ = false;
+  bool haveMain_;
+  bool haveSlic1_;
+  bool haveSlic2_;
+  bool haveMT8816_;
 
   // === [NYTT] Säkra I2C-hjälpare (deklarationer) ===
   bool writeReg8_(uint8_t addr, uint8_t reg, uint8_t val);
   bool readReg8_OK_(uint8_t addr, uint8_t reg, uint8_t& out);
   bool readRegPair16_OK_(uint8_t addr, uint8_t regA, uint16_t& out16);
+
+  // Prova att initiera en MCP och returnera true om den svarar
+  bool probeMcp_(Adafruit_MCP23X17& mcp, uint8_t addr);
 
 };

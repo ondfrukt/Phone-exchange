@@ -1,9 +1,9 @@
 #pragma once
 #include "config.h"
 #include <Wire.h>
-#include "MCPDriver.h"
+#include "drivers/MCPDriver.h"
 #include "LineHandler.h"
-#include "LineManager.h"
+#include "services/LineManager.h"
 // #include "drivers/ToneOut.h"
 // #include "net/WebServer.h"
 // #include "net/WifiClient.h"

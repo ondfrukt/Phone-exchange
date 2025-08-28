@@ -1,6 +1,7 @@
-#include "MCPDriver.h"
-#include "config.h"   // använder dina konstanter & pin-tabeller
+#include "drivers/MCPDriver.h"
 using namespace cfg;
+
+
 
 // ===== Register-adresser för MCP23X17 (BANK=0) =====
 static constexpr uint8_t REG_IOCON     = 0x0A; // även 0x0B
@@ -24,13 +25,16 @@ static void splitPinTable(const cfg::mcp::PinModeEntry (&tbl)[16], uint8_t (&mod
   for (int i=0;i<16;i++){ modes[i]=tbl[i].mode; initial[i]=tbl[i].initial; }
 }
 
+
 // ===== [NYTT] Säkra I2C-hjälpare som returnerar bool =====
 bool MCPDriver::writeReg8_(uint8_t addr, uint8_t reg, uint8_t val) {
+
   Wire.beginTransmission(addr);
   Wire.write(reg); Wire.write(val);
   return Wire.endTransmission() == 0; // 0 = success
 }
 bool MCPDriver::readReg8_OK_(uint8_t addr, uint8_t reg, uint8_t& out) {
+
   Wire.beginTransmission(addr);
   Wire.write(reg);
   if (Wire.endTransmission(false) != 0) return false;
@@ -39,6 +43,7 @@ bool MCPDriver::readReg8_OK_(uint8_t addr, uint8_t reg, uint8_t& out) {
   return true;
 }
 bool MCPDriver::readRegPair16_OK_(uint8_t addr, uint8_t regA, uint16_t& out16) {
+
   Wire.beginTransmission(addr);
   Wire.write(regA);
   if (Wire.endTransmission(false) != 0) return false;
@@ -51,6 +56,7 @@ bool MCPDriver::readRegPair16_OK_(uint8_t addr, uint8_t regA, uint16_t& out16) {
 
 // ===== [KVAR] Original enkla helpers (behålls för kompatibilitet internt) =====
 uint8_t MCPDriver::readReg8_(uint8_t addr, uint8_t reg) {
+
   Wire.beginTransmission(addr);
   Wire.write(reg);
   Wire.endTransmission(false);
@@ -58,6 +64,7 @@ uint8_t MCPDriver::readReg8_(uint8_t addr, uint8_t reg) {
   return Wire.available() ? Wire.read() : 0;
 }
 void MCPDriver::readRegPair16_(uint8_t addr, uint8_t regA, uint16_t& out16) {
+
   Wire.beginTransmission(addr);
   Wire.write(regA);
   Wire.endTransmission(false);
@@ -70,11 +77,20 @@ void MCPDriver::readRegPair16_(uint8_t addr, uint8_t regA, uint16_t& out16) {
 bool MCPDriver::begin() {
   // Kort I2C-timeout så vi inte låser oss
   Wire.setTimeOut(50);
+  auto& settings = Settings::instance();
+  haveMain_ = haveSlic1_ = haveSlic2_ = haveMT8816_ = false;
 
   // 1) Försök hitta alla MCP:er
-  haveMain_   = mcpMain_.begin_I2C (mcp::MCP_MAIN_ADDRESS);
-  haveSlic1_  = mcpSlic1_.begin_I2C(mcp::MCP_SLIC1_ADDRESS);
-  haveMT8816_ = mcpMT8816_.begin_I2C(mcp::MCP_MT8816_ADDRESS);
+  haveSlic1_  = probeMcp_(mcpSlic1_,  cfg::mcp::MCP_SLIC1_ADDRESS);
+  haveSlic2_  = probeMcp_(mcpSlic2_,  cfg::mcp::MCP_SLIC2_ADDRESS);
+  haveMain_   = probeMcp_(mcpMain_,   cfg::mcp::MCP_MAIN_ADDRESS);
+  haveMT8816_ = probeMcp_(mcpMT8816_, cfg::mcp::MCP_MT8816_ADDRESS);
+
+  // Spara utfallet i Settings så alla andra delar kan läsa det
+  settings.mcpSlic1Present  = haveSlic1_;
+  settings.mcpSlic2Present = haveSlic2_;
+  settings.mcpMainPresent  = haveMain_;
+  settings.mcpMt8816Present = haveMT8816_;
 
   Serial.println(F("MCP init:"));
   if (haveMain_)   Serial.println(F(" - MCP_MAIN   hittad")); else Serial.println(F(" - MCP_MAIN   saknas"));
@@ -265,13 +281,13 @@ IntResult MCPDriver::readIntfIntcapFallback_(uint8_t addr) {
 }
 
 int8_t MCPDriver::mapSlicPinToLine_(uint8_t pin) const {
-  // Vi utgår från att SHK_PINS beskriver vilka MCP-pins som är kopplade till linjerna
-  // i ordning line 0..ACTIVE_LINES-1.
-  for (uint8_t line = 0; line < cfg::ACTIVE_LINES; ++line) {
-    if (cfg::mcp::SHK_PINS[line] == pin) return line;
+  // var SLIC1 (linjer 0..3)
+  for (uint8_t line = 0; line < (uint8_t)(sizeof(cfg::mcp::SHK_PINS)/sizeof(cfg::mcp::SHK_PINS[0])); ++line) {
+    if (cfg::mcp::SHK_PINS[line] == pin) return line; // 0..3
   }
-  return -1; // okänd
+  return -1;
 }
+
 
 bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]) {
   // Sätt lägen
@@ -336,3 +352,15 @@ void MCPDriver::enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp) {
   (void)mcp.readGPIOAB();
 }
 
+bool MCPDriver::readGpioAB16(uint8_t addr, uint16_t& out16) {
+  uint8_t a = readReg8_(addr, 0x12);
+  uint8_t b = readReg8_(addr, 0x13);
+  out16 = (uint16_t(b) << 8) | uint16_t(a);
+  return true; // lägg gärna verklig felhantering
+}
+
+bool MCPDriver::probeMcp_(Adafruit_MCP23X17& mcp, uint8_t addr) {
+  // Adafruit_MCP23X17::begin_I2C returnerar bool; hantera fel säkert
+  if (!mcp.begin_I2C(addr)) return false;
+  return true;
+}

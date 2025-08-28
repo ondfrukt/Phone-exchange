@@ -1,8 +1,7 @@
 #include "app/App.h"
+#include "settings/settings.h"
 #include "util/i2CScanner.h"
 using namespace cfg;
-
-
 
 App::App()
     : mcpDriver_(),
@@ -11,6 +10,9 @@ App::App()
 }
 
 void App::begin() {
+    auto& settings = Settings::instance();
+    settings.load();  // ladda sparade inställningar (om några)
+
     Serial.begin(115200);
     Serial.println("App starting...");
     i2cScan(Wire, 9, 10, 100000);

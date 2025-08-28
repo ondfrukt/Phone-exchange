@@ -8,9 +8,6 @@
 
 namespace cfg {
 
-
-  constexpr uint8_t ACTIVE_LINES = 4; // Antal aktiva linjer
-
   namespace ESP_LED_PINS {
     constexpr int StatusLED_PIN = 21;
     constexpr int WiFiLED_PIN = 24;
@@ -33,14 +30,14 @@ namespace cfg {
 
   namespace mcp {
 
-    constexpr int MCP_MAIN_INT_PIN = 18;
-    constexpr int MCP_SLIC_INT_1_PIN = 11;
-    constexpr int MCP_SLIC_INT_2_PIN = 14;
+    inline constexpr int MCP_MAIN_INT_PIN = 18;
+    inline constexpr int MCP_SLIC_INT_1_PIN = 11;
+    inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    constexpr uint8_t MCP_MAIN_ADDRESS = 0x24; //BEHÖVER ÄNDRAS!
-    constexpr uint8_t MCP_MT8816_ADDRESS = 0x25; //BEHÖVER ÄNDRAS!
-    constexpr uint8_t MCP_SLIC1_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
-    constexpr uint8_t MCP_SLIC2_ADDRESS = 0x23; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x24; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x25; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x23; //BEHÖVER ÄNDRAS!
 
     struct PinModeEntry {
     uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP
@@ -155,27 +152,49 @@ namespace cfg {
       /*15*/{OUTPUT, LOW},     // GPB7 Not in use
     };
 
-    constexpr uint8_t SHK_PINS[4] = {
-      4,   // Line 0 & 4: MCP_SLIC1, GPA4
-      5,   // Line 1 & 5: MCP_SLIC1, GPA5
-      8,   // Line 2 & 6: MCP_SLIC1, GPB0
-      11   // Line 3 & 7: MCP_SLIC1, GPB3
+    inline constexpr uint8_t SHK_LINE_ADDR[8] = {
+      MCP_SLIC1_ADDRESS, MCP_SLIC1_ADDRESS, MCP_SLIC1_ADDRESS, MCP_SLIC1_ADDRESS,
+      MCP_SLIC2_ADDRESS, MCP_SLIC2_ADDRESS, MCP_SLIC2_ADDRESS, MCP_SLIC2_ADDRESS
     };
+
+    constexpr uint8_t SHK_PINS[8] = {
+      4,   // Line 0 MCP_SLIC1, GPA4
+      5,   // Line 1 MCP_SLIC1, GPA5
+      8,   // Line 2 MCP_SLIC1, GPB0
+      11,  // Line 3 MCP_SLIC1, GPB3
+      4,   // Line 4 MCP_SLIC2, GPA4
+      5,   // Line 5 MCP_SLIC2, GPA5
+      8,   // Line 6 MCP_SLIC2, GPB0
+      11   // Line 7 MCP_SLIC2, GPB3
+    };
+
+    inline constexpr std::size_t SHK_LINE_COUNT = 8;
 
     constexpr uint8_t FR_PINS[8] = {
-      2,   // Line 0 & 4: MCP_SLIC1, GPA2
-      0,   // Line 1 & 5: MCP_SLIC1, GPA0
-      9,   // Line 2 & 6: MCP_SLIC1, GPB1
-      12,  // Line 3 & 7: MCP_SLIC1, GPB4
+      2,   // Line 0 MCP_SLIC1, GPA2
+      0,   // Line 1 MCP_SLIC1, GPA0
+      9,   // Line 2 MCP_SLIC1, GPB1
+      12,  // Line 3 MCP_SLIC1, GPB4
+      2,   // Line 4 MCP_SLIC2, GPA2
+      0,   // Line 5 MCP_SLIC2, GPA0
+      9,   // Line 6 MCP_SLIC2, GPB1
+      12  // Line 7 MCP_SLIC2, GPB4
     };
+
+    inline constexpr std::size_t FR_LINE_COUNT = 8;
 
     constexpr uint8_t RM_PINS[8] = {
-      3,   // Line 0 & 4: MCP_SLIC1, GPA3
-      1,   // Line 1 & 5: MCP_SLIC1, GPA1
-      10,  // Line 2 & 6: MCP_SLIC1, GPB2
-      13,  // Line 3 & 7: MCP_SLIC1, GPB5
+      3,   // Line 0 MCP_SLIC1, GPA3
+      1,   // Line 1 MCP_SLIC1, GPA1
+      10,  // Line 2 MCP_SLIC1, GPB2
+      13,  // Line 3 MCP_SLIC1, GPB5
+      3,   // Line 4 MCP_SLIC2, GPA3
+      1,   // Line 5 MCP_SLIC2, GPA1
+      10,  // Line 6 MCP_SLIC2, GPB2
+      13   // Line 7 MCP_SLIC2, GPB5
     };
 
+    inline constexpr std::size_t RM_LINE_COUNT = 8;
 
   }
 
