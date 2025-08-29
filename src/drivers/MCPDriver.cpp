@@ -151,10 +151,6 @@ bool MCPDriver::begin() {
   }
 
   if (haveSlic2_) {
-      uint8_t modes[16]; bool initial[16];
-      splitPinTable(mcp::MCP_SLIC, modes, initial);
-      if (!applyPinModes_(mcpSlic2_, modes, initial)) return false;
-  
       // Sätt IOCON till 0x44 (MIRROR=1, ODR=1) för båda bankerna
       writeReg8_(mcp::MCP_SLIC2_ADDRESS, REG_IOCON,     0x44);
       writeReg8_(mcp::MCP_SLIC2_ADDRESS, REG_IOCON + 1, 0x44);
@@ -179,10 +175,10 @@ bool MCPDriver::begin() {
   if (haveSlic2_) {
     pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
-                       &MCPDriver::isrSlic1Thunk, this, FALLING);
+                       &MCPDriver::isrSlic2Thunk, this, FALLING);
   if (haveMT8816_) {
     pinMode(mcp::MCP_MT8816_INT_PIN, INPUT_PULLUP);
-    attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
+    attachInterruptArg(digitalPinToInterrupt(mcp::MCP_MT8816_INT_PIN),
                        &MCPDriver::isrMT8816Thunk, this, FALLING);
   }
   return true;
