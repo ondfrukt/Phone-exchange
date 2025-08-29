@@ -31,17 +31,20 @@ public:
   // Snabbhjälp för kända kretsar
   inline Adafruit_MCP23X17& mainChip()   { return mcpMain_;   }
   inline Adafruit_MCP23X17& slic1Chip()  { return mcpSlic1_;  }
+  inline Adafruit_MCP23X17& slic2Chip()  { return mcpSlic2_;  }
   inline Adafruit_MCP23X17& mt8816Chip() { return mcpMT8816_; }
 
   // ===== Loop-hanterare (pollas från loop()) =====
   IntResult handleMainInterrupt();
   IntResult handleSlic1Interrupt();
+  IntResult handleSlic2Interrupt();
   IntResult handleMT8816Interrupt();
 
 private:
   // ===== ISR-thunks (sätter endast flaggor) =====
   static void IRAM_ATTR isrMainThunk (void* arg);
   static void IRAM_ATTR isrSlic1Thunk(void* arg);
+  static void IRAM_ATTR isrSlic2Thunk(void* arg);
   static void IRAM_ATTR isrMT8816Thunk(void* arg);
 
   // Gemensam interrupt-hantering
@@ -68,6 +71,7 @@ private:
 
   volatile bool mainIntFlag_   = false;
   volatile bool slic1IntFlag_  = false;
+  volatile bool slic2IntFlag_  = false;
   volatile bool mt8816IntFlag_ = false;
 
   int8_t mapSlicPinToLine_(uint8_t pin) const;
