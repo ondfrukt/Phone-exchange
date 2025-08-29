@@ -181,7 +181,7 @@ bool MCPDriver::begin() {
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
                        &MCPDriver::isrSlic1Thunk, this, FALLING);
   if (haveMT8816_) {
-    pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
+    pinMode(mcp::MCP_MT8816_INT_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
                        &MCPDriver::isrMT8816Thunk, this, FALLING);
   }
@@ -210,11 +210,13 @@ bool MCPDriver::digitalReadMCP(uint8_t addr, uint8_t pin, bool& out) {
   // [NYTT] Respektera närvaro
   if (addr==mcp::MCP_MAIN_ADDRESS   && !haveMain_)   return false;
   if (addr==mcp::MCP_SLIC1_ADDRESS  && !haveSlic1_)  return false;
+  if (addr==mcp::MCP_SLIC2_ADDRESS  && !haveSlic2_)  return false;
   if (addr==mcp::MCP_MT8816_ADDRESS && !haveMT8816_) return false;
 
   Adafruit_MCP23X17* m = nullptr;
   if (addr==mcp::MCP_MAIN_ADDRESS)        m=&mcpMain_;
   else if (addr==mcp::MCP_SLIC1_ADDRESS)  m=&mcpSlic1_;
+  else if (addr==mcp::MCP_SLIC2_ADDRESS)  m=&mcpSlic2_;
   else if (addr==mcp::MCP_MT8816_ADDRESS) m=&mcpMT8816_;
   else return false;
 
@@ -225,6 +227,7 @@ bool MCPDriver::digitalReadMCP(uint8_t addr, uint8_t pin, bool& out) {
 // ===== ISR-thunks =====
 void IRAM_ATTR MCPDriver::isrMainThunk(void* arg)   { reinterpret_cast<MCPDriver*>(arg)->mainIntFlag_   = true; }
 void IRAM_ATTR MCPDriver::isrSlic1Thunk(void* arg)  { reinterpret_cast<MCPDriver*>(arg)->slic1IntFlag_  = true; }
+void IRAM_ATTR MCPDriver::isrSlic2Thunk(void* arg)  { reinterpret_cast<MCPDriver*>(arg)->slic2IntFlag_  = true; }
 void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg) { reinterpret_cast<MCPDriver*>(arg)->mt8816IntFlag_ = true; }
 
 // ===== Loop-hanterare =====
