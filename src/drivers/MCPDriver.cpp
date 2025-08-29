@@ -95,6 +95,7 @@ bool MCPDriver::begin() {
   Serial.println(F("MCP init:"));
   if (haveMain_)   Serial.println(F(" - MCP_MAIN   hittad")); else Serial.println(F(" - MCP_MAIN   saknas"));
   if (haveSlic1_)  Serial.println(F(" - MCP_SLIC1  hittad")); else Serial.println(F(" - MCP_SLIC1  saknas"));
+  if (haveSlic2_)  Serial.println(F(" - MCP_SLIC2  hittad")); else Serial.println(F(" - MCP_SLIC2  saknas"));
   if (haveMT8816_) Serial.println(F(" - MCP_MT8816 hittad")); else Serial.println(F(" - MCP_MT8816 saknas"));
 
   if (!(haveMain_ || haveSlic1_ || haveMT8816_)) {
@@ -115,12 +116,16 @@ bool MCPDriver::begin() {
     if (!applyPinModes_(mcpMain_, modes, initial)) return false;
     (void)programIOCON(mcp::MCP_MAIN_ADDRESS);
   }
-
   if (haveSlic1_) {
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_SLIC, modes, initial);
     if (!applyPinModes_(mcpSlic1_, modes, initial)) return false;
     // Vi kommer strax överskriva IOCON för SLIC1 mer strikt (0x44).
+  }
+  if (haveSlic2_) {
+    uint8_t modes[16]; bool initial[16];
+    splitPinTable(mcp::MCP_SLIC, modes, initial);
+    if (!applyPinModes_(mcpSlic2_, modes, initial)) return false;
   }
 
   if (haveMT8816_) {
@@ -145,6 +150,21 @@ bool MCPDriver::begin() {
     (void)readRegPair16_OK_(mcp::MCP_SLIC1_ADDRESS, REG_GPIOA,   dummy); // extra kvittens
   }
 
+  if (haveSlic2_) {
+      uint8_t modes[16]; bool initial[16];
+      splitPinTable(mcp::MCP_SLIC, modes, initial);
+      if (!applyPinModes_(mcpSlic2_, modes, initial)) return false;
+  
+      // Sätt IOCON till 0x44 (MIRROR=1, ODR=1) för båda bankerna
+      writeReg8_(mcp::MCP_SLIC2_ADDRESS, REG_IOCON,     0x44);
+      writeReg8_(mcp::MCP_SLIC2_ADDRESS, REG_IOCON + 1, 0x44);
+  
+      // Aktivera SLIC‑SHK‑avbrott och rensa latch
+      enableSlicShkInterrupts_(mcpSlic2_);
+      uint16_t dummy;
+      (void)readRegPair16_OK_(mcp::MCP_SLIC2_ADDRESS, REG_INTCAPA, dummy);
+      (void)readRegPair16_OK_(mcp::MCP_SLIC2_ADDRESS, REG_GPIOA,   dummy);
+  }
   // 4) Koppla ESP32-interrupts (fallande flank) endast för kretsar som finns
   if (haveMain_) {
     pinMode(mcp::MCP_MAIN_INT_PIN, INPUT_PULLUP);
@@ -156,12 +176,15 @@ bool MCPDriver::begin() {
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_1_PIN),
                        &MCPDriver::isrSlic1Thunk, this, FALLING);
   }
+  if (haveSlic2_) {
+    pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
+    attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
+                       &MCPDriver::isrSlic1Thunk, this, FALLING);
   if (haveMT8816_) {
     pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
                        &MCPDriver::isrMT8816Thunk, this, FALLING);
   }
-
   return true;
 }
 
@@ -170,11 +193,13 @@ bool MCPDriver::digitalWriteMCP(uint8_t addr, uint8_t pin, bool value) {
   // [NYTT] Respektera närvaro — undvik I2C-timeouts mot saknade chips
   if (addr==mcp::MCP_MAIN_ADDRESS   && !haveMain_)   return false;
   if (addr==mcp::MCP_SLIC1_ADDRESS  && !haveSlic1_)  return false;
+  if (addr == mcp::MCP_SLIC2_ADDRESS && !haveSlic2_) return false;
   if (addr==mcp::MCP_MT8816_ADDRESS && !haveMT8816_) return false;
 
   Adafruit_MCP23X17* m = nullptr;
   if (addr==mcp::MCP_MAIN_ADDRESS)        m=&mcpMain_;
   else if (addr==mcp::MCP_SLIC1_ADDRESS)  m=&mcpSlic1_;
+  else if (addr == mcp::MCP_SLIC2_ADDRESS) m = &mcpSlic2_;
   else if (addr==mcp::MCP_MT8816_ADDRESS) m=&mcpMT8816_;
   else return false;
 
@@ -210,6 +235,20 @@ IntResult MCPDriver::handleMainInterrupt()   {
 IntResult MCPDriver::handleSlic1Interrupt()  {
   if (!haveSlic1_) return {};
   IntResult r = handleInterrupt_(slic1IntFlag_,  mcpSlic1_,  mcp::MCP_SLIC1_ADDRESS);
+  if (r.hasEvent) {
+    Serial.print("SHK event: line=");
+    Serial.print(r.line);
+    Serial.print(" pin=");
+    Serial.print(r.pin);
+    Serial.print(" level=");
+    Serial.println(r.level ? "HIGH" : "LOW");
+  }
+  return r;
+}
+
+IntResult MCPDriver::handleSlic2Interrupt()  {
+  if (!haveSlic2_) return {};
+  IntResult r = handleInterrupt_(slic2IntFlag_,  mcpSlic2_,  mcp::MCP_SLIC2_ADDRESS);
   if (r.hasEvent) {
     Serial.print("SHK event: line=");
     Serial.print(r.line);
