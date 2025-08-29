@@ -142,8 +142,9 @@ bool MCPDriver::begin() {
     writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_IOCON + 1, 0x44);
 
     // b) Enable:a alla dina SHK-pinnar (CHANGE + pull-ups) via din helper
-    enableSlicShkInterrupts_(mcpSlic1_);
-
+    enableSlicShkInterrupts_(cfg::mcp::MCP_SLIC1_ADDRESS, mcpSlic1_);
+    enableSlicShkInterrupts_(cfg::mcp::MCP_SLIC2_ADDRESS, mcpSlic2_);
+    
     // c) Rensa ev. latched status så INT re-armas från ren start
     uint16_t dummy;
     (void)readRegPair16_OK_(mcp::MCP_SLIC1_ADDRESS, REG_INTCAPA, dummy); // läs INTCAP A/B
@@ -283,7 +284,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
     r.level    = (intcap & (1u<<pin)) != 0;
     r.hasEvent = true;
 
-    if (addr == cfg::mcp::MCP_SLIC1_ADDRESS) {
+    if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
       int8_t line = mapSlicPinToLine_(r.pin);
       r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
     }
@@ -350,7 +351,7 @@ bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16
   return true;
 }
 
-void MCPDriver::enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp) {
+void MCPDriver::enableSlicShkInterrupts_(uin8_t i2cAddr Adafruit_MCP23X17& mcp) {
   // Aktivera INT på alla SHK-pinnar och sätt CHANGE (INTCON=0)
   // – dvs jämförelse mot föregående värde, inte mot DEFVAL.
   // Samtidigt: om någon SHK är INPUT utan pullup, på med pullup för stabilitet.
@@ -371,20 +372,20 @@ void MCPDriver::enableSlicShkInterrupts_(Adafruit_MCP23X17& mcp) {
   }
 
   // Skriv INTCON=0 för båda portar (CHANGE)
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_INTCONA, intcona);
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_INTCONB, intconb);
+  writeReg8_(mcp::i2cAddr, REG_INTCONA, intcona);
+  writeReg8_(mcp::i2cAddr, REG_INTCONB, intconb);
 
   // DEFVAL ointressant för CHANGE, men nollställ för tydlighet
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_DEFVALA, 0x00);
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_DEFVALB, 0x00);
+  writeReg8_(mcp::i2cAddr, REG_DEFVALA, 0x00);
+  writeReg8_(mcp::i2cAddr, REG_DEFVALB, 0x00);
 
   // Pullups
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUA, gppua);
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPPUB, gppub);
+  writeReg8_(mcp::i2cAddr, REG_GPPUA, gppua);
+  writeReg8_(mcp::i2cAddr, REG_GPPUB, gppub);
 
   // Slå på GPINTEN
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPINTENA, gpintena);
-  writeReg8_(mcp::MCP_SLIC1_ADDRESS, REG_GPINTENB, gpintenb);
+  writeReg8_(mcp::i2cAddr, REG_GPINTENA, gpintena);
+  writeReg8_(mcp::i2cAddr, REG_GPINTENB, gpintenb);
 
   // Läs INTCAP för att rensa ev. gamla tillstånd
   (void)mcp.readGPIOAB();
