@@ -27,6 +27,7 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
     line.SHK = offHook;
     line.previousHookStatus = line.currentHookStatus;
     line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
+    Serial.printf("SHKService: Line %d initial SHK=%d -> %s\n", (int)i, rawHigh, offHook ? "OffHook" : "OnHook");
   }
 }
 
@@ -174,6 +175,7 @@ void SHKService::setStableHook_(int lineIndex, bool offHook) {
   line.SHK = offHook; // 1 = off-hook
   line.previousHookStatus = line.currentHookStatus;
   line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
+  Serial.printf("SHKService: Line %d stable SHK=%d -> %s\n", (int)lineIndex, offHook ? 1 : 0, offHook ? "OffHook" : "OnHook");
 
   // Om vi gick till OnHook -> nollställ pulsdelen
   if (!offHook) {
@@ -281,6 +283,7 @@ void SHKService::emitDigitAndReset_(int idx) {
   if (s.pulseCountWork > 0) {
     char d = mapPulseCountToDigit(s.pulseCountWork); // 10→'0'
     line.dialedDigits += d; // lägg direkt i LineHandler
+    Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
   }
   resetPulseState_(idx);
 }

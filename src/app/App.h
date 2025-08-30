@@ -4,6 +4,10 @@
 #include "drivers/MCPDriver.h"
 #include "LineHandler.h"
 #include "services/LineManager.h"
+#include "services/SHKService.h"
+#include "drivers/MCPDriver.h"
+#include "settings/settings.h"
+
 // #include "drivers/ToneOut.h"
 // #include "net/WebServer.h"
 // #include "net/WifiClient.h"
@@ -17,6 +21,7 @@ public:
 private:
     MCPDriver mcpDriver_;
     LineManager lineManager_;
+    SHKService SHKService_;
 
 // Här skapar jag olika objekt av mina klasser som jag behöver i appen
 // LineManager lineManager_;

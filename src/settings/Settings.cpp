@@ -4,9 +4,28 @@ Settings::Settings() {
   resetDefaults();        // se till att fälten har startvärden
 }
 
+
+void Settings::adjustActiveLines() {
+  // Justera activeLinesMask så den tar hänsyn till fysiska MCP-anslutningar
+  uint8_t userMask = activeLinesMask;
+  uint8_t allowMask;
+  if (mcpSlic1Present && !mcpSlic2Present) {
+    // Bara SLIC1 finns: tillåt endast linjer 0–3
+    allowMask = 0b00001111;
+  } else if (!mcpSlic1Present && mcpSlic2Present) {
+    // Bara SLIC2 finns: tillåt endast linjer 4–7
+    allowMask = 0b11110000;
+  } else {
+    // Båda finns: tillåt alla linjer
+    allowMask = 0b11111111;
+  }
+  // Maskera användarens mask så att otillåtna linjer alltid blir inaktiva
+  activeLinesMask = userMask & allowMask;
+}
+
 void Settings::resetDefaults() {
   // Spara bara *inställningar*, inte körtidsstatus
-  activeLinesMask       = 0x00;
+  activeLinesMask       = 0x80;
   debounceMs            = 25;
 
   burstTickMs           = 2;

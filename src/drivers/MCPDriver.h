@@ -18,6 +18,11 @@ class MCPDriver {
 public:
   MCPDriver() = default;
 
+  bool haveMain_;
+  bool haveSlic1_;
+  bool haveSlic2_;
+  bool haveMT8816_;
+
   // Initiera alla MCP:er, lägg deras GPIO-lägen, INT-egenskaper och
   // koppla ESP32-interrupts (fallande flank; open-drain).
   bool begin();
@@ -73,12 +78,7 @@ private:
   volatile bool slic2IntFlag_  = false;
   volatile bool mt8816IntFlag_ = false;
 
-  int8_t mapSlicPinToLine_(uint8_t pin) const;
-
-  bool haveMain_;
-  bool haveSlic1_;
-  bool haveSlic2_;
-  bool haveMT8816_;
+  int8_t mapSlicPinToLine_(uint8_t addr, uint8_t pin) const;
 
   // === [NYTT] Säkra I2C-hjälpare (deklarationer) ===
   bool writeReg8_(uint8_t addr, uint8_t reg, uint8_t val);

@@ -1,11 +1,11 @@
 #include "app/App.h"
-#include "settings/settings.h"
 #include "util/i2CScanner.h"
 using namespace cfg;
 
 App::App()
     : mcpDriver_(),
-      lineManager_()
+      lineManager_(),
+      SHKService_(lineManager_, mcpDriver_, Settings::instance())
 {
 }
 
@@ -18,32 +18,33 @@ void App::begin() {
     i2cScan(Wire, i2c::SDA_PIN, i2c::SCL_PIN, 100000);
     Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
     mcpDriver_.begin();
+    settings.adjustActiveLines();
     lineManager_.begin();
 }
 
 void App::loop() {
-  // Dränera max N events per varv för rättvisa
-  for (int i = 0; i < 16; ++i) {
-    IntResult r = mcpDriver_.handleSlic1Interrupt();
-    if (!r.hasEvent) break;
-    // ...hantera event...
-    yield();          // eller delay(0); ger tid till andra tasks
-  }
+    // Hantera SLIC‑1 avbrott
 
-  // Hantera även andra källor
-  for (int i = 0; i < 16; ++i) {
-    auto r2 = mcpDriver_.handleSlic2Interrupt();
-    if (!r2.hasEvent) break;
-    yield();
-  }
+    for (int i=0; i<16; ++i) {
+        IntResult r = mcpDriver_.handleSlic1Interrupt();
+        if (r.hasEvent && r.line < 8) {
+        uint32_t mask = (1u << r.line);
+        SHKService_.notifyLinesPossiblyChanged(mask, millis());
+        yield();
+        }
+    }
+
+        for (int i=0; i<16; ++i) {
+        IntResult r = mcpDriver_.handleSlic2Interrupt();
+        if (r.hasEvent && r.line < 8) {
+        uint32_t mask = (1u << r.line);
+        SHKService_.notifyLinesPossiblyChanged(mask, millis());
+        yield();
+        }
+    }
+
+    uint32_t nowMs = millis();
+    if (SHKService_.needsTick(nowMs)) {
+        SHKService_.tick(nowMs); // uppdaterar hook‑status och pulser
+    }
 }
-
-
-
-// struct IntResult {
-//   bool    hasEvent = false;  // om något fanns att hämta
-//   uint8_t line     = 255;    // 0..7, 255 = okänd linje
-//   uint8_t pin      = 255;    // 0..15, 255 = ogiltig
-//   bool    level    = false;  // nivå enligt INTCAP/getLastInterruptValue()
-//   uint8_t i2c_addr = 0x00;   // vilken MCP
-// };

@@ -281,7 +281,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
     r.hasEvent = true;
 
     if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
-      int8_t line = mapSlicPinToLine_(r.pin);
+      int8_t line = mapSlicPinToLine_(addr, r.pin);
       r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
     }
     return r;
@@ -315,10 +315,12 @@ IntResult MCPDriver::readIntfIntcapFallback_(uint8_t addr) {
   return r;
 }
 
-int8_t MCPDriver::mapSlicPinToLine_(uint8_t pin) const {
-  // var SLIC1 (linjer 0..3)
-  for (uint8_t line = 0; line < (uint8_t)(sizeof(cfg::mcp::SHK_PINS)/sizeof(cfg::mcp::SHK_PINS[0])); ++line) {
-    if (cfg::mcp::SHK_PINS[line] == pin) return line; // 0..3
+int8_t MCPDriver::mapSlicPinToLine_(uint8_t addr, uint8_t pin) const {
+  for (uint8_t line = 0; line < cfg::mcp::SHK_LINE_COUNT; ++line) {
+    if (cfg::mcp::SHK_LINE_ADDR[line] == addr &&
+        cfg::mcp::SHK_PINS[line]      == pin) {
+      return static_cast<int8_t>(line);
+    }
   }
   return -1;
 }
