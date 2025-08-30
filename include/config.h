@@ -37,7 +37,7 @@ namespace cfg {
     inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x24; //BEHÖVER ÄNDRAS!
     inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x25; //BEHÖVER ÄNDRAS!
     inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
-    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x23; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21; //BEHÖVER ÄNDRAS!
 
     struct PinModeEntry {
     uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP

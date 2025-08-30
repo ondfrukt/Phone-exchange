@@ -97,7 +97,7 @@ bool MCPDriver::begin() {
   if (haveSlic2_)  Serial.println(F(" - MCP_SLIC2  hittad")); else Serial.println(F(" - MCP_SLIC2  saknas"));
   if (haveMT8816_) Serial.println(F(" - MCP_MT8816 hittad")); else Serial.println(F(" - MCP_MT8816 saknas"));
 
-  if (!(haveMain_ || haveSlic1_ || haveMT8816_)) {
+  if (!(haveMain_ || haveSlic1_ || haveSlic2_ || haveMT8816_ )) {
     Serial.println(F("Ingen MCP hittades, avbryter."));
     return false;
   }

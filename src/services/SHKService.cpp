@@ -11,6 +11,7 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
   lineState_.resize(maxPhysicalLines_);
   activeLines_ = settings_.activeLinesMask;
+  if (activeLines_ > maxPhysicalLines_) activeLines_ = maxPhysicalLines_;
 
   // Initial read of SHK states. Assumes stable at startup.
   uint32_t raw = readShkMask_();
@@ -81,13 +82,13 @@ bool SHKService::tick(uint32_t nowMs) {
     updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs);
     updatePulseDetector_(static_cast<int>(lineIndex), rawHigh, nowMs);
 
-    const auto& s = lineState_[i];
+    const auto& s = lineState_[lineIndex];
     bool hookUnstable =
       ((settings_.hookStableConsec > 0 && s.hookCandConsec < settings_.hookStableConsec) ||
        ((nowMs - s.hookCandSince) < settings_.hookStableMs));
     bool pdActive = (s.pdState != PerLine::PDState::Idle);
 
-    if (hookUnstable || pdActive) nextActiveMask |= (1u << i);
+    if (hookUnstable || pdActive) nextActiveMask |= (1u << lineIndex);
   }
 
   activeMask_ = nextActiveMask;

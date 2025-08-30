@@ -15,17 +15,27 @@ void App::begin() {
 
     Serial.begin(115200);
     Serial.println("App starting...");
-    i2cScan(Wire, 9, 10, 100000);
+    i2cScan(Wire, i2c::SDA_PIN, i2c::SCL_PIN, 100000);
     Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
     mcpDriver_.begin();
     lineManager_.begin();
 }
 
 void App::loop() {
-    while (true) {
-    IntResult r = mcpDriver_.handleSlic1Interrupt(); // läser INTCAP -> kvitterar
+  // Dränera max N events per varv för rättvisa
+  for (int i = 0; i < 16; ++i) {
+    IntResult r = mcpDriver_.handleSlic1Interrupt();
     if (!r.hasEvent) break;
-    }
+    // ...hantera event...
+    yield();          // eller delay(0); ger tid till andra tasks
+  }
+
+  // Hantera även andra källor
+  for (int i = 0; i < 16; ++i) {
+    auto r2 = mcpDriver_.handleSlic2Interrupt();
+    if (!r2.hasEvent) break;
+    yield();
+  }
 }
 
 
