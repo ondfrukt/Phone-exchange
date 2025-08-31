@@ -28,8 +28,8 @@ void Settings::resetDefaults() {
   debounceMs            = 25;
 
   burstTickMs           = 2;
-  hookStableMs          = 10;
-  hookStableConsec      = 2;
+  hookStableMs          = 80;
+  hookStableConsec      = 5;
   pulseGlitchMs         = 2;
   pulseLowMaxMs         = 80;
   digitGapMinMs         = 180;
@@ -42,7 +42,11 @@ void Settings::resetDefaults() {
 
 bool Settings::load() {
   Preferences prefs;
-  if (!prefs.begin(kNamespace, /*ro*/true)) return false;
+  if (!prefs.begin(kNamespace, /*read only*/true)) {
+    Serial.println("No NVS namespace found");
+    return false;
+  }
+  
   uint16_t v = prefs.getUShort("ver", 0);
   bool ok = (v == kVersion);
   if (ok) {

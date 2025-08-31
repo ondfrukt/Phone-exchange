@@ -11,7 +11,8 @@ App::App()
 
 void App::begin() {
     auto& settings = Settings::instance();
-    settings.load();  // ladda sparade inställningar (om några)
+    settings.resetDefaults(); // sätt standardvärden. Används nu under utveckling
+    //settings.load();  // ladda sparade inställningar (om några) (ska användas i färdig produkt)
 
     Serial.begin(115200);
     Serial.println("App starting...");

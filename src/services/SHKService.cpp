@@ -198,7 +198,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 
   bool timeOk   = (nowMs - s.hookCandSince) >= settings_.hookStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
-  if (timeOk && consecOk) {
+  if (timeOk && consecOk && s.pdState == PerLine::PDState::Idle) {
     bool offHook = rawToOffHook_(s.hookCand);
     setStableHook_(idx, offHook);
   }
@@ -206,7 +206,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 
 void SHKService::setStableHook_(int lineIndex, bool offHook) {
   auto& line = lineManager_.getLine(lineIndex);
-
+  
   line.SHK = offHook; // 1 = off-hook
   line.previousHookStatus = line.currentHookStatus;
   line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
