@@ -27,7 +27,6 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
     line.SHK = offHook;
     line.previousHookStatus = line.currentHookStatus;
     line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
-    Serial.printf("SHKService: Line %d initial SHK=%d -> %s\n", (int)i, rawHigh, offHook ? "OffHook" : "OnHook");
   }
 }
 
@@ -103,49 +102,85 @@ bool SHKService::tick(uint32_t nowMs) {
 }
 
 // Read SHK pin states from MCP and return as bitmask
+// Läs SHK‑ingångar och returnera rå bitmask (1 = ingång hög)
 uint32_t SHKService::readShkMask_() const {
-  // 1) Samla distinkta adresser som faktiskt förekommer i tabellen
-  uint8_t addrs[2]  = {0}; // vi har max två SLIC
-  uint16_t gpio[2]  = {0};
-  bool have[2]      = {false,false};
+  uint32_t mask = 0;
+
+  // 1) Bygg en lista över SLIC‑adresser som behövs utifrån allowMask
+  uint8_t addrs[2] = {0};
+  uint16_t gpio[2] = {0};
+  bool have[2] = {false, false};
   int addrCount = 0;
 
-  auto findOrAdd = [&](uint8_t a)->int {
-    for (int i=0;i<addrCount;++i) if (addrs[i]==a) return i;
-    if (addrCount < 2) { addrs[addrCount]=a; return addrCount++; }
-    return -1;
+  auto findOrAdd = [&](uint8_t a) -> int {
+      for (int i = 0; i < addrCount; ++i) {
+          if (addrs[i] == a) return i;
+      }
+      if (addrCount < 2) {
+          addrs[addrCount] = a;
+          return addrCount++;
+      }
+      return -1;
   };
 
-  for (std::size_t i=0;i<maxPhysicalLines_; ++i) {
-    (void)findOrAdd(cfg::mcp::SHK_LINE_ADDR[i]);
+  // Samla bara adresser för linjer som är tillåtna (allowMask)
+  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
+      if ((settings_.allowMask & (1u << i)) != 0) {
+          (void)findOrAdd(cfg::mcp::SHK_LINE_ADDR[i]);
+      }
   }
 
-  // 2) Läs varje unik adress EN gång (16-bit GPIO)
-  for (int k=0; k<addrCount; ++k) {
-    uint16_t g = 0;
-    if (mcpDriver_.readGpioAB16(addrs[k], g)) {
-      have[k] = true;
-      gpio[k] = g;
-    } else {
-      have[k] = false; // bank saknas/offline
-    }
+  // 2) Läs varje unik SLIC‑adress om den faktiskt finns
+  for (int k = 0; k < addrCount; ++k) {
+      uint8_t a = addrs[k];
+      bool present = true;
+      // Koppla adresser till närvaroflaggor
+      if (a == cfg::mcp::MCP_SLIC1_ADDRESS && !settings_.mcpSlic1Present) {
+          present = false;
+      }
+      if (a == cfg::mcp::MCP_SLIC2_ADDRESS && !settings_.mcpSlic2Present) {
+          present = false;
+      }
+      if (!present) {
+          have[k] = false;       // hoppa över läsning om kretsen saknas
+          continue;
+      }
+      uint16_t g = 0;
+      if (mcpDriver_.readGpioAB16(a, g)) {
+          have[k] = true;
+          gpio[k] = g;
+      } else {
+          // om läsningen misslyckas betraktas banken som saknad
+          have[k] = false;
+      }
   }
-
-  // 3) Bygg mask per global linje
-  uint32_t mask = 0;
-  for (std::size_t i=0;i<maxPhysicalLines_; ++i) {
-    uint8_t addr = cfg::mcp::SHK_LINE_ADDR[i];
-    uint8_t pin  = cfg::mcp::SHK_PINS[i];
-
-    int bank = -1;
-    for (int k=0;k<addrCount;++k) if (addrs[k]==addr) { bank=k; break; }
-    if (bank<0 || !have[bank]) continue;       // MCP saknas → skippa linjen
-
-    bool val = ( (gpio[bank] >> pin) & 0x1 ) != 0;
-    if (val) mask |= (1u << i);
+  // 3) Bygg rå mask för varje tillåten linje
+  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
+      if ((settings_.allowMask & (1u << i)) == 0) {
+          continue;                       // linjen är inte tillåten
+      }
+      uint8_t addr = cfg::mcp::SHK_LINE_ADDR[i];
+      uint8_t pin  = cfg::mcp::SHK_PINS[i];
+      // hitta index för aktuell adress i addrs[]
+      int bank = -1;
+      for (int k = 0; k < addrCount; ++k) {
+          if (addrs[k] == addr) {
+              bank = k;
+              break;
+          }
+      }
+      // hoppa över linjen om banken saknas/offline
+      if (bank < 0 || !have[bank]) {
+          continue;
+      }
+      bool val = ((gpio[bank] >> pin) & 0x1U) != 0U;   // läs bit från 16‑bitars GPIO
+      if (val) {
+          mask |= (1u << i);  // sätt bit i rå mask om nivån är hög
+      }
   }
   return mask;
 }
+
 
 // ---------------- Hook-filter ----------------
 // Updates hook filter state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'
@@ -175,7 +210,7 @@ void SHKService::setStableHook_(int lineIndex, bool offHook) {
   line.SHK = offHook; // 1 = off-hook
   line.previousHookStatus = line.currentHookStatus;
   line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
-  Serial.printf("SHKService: Line %d stable SHK=%d -> %s\n", (int)lineIndex, offHook ? 1 : 0, offHook ? "OffHook" : "OnHook");
+  Serial.printf("SHKService: Line %d stable SHK=%d -> %s\n", (int)lineIndex, line.SHK, offHook ? "OffHook" : "OnHook");
 
   // Om vi gick till OnHook -> nollställ pulsdelen
   if (!offHook) {

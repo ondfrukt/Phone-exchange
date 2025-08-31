@@ -33,6 +33,8 @@ public:
   uint32_t globalPulseTimeoutMs;  // Global timeout for pulse dialing
   bool highMeansOffHook;          // True if high signal means off-hook
 
+  uint8_t allowMask;
+
   // ---- MCP statuses (Are not saved into NVS, just for runtime use) ----
   bool mcpSlic1Present = false;
   bool mcpSlic2Present = false;

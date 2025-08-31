@@ -231,28 +231,12 @@ IntResult MCPDriver::handleMainInterrupt()   {
 IntResult MCPDriver::handleSlic1Interrupt()  {
   if (!haveSlic1_) return {};
   IntResult r = handleInterrupt_(slic1IntFlag_,  mcpSlic1_,  mcp::MCP_SLIC1_ADDRESS);
-  if (r.hasEvent) {
-    Serial.print("SHK event: line=");
-    Serial.print(r.line);
-    Serial.print(" pin=");
-    Serial.print(r.pin);
-    Serial.print(" level=");
-    Serial.println(r.level ? "HIGH" : "LOW");
-  }
   return r;
 }
 
 IntResult MCPDriver::handleSlic2Interrupt()  {
   if (!haveSlic2_) return {};
   IntResult r = handleInterrupt_(slic2IntFlag_,  mcpSlic2_,  mcp::MCP_SLIC2_ADDRESS);
-  if (r.hasEvent) {
-    Serial.print("SHK event: line=");
-    Serial.print(r.line);
-    Serial.print(" pin=");
-    Serial.print(r.pin);
-    Serial.print(" level=");
-    Serial.println(r.level ? "HIGH" : "LOW");
-  }
   return r;
 }
 IntResult MCPDriver::handleMT8816Interrupt() {

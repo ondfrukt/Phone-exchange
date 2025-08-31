@@ -8,7 +8,6 @@ Settings::Settings() {
 void Settings::adjustActiveLines() {
   // Justera activeLinesMask så den tar hänsyn till fysiska MCP-anslutningar
   uint8_t userMask = activeLinesMask;
-  uint8_t allowMask;
   if (mcpSlic1Present && !mcpSlic2Present) {
     // Bara SLIC1 finns: tillåt endast linjer 0–3
     allowMask = 0b00001111;
