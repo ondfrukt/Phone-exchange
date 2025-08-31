@@ -35,13 +35,12 @@ private:
     uint32_t lowStartMs  = 0;    // start på låg-del
     uint32_t lastEdgeMs  = 0;    // senaste godkända stigande kant
     uint8_t  pulseCountWork = 0; // pulser i pågående siffra
+    uint32_t blockUntilMs = 0;
   };
 
   // Hjälp
-  static inline char mapPulseCountToDigit(uint8_t count) {
-    uint8_t p = count % 10;
-    return (p == 0) ? '0' : static_cast<char>('0' + p);
-  }
+  char mapPulseToDigit_(uint8_t count) const;
+
   inline bool rawToOffHook_(bool rawHigh) const {
     // SHK=1 => OffHook om settings_.highMeansOffHook == true
     return settings_.highMeansOffHook ? rawHigh : !rawHigh;
@@ -52,15 +51,17 @@ private:
 
   // Logik
   void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs);
-  void setStableHook_(int idx, bool offHook);
+  void setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs);
 
   void updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs);
   bool pulseModeAllowed_(const LineHandler& line) const;
 
   void pulseFalling_(int idx, uint32_t nowMs);
   void pulseRising_(int idx, uint32_t nowMs);
-  void emitDigitAndReset_(int idx);
+  void emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs);
   void resetPulseState_(int idx);
+
+  void resyncFast_(int idx, bool rawHigh, uint32_t nowMs);
 
 private:
   LineManager& lineManager_;
@@ -73,6 +74,6 @@ private:
   uint32_t activeMask_ = 0;
   bool     burstActive_     = false;
   uint32_t burstNextTickAtMs_ = 0;
-  std::size_t maxPhysicalLines_ = 4;
+  std::size_t maxPhysicalLines_ = 8;
 
 };

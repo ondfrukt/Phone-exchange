@@ -20,9 +20,11 @@ public:
   void save() const;      // Saves current settings to NVS
 
   // ---- Publika fält ----
-  uint8_t activeLinesMask;    // Bitmask for active lines (1-4)
-  uint16_t debounceMs;      // Debounce time for line state changes
-  uint8_t debugLevel;         // 0=ingen, 1=lite, 2=mycket
+  uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
+  uint16_t debounceMs;            // Debounce time for line state changes
+  uint8_t debugSHKLevel;          // 0=ingen, 1=lite, 2=mycket
+  uint8_t debugLmLevel;           // 0=ingen, 1=lite, 2=mycket
+  uint8_t pulseAdjustment;         // Pulsjustering (1 ger att 1 puls = 0, 2 pulser = 1 osv)
 
   // ---- Settings (justera efter din settings-klass/konstanter) ----
   uint32_t burstTickMs;           // Time for a burst tick

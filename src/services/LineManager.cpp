@@ -1,8 +1,9 @@
 #include "LineManager.h"
 #include <Arduino.h>
-#include "settings/settings.h"   // <-- byt från settings_global.h
+#include <vector>
 
-LineManager::LineManager() {
+LineManager::LineManager(Settings& settings)
+:settings_(settings){
   lines.reserve(8);
 
   auto& s = Settings::instance();   // singleton
@@ -14,6 +15,9 @@ LineManager::LineManager() {
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
+
+  lineChangeFlag = 0; // Initiera flaggan
+
 }
 
 void LineManager::begin() {
@@ -39,4 +43,32 @@ LineHandler& LineManager::getLine(int index) {
     return lines[0];
   }
   return lines[static_cast<size_t>(index)];
+}
+
+void LineManager::setStatus(int index, LineStatus newStatus) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setStatus - ogiltigt index: ");
+    return;
+  }
+
+  lines[index].previousLineStatus = lines[index].currentLineStatus;
+  lines[index].currentLineStatus = newStatus;
+  lineChangeFlag |= (1 << index); // Sätt motsvarande bit i flaggan
+
+  if (settings_.debugLmLevel >= 1) {
+    Serial.print("LineManager: Line ");
+    Serial.print(index);
+    Serial.print(" status changed to ");
+    Serial.println(model::toString(newStatus));
+  }
+
+}
+
+void LineManager::clearChangeFlag(int index) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::clearChangeFlag - ogiltigt index: ");
+    Serial.println(index);
+    return;
+  }
+  lineChangeFlag &= ~(1 << index); // Rensa motsvarande bit i flaggan
 }

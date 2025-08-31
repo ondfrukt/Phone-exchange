@@ -4,7 +4,7 @@ using namespace cfg;
 
 App::App()
     : mcpDriver_(),
-      lineManager_(),
+      lineManager_(Settings::instance()),
       SHKService_(lineManager_, mcpDriver_, Settings::instance())
 {
 }

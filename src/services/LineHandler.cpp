@@ -18,7 +18,6 @@ LineHandler::LineHandler(int line) {
     lastDebounceTime = millis();
     lastDebounceValue = true;
     gap = 0;
-    pulsing = false;
     pulsCount = 0;
     dialedDigits = "";
     edge = millis();
@@ -72,7 +71,6 @@ void LineHandler::resetDialedDigits() {
 // Reset variables when idel is set as new status
 void LineHandler::lineIdle() {
   resetDialedDigits();
-  pulsing = false;
   pulsCount = 0;
   dialedDigits = "";
   edge = 0; 

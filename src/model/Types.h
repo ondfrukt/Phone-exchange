@@ -23,8 +23,8 @@ namespace model {
 
   // Enum representing all possible statuses of the hook
   enum class HookStatus : uint8_t {
-    Off,            // Hook is off (off-hook)
-    On,             // Hook is on (on-hook)
+    On,            // Hook is off (off-hook)
+    Off,             // Hook is on (on-hook)
     Disconnected    // Hook is disconnected
   };
 
@@ -39,20 +39,20 @@ namespace model {
   // Function to convert line status enum to string
   inline const char* toString(LineStatus st) {
     switch (st) {
-      case LineStatus::Idle:          return "line_idle";
-      case LineStatus::Ready:         return "line_ready";
-      case LineStatus::PulseDialing:  return "line_pulse_dialing";
-      case LineStatus::ToneDialing:   return "line_tone_dialing";
-      case LineStatus::Busy:          return "line_busy";
-      case LineStatus::Fail:          return "line_fail";
-      case LineStatus::Ringing:       return "line_ringing";
-      case LineStatus::Connected:     return "line_connected";
-      case LineStatus::Disconnected:  return "line_disconnected";
-      case LineStatus::Timeout:       return "line_timeout";
-      case LineStatus::Abandoned:     return "line_abandoned";
-      case LineStatus::Incoming:      return "line_incoming";
-      case LineStatus::Operator:      return "line_operator";
-      case LineStatus::SystemConfig:  return "system_config";
+      case LineStatus::Idle:          return "Idle";
+      case LineStatus::Ready:         return "Ready";
+      case LineStatus::PulseDialing:  return "Pulse_dialing";
+      case LineStatus::ToneDialing:   return "Tone_dialing";
+      case LineStatus::Busy:          return "Busy";
+      case LineStatus::Fail:          return "Fail";
+      case LineStatus::Ringing:       return "Ringing";
+      case LineStatus::Connected:     return "Connected";
+      case LineStatus::Disconnected:  return "Disconnected";
+      case LineStatus::Timeout:       return "Timeout";
+      case LineStatus::Abandoned:     return "Abandoned";
+      case LineStatus::Incoming:      return "Incoming";
+      case LineStatus::Operator:      return "Operator";
+      case LineStatus::SystemConfig:  return "Config";
       default:                        return "unknown";
       }
   }

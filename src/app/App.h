@@ -2,7 +2,7 @@
 #include "config.h"
 #include <Wire.h>
 #include "drivers/MCPDriver.h"
-#include "LineHandler.h"
+#include "services/LineHandler.h"
 #include "services/LineManager.h"
 #include "services/SHKService.h"
 #include "drivers/MCPDriver.h"

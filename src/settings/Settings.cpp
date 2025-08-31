@@ -26,14 +26,17 @@ void Settings::resetDefaults() {
   // Spara bara *inställningar*, inte körtidsstatus
   activeLinesMask       = 0x80;
   //debounceMs            = 25;
-  debugLevel            = 2;
+  debugSHKLevel         = 0;
+  debugLmLevel          = 1;
+
+  pulseAdjustment       = 1;
 
   burstTickMs           = 2;
-  hookStableMs          = 80;
-  hookStableConsec      = 5;
+  hookStableMs          = 50;
+  hookStableConsec      = 2;
   pulseGlitchMs         = 2;
-  pulseLowMaxMs         = 80;
-  digitGapMinMs         = 180;
+  pulseLowMaxMs         = 150;
+  digitGapMinMs         = 600;
   globalPulseTimeoutMs  = 500;
   highMeansOffHook      = true;
 
@@ -54,7 +57,7 @@ bool Settings::load() {
   if (ok) {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
     debounceMs            = prefs.getUShort("debounceMs", debounceMs);
-    debugLevel            = prefs.getUChar ("debugLevel", debugLevel);
+    debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel);
 
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
@@ -77,6 +80,7 @@ void Settings::save() const {
 
   prefs.putUChar ("activeMask", activeLinesMask);
   prefs.putUShort("debounceMs", debounceMs);
+  prefs.putUChar ("debugSHKLevel", debugSHKLevel);
 
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);

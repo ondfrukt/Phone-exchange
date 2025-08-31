@@ -29,9 +29,7 @@ public:
     // Pulsing variables
     unsigned gap;                       // Time from last edge
     unsigned long edge;                 // Timestamp for the last edge
-    bool pulsing;                       // Flag to indicate the low part of the pulse
     int pulsCount;                      // Count number of pulses
-    bool pulsingFlag;                   // Flag to indicate if pulsing are active
     String dialedDigits;                // char to store the dialed digits
 
     // Timer variables

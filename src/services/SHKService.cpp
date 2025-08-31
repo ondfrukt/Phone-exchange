@@ -42,7 +42,6 @@ void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs
   if (nowMs >= burstNextTickAtMs_) burstNextTickAtMs_ = nowMs;
 }
 
-
 // Chek if it's time for a tick (returns true if so)
 bool SHKService::needsTick(uint32_t nowMs) const {
   return burstActive_ && (nowMs >= burstNextTickAtMs_);
@@ -196,23 +195,35 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 
   bool timeOk   = (nowMs - s.hookCandSince) >= settings_.hookStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
-  if (timeOk && consecOk && s.pdState == PerLine::PDState::Idle) {
+  if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
-    setStableHook_(idx, offHook);
+
+    // Om vi går till OnHook: committa siffra om vi var mellan pulser
+    if (!offHook) { // OnHook
+      if (s.pdState == PerLine::PDState::BetweenPulses && s.pulseCountWork > 0) {
+        emitDigitAndReset_(idx, rawHigh, nowMs);
+      } else if (s.pdState == PerLine::PDState::InPulse) {
+        // Avbruten puls på lägg-på → kasta den
+        resetPulseState_(idx);
+      }
+    }
+    setStableHook_(idx, offHook, rawHigh, nowMs);
   }
 }
 
-void SHKService::setStableHook_(int lineIndex, bool offHook) {
-  auto& line = lineManager_.getLine(lineIndex);
+void SHKService::setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs) {
+  auto& line = lineManager_.getLine(index);
 
-  line.SHK = offHook; // 1 = off-hook
-  line.previousHookStatus = line.currentHookStatus;
-  line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
-  Serial.printf("SHKService: Line %d stable SHK = %d \n", (int)lineIndex, line.SHK);
+  model::HookStatus newHook = offHook ? model::HookStatus::Off : model::HookStatus::On;
+  if (newHook != line.currentHookStatus) {
+    line.currentHookStatus = newHook;
+    line.SHK = offHook;
+    lineManager_.setStatus(index, offHook ? model::LineStatus::Ready : model::LineStatus::Idle);
 
-  // Om vi gick till OnHook -> nollställ pulsdelen
-  if (!offHook) {
-    resetPulseState_(lineIndex);
+    // resync fast först NÄR hook-läget faktiskt har bytts:
+    resyncFast_(index, rawHigh, nowMs);
+
+    if (!offHook) resetPulseState_(index);  // gick till OnHook
   }
 }
 
@@ -224,75 +235,94 @@ bool SHKService::pulseModeAllowed_(const LineHandler& line) const {
 }
 
 void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
-  auto& s = lineState_[idx];
+  
+  if (settings_.debugSHKLevel >= 2){
+    Serial.printf("SHKService: Line %d updatePulseDetector_ rawHigh=%d\n", (int)idx, (int)rawHigh);
+  }
+
+  auto& s   = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
 
-  // Kör bara i Ready/PulseDialing och OffHook
-  if (!pulseModeAllowed_(line)) {
-    resetPulseState_(idx);
-    line.gap = line.edge ? (nowMs - line.edge) : 0;
+  if (nowMs < s.blockUntilMs) {
+    // hoppa helt över pulsdelen en liten stund efter förra siffran
     return;
   }
 
-  // Glitch-filter (små spikar ignoreras) baserat på settings_.pulseGlitchMs
+  // 1) Kör bara i rätt läge. Men: avbryt inte en pågående puls.
+  if (!pulseModeAllowed_(line)) {
+    if (s.pdState == PerLine::PDState::BetweenPulses && s.pulseCountWork > 0) {
+      emitDigitAndReset_(idx, rawHigh, nowMs);                  // committa ev. siffra vid t.ex. OnHook
+      return;
+    }
+    if (s.pdState != PerLine::PDState::InPulse) {
+      resetPulseState_(idx);
+      line.gap = line.edge ? (nowMs - line.edge) : 0;
+      return;
+    }
+    // Är vi mitt i en puls? Låt den få slutföras (ingen reset här).
+  }
+
+  // 2) Glitchfilter
   if (rawHigh != s.lastRaw) { s.lastRaw = rawHigh; s.rawChangeMs = nowMs; }
   bool accept = (nowMs - s.rawChangeMs) >= settings_.pulseGlitchMs;
 
+  // 3) Kantdetektering (OBS: rätt ordning och INTE beroende av debug)
   if (accept && (rawHigh != s.fastLevel)) {
     s.fastLevel = rawHigh;
 
     if (!s.fastLevel) {
-      // Hög -> Låg : start puls
-      if(settings_.debugLevel == 2) {
-      Serial.printf("SHKService: Line %d pulse falling", (int)idx);
+      // High -> Low = start av puls
       pulseFalling_(idx, nowMs);
-      }
     } else {
-      // Låg -> Hög : slut puls
-      if(settings_.debugLevel == 2) {
-      Serial.printf("SHKService: Line %d pulse rising", (int)idx);
+      // Low -> High = slut av puls
       pulseRising_(idx, nowMs);
+    }
+  }   // <-- VIKTIG: stäng kant-blocket här!
 
-      }
-  }
-
-  // Siffra klar (digit-gap)
+  // 4) Digit-gap: körs varje tick (inte bara när kant sker)
   if (s.pdState == PerLine::PDState::BetweenPulses) {
     uint32_t sinceRise = nowMs - s.lastEdgeMs;
+    if (settings_.debugSHKLevel >= 2) {
+      Serial.printf("SHKService: L%d gap=%u ms (thr=%u)\n",
+                    idx, (unsigned)sinceRise, (unsigned)settings_.digitGapMinMs);
+    }
     if (sinceRise >= settings_.digitGapMinMs) {
-      emitDigitAndReset_(idx);
+      emitDigitAndReset_(idx, rawHigh, nowMs);
       return;
     }
   }
 
-  // Timeout-skydd för hängande sekvens
-  if (s.pdState != PerLine::PDState::Idle) {
-    uint32_t since = nowMs - s.lastEdgeMs;
+  // 5) Timeout: state-medveten
+  if (s.pdState == PerLine::PDState::InPulse) {
+    uint32_t since = nowMs - s.lowStartMs;     // hur länge "lågt" pågår
     if (since >= settings_.globalPulseTimeoutMs) {
-      resetPulseState_(idx);
+      resetPulseState_(idx);                   // avbruten/trasig puls
+      return;
+    }
+  } else if (s.pdState == PerLine::PDState::BetweenPulses) {
+    uint32_t since = nowMs - s.lastEdgeMs;     // hur länge sedan sist stigande kant
+    if (since >= settings_.globalPulseTimeoutMs) {
+      emitDigitAndReset_(idx, rawHigh, nowMs);                 // committa siffran ändå
       return;
     }
   }
 
-  // Uppdatera gap för diag
+  // 6) Diag
   line.gap = line.edge ? (nowMs - line.edge) : 0;
-  }
 }
 
 void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
-  auto& s = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
-
+  if (line.currentHookStatus != model::HookStatus::Off) {
+    return; // På OnHook ska inga pulser startas
+  }
+  auto& s = lineState_[idx];
   if (s.pdState == PerLine::PDState::Idle || s.pdState == PerLine::PDState::BetweenPulses) {
-    s.pdState = PerLine::PDState::InPulse;
+    s.pdState   = PerLine::PDState::InPulse;
     s.lowStartMs = nowMs;
-    if (settings_.debugLevel == 2) {
-    Serial.printf("SHKService: Line %d pulse falling", (int)idx);
-    }
-
-    line.pulsing = true;
-    line.pulsingFlag = true;
-    line.edge = nowMs;
+    s.lastEdgeMs = nowMs;
+    if (settings_.debugSHKLevel >= 2)
+      Serial.printf("SHKService: Line %d pulse falling \n", idx);
   }
 }
 
@@ -303,36 +333,46 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
   if (s.pdState == PerLine::PDState::InPulse) {
     uint32_t lowDur = nowMs - s.lowStartMs; // låg-bredd
     s.lastEdgeMs = nowMs;                   // stigande kant
-    if (settings_.debugLevel == 2) {
-      Serial.printf("SHKService: Line %d pulse low rising", (int)idx);
+    if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: Line %d pulse low duration %d ms\n", (int)idx, (int)lowDur);
     }
 
     // Validera puls-lågtid: min = settings_.debounceMs, max = settings_.pulseLowMaxMs
     if (lowDur >= settings_.debounceMs && lowDur <= settings_.pulseLowMaxMs) {
-      if (s.pulseCountWork < 200) s.pulseCountWork++;
-      line.pulsCount = s.pulseCountWork;    // synligt för diagnos
+      
+      if (s.pulseCountWork == 0 &&
+          line.currentHookStatus == model::HookStatus::Off &&
+          line.currentLineStatus == model::LineStatus::Ready) {
+        lineManager_.setStatus(idx, model::LineStatus::PulseDialing);
+      }
+      s.pulseCountWork += 1;
+      s.pdState     = PerLine::PDState::BetweenPulses;
+      s.lastEdgeMs  = nowMs;           // starta digit-gap-mätning
+
+    if (settings_.debugSHKLevel >= 1) {
+      Serial.printf("SHKService: Line %d pulsCountWork %d \n", (int)idx, (int)s.pulseCountWork);
+    }
+
     } else {
       resetPulseState_(idx);
       return;
     }
-
-    s.pdState = PerLine::PDState::BetweenPulses;
-    line.pulsing = false;                   // lågdel avslutad
-    line.edge = nowMs;
   }
 }
 
-void SHKService::emitDigitAndReset_(int idx) {
+void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
   auto& s = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
 
   if (s.pulseCountWork > 0) {
-    char d = mapPulseCountToDigit(s.pulseCountWork); // 10→'0'
+    char d = mapPulseToDigit_(s.pulseCountWork); // 10→'0'
     line.dialedDigits += d; // lägg direkt i LineHandler
     Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
+    Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
   }
   resetPulseState_(idx);
+  s.blockUntilMs = nowMs + 80;
+  resyncFast_(idx, rawHigh, nowMs);
 }
 
 void SHKService::resetPulseState_(int idx) {
@@ -344,6 +384,24 @@ void SHKService::resetPulseState_(int idx) {
   s.lowStartMs = 0;
   s.lastEdgeMs = 0;
 
-  line.pulsing = false;
-  line.pulsingFlag = false;
+}
+
+void SHKService::resyncFast_(int idx, bool rawHigh, uint32_t nowMs) {
+  auto& s = lineState_[idx];
+  s.lastRaw     = rawHigh;
+  s.fastLevel   = rawHigh;
+  s.rawChangeMs = nowMs;
+}
+
+char SHKService::mapPulseToDigit_(uint8_t count) const {
+  uint8_t p = count % 10;               // p ∈ {0..9} där 0 betyder “10 pulser”
+  if (settings_.pulseAdjustment == 1) {
+    // Svensk typ: 0 = 1 puls, 1 = 2 pulser, ..., 9 = 10 pulser
+    // => digit = (p == 0) ? 9 : (p - 1)
+    uint8_t d = (p == 0) ? 9 : (p - 1);
+    return static_cast<char>('0' + d);
+  } else {
+    // Standard (decadic): 1..9 => 1..9, 10 => 0
+    return (p == 0) ? '0' : static_cast<char>('0' + p);
+  }
 }
