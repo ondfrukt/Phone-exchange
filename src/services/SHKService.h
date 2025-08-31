@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
+#include "config.h"
 #include "LineManager.h"
 #include "drivers/MCPDriver.h"
 #include "settings.h"

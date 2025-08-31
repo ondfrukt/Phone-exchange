@@ -1,7 +1,5 @@
 // src/telephony/SHKService.cpp
 #include "SHKService.h"
-#include "config.h"
-
 
 // Constructor. Takes references to LineManager, MCPDriver and Settings instances.
 SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings& settings)
@@ -206,11 +204,11 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 
 void SHKService::setStableHook_(int lineIndex, bool offHook) {
   auto& line = lineManager_.getLine(lineIndex);
-  
+
   line.SHK = offHook; // 1 = off-hook
   line.previousHookStatus = line.currentHookStatus;
   line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
-  Serial.printf("SHKService: Line %d stable SHK=%d -> %s\n", (int)lineIndex, line.SHK, offHook ? "OffHook" : "OnHook");
+  Serial.printf("SHKService: Line %d stable SHK = %d \n", (int)lineIndex, line.SHK);
 
   // Om vi gick till OnHook -> nollställ pulsdelen
   if (!offHook) {
@@ -245,11 +243,17 @@ void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
 
     if (!s.fastLevel) {
       // Hög -> Låg : start puls
+      if(settings_.debugLevel == 2) {
+      Serial.printf("SHKService: Line %d pulse falling", (int)idx);
       pulseFalling_(idx, nowMs);
+      }
     } else {
       // Låg -> Hög : slut puls
+      if(settings_.debugLevel == 2) {
+      Serial.printf("SHKService: Line %d pulse rising", (int)idx);
       pulseRising_(idx, nowMs);
-    }
+
+      }
   }
 
   // Siffra klar (digit-gap)
@@ -272,6 +276,7 @@ void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
 
   // Uppdatera gap för diag
   line.gap = line.edge ? (nowMs - line.edge) : 0;
+  }
 }
 
 void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
@@ -281,6 +286,9 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
   if (s.pdState == PerLine::PDState::Idle || s.pdState == PerLine::PDState::BetweenPulses) {
     s.pdState = PerLine::PDState::InPulse;
     s.lowStartMs = nowMs;
+    if (settings_.debugLevel == 2) {
+    Serial.printf("SHKService: Line %d pulse falling", (int)idx);
+    }
 
     line.pulsing = true;
     line.pulsingFlag = true;
@@ -294,7 +302,11 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
 
   if (s.pdState == PerLine::PDState::InPulse) {
     uint32_t lowDur = nowMs - s.lowStartMs; // låg-bredd
-    s.lastEdgeMs = nowMs;                    // stigande kant
+    s.lastEdgeMs = nowMs;                   // stigande kant
+    if (settings_.debugLevel == 2) {
+      Serial.printf("SHKService: Line %d pulse low rising", (int)idx);
+      Serial.printf("SHKService: Line %d pulse low duration %d ms\n", (int)idx, (int)lowDur);
+    }
 
     // Validera puls-lågtid: min = settings_.debounceMs, max = settings_.pulseLowMaxMs
     if (lowDur >= settings_.debounceMs && lowDur <= settings_.pulseLowMaxMs) {

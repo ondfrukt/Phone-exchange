@@ -25,7 +25,8 @@ void Settings::adjustActiveLines() {
 void Settings::resetDefaults() {
   // Spara bara *inställningar*, inte körtidsstatus
   activeLinesMask       = 0x80;
-  debounceMs            = 25;
+  //debounceMs            = 25;
+  debugLevel            = 2;
 
   burstTickMs           = 2;
   hookStableMs          = 80;
@@ -38,12 +39,13 @@ void Settings::resetDefaults() {
 
   // körtidsflaggor hålls false här; sätts av MCPDriver::begin()
   mcpSlic1Present = mcpSlic2Present = mcpMainPresent = mcpMt8816Present = false;
+  Serial.println("Settings reset to defaults");
 }
 
 bool Settings::load() {
   Preferences prefs;
   if (!prefs.begin(kNamespace, /*read only*/true)) {
-    Serial.println("No NVS namespace found");
+    Serial.println("No NVS namespace found for settings");
     return false;
   }
   
@@ -52,6 +54,7 @@ bool Settings::load() {
   if (ok) {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
     debounceMs            = prefs.getUShort("debounceMs", debounceMs);
+    debugLevel            = prefs.getUChar ("debugLevel", debugLevel);
 
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);

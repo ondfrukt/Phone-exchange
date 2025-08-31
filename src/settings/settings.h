@@ -21,7 +21,8 @@ public:
 
   // ---- Publika fält ----
   uint8_t activeLinesMask;    // Bitmask for active lines (1-4)
-  uint16_t debounceMs;    // Debounce time for line state changes
+  uint16_t debounceMs;      // Debounce time for line state changes
+  uint8_t debugLevel;         // 0=ingen, 1=lite, 2=mycket
 
   // ---- Settings (justera efter din settings-klass/konstanter) ----
   uint32_t burstTickMs;           // Time for a burst tick
