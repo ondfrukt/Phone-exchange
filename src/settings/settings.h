@@ -44,6 +44,11 @@ public:
   bool mcpMainPresent  = false;
   bool mcpMt8816Present= false;
 
+  // Timers
+
+  
+
+
   inline uint8_t activeLinesCount() const {
     uint8_t x = activeLinesMask, c = 0;
     while (x) { c += (x & 1u); x >>= 1; }

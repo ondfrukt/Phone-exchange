@@ -15,9 +15,7 @@ LineManager::LineManager(Settings& settings)
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
-
   lineChangeFlag = 0; // Initiera flaggan
-
 }
 
 void LineManager::begin() {
@@ -51,8 +49,14 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     return;
   }
 
+
+
+  // 
   lines[index].previousLineStatus = lines[index].currentLineStatus;
   lines[index].currentLineStatus = newStatus;
+  if (newStatus == LineStatus::Idle) {
+    lines[index].lineIdle();
+  }
   lineChangeFlag |= (1 << index); // Sätt motsvarande bit i flaggan
 
   if (settings_.debugLmLevel >= 1) {
