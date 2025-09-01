@@ -49,9 +49,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     return;
   }
 
-
-
-  // 
+  // Uppdate status and set change flag
   lines[index].previousLineStatus = lines[index].currentLineStatus;
   lines[index].currentLineStatus = newStatus;
   if (newStatus == LineStatus::Idle) {
@@ -65,7 +63,6 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     Serial.print(" status changed to ");
     Serial.println(model::toString(newStatus));
   }
-
 }
 
 void LineManager::clearChangeFlag(int index) {
@@ -74,5 +71,6 @@ void LineManager::clearChangeFlag(int index) {
     Serial.println(index);
     return;
   }
-  lineChangeFlag &= ~(1 << index); // Rensa motsvarande bit i flaggan
+  // Clear the change flag for the specified line
+  lineChangeFlag &= ~(1 << index); 
 }

@@ -5,6 +5,7 @@
 #include "services/LineHandler.h"
 #include "services/LineManager.h"
 #include "services/SHKService.h"
+#include "services/LineAction.h"
 #include "drivers/MCPDriver.h"
 #include "settings/settings.h"
 
@@ -22,6 +23,7 @@ private:
     MCPDriver mcpDriver_;
     LineManager lineManager_;
     SHKService SHKService_;
+    LineAction lineAction_;
 
 // Här skapar jag olika objekt av mina klasser som jag behöver i appen
 // LineManager lineManager_;

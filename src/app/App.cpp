@@ -3,17 +3,16 @@
 using namespace cfg;
 
 App::App()
-    : mcpDriver_(),
-      lineManager_(Settings::instance()),
-      SHKService_(lineManager_, mcpDriver_, Settings::instance())
-{
+  : mcpDriver_(),
+    lineManager_(Settings::instance()),
+    SHKService_(lineManager_, mcpDriver_, Settings::instance()),
+    lineAction_(lineManager_, Settings::instance()){
 }
 
 void App::begin() {
     auto& settings = Settings::instance();
     settings.resetDefaults(); // sätt standardvärden. Används nu under utveckling
     //settings.load();  // ladda sparade inställningar (om några) (ska användas i färdig produkt)
-
     Serial.begin(115200);
     Serial.println("App starting...");
     i2cScan(Wire, i2c::SDA_PIN, i2c::SCL_PIN, 100000);
