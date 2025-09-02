@@ -20,10 +20,15 @@ void App::begin() {
     mcpDriver_.begin();
     settings.adjustActiveLines();
     lineManager_.begin();
+    wifiClient_.begin("phoneexchange");
+    provisioning_.begin(wifiClient_, "phoneexchange"); 
 }
 
 void App::loop() {
     // Hantera SLIC‑1 avbrott
+
+    wifiClient_.loop();
+
 
     for (int i=0; i<16; ++i) {
         IntResult r = mcpDriver_.handleSlic1Interrupt();
