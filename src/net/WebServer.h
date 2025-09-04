@@ -2,12 +2,13 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
+#include "settings/settings.h"
 
 class LineManager;
 
 class WebServer {
 public:
-  WebServer(LineManager& lineManager, uint16_t port = 80);
+  WebServer(Settings& settings, LineManager& lineManager, uint16_t port = 80);
 
   bool begin();
   bool isReady() const { return serverStarted_ && fsMounted_; }
@@ -20,6 +21,7 @@ public:
 
 private:
   LineManager& lm_;
+  Settings& settings_;
   AsyncWebServer server_;
   AsyncEventSource events_{"/events"};
   bool fsMounted_ = false;

@@ -2,8 +2,8 @@
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
 
-WebServer::WebServer(LineManager& lineManager, uint16_t port)
-: lm_(lineManager), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, uint16_t port)
+: settings_ (settings), lm_(lineManager), server_(port) {}
 
 bool WebServer::begin() {
   setupFilesystem_();
