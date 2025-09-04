@@ -49,13 +49,16 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     return;
   }
 
-  // Uppdate status and set change flag
+  // Uppdating the status and changing previous status
   lines[index].previousLineStatus = lines[index].currentLineStatus;
   lines[index].currentLineStatus = newStatus;
   if (newStatus == LineStatus::Idle) {
     lines[index].lineIdle();
   }
-  lineChangeFlag |= (1 << index); // Sätt motsvarande bit i flaggan
+
+
+  lineChangeFlag |= (1 << index); // Set the change flag for the specified line
+  if (onStatusChanged_) onStatusChanged_(index, newStatus);  // 🔔 meddela observatörer
 
   if (settings_.debugLmLevel >= 1) {
     Serial.print("LineManager: Line ");
@@ -73,4 +76,9 @@ void LineManager::clearChangeFlag(int index) {
   }
   // Clear the change flag for the specified line
   lineChangeFlag &= ~(1 << index); 
+}
+
+
+void LineManager::setStatusChangedCallback(StatusChangedCb cb) {
+  onStatusChanged_ = std::move(cb);
 }

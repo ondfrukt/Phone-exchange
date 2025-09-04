@@ -1,17 +1,32 @@
-
-
-// Om jag vill i denna klass använda använda funktuoner ur klassen LineManager
-// så skapar jag en referens till den som skapats i App.h
-
 #pragma once
-class LineManager; // Forward declaration of LineManager class
+#include <Arduino.h>
+#include <ESPAsyncWebServer.h>
+#include <LittleFS.h>
+
+class LineManager;
 
 class WebServer {
-  public:
-    WebServer(LineManager& lineManager); // Constructor that takes a reference to LineManager
+public:
+  WebServer(LineManager& lineManager, uint16_t port = 80);
 
-    void start(); // Method to start the web server
-    void handleClient(); // Method to handle incoming client requests
+  bool begin();
+  bool isReady() const { return serverStarted_ && fsMounted_; }
+
+  // Anropas vid behov (vi kallar den från callbacken i LineManager)
+  void sendFullStatusSse();
+  void listFS();
+
+  void attachToLineManager();
+
 private:
-    LineManager& lineMgr_;  // referarar till LineManager-objektet i App.h
+  LineManager& lm_;
+  AsyncWebServer server_;
+  AsyncEventSource events_{"/events"};
+  bool fsMounted_ = false;
+  bool serverStarted_ = false;
+
+  void setupFilesystem_();
+  void setupRoutes_();
+  void attach(); // koppla till LineManager
+  String buildStatusJson_() const; // använder StatusSerializer
 };

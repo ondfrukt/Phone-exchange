@@ -10,6 +10,7 @@
 #include "settings/settings.h"
 #include "net/WifiClient.h"
 #include "net/Provisioning.h"
+#include "net/WebServer.h"
 
 // #include "drivers/ToneOut.h"
 // #include "net/WebServer.h"
@@ -28,6 +29,7 @@ private:
     LineAction lineAction_;
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
+    WebServer webServer_;
 
 // Här skapar jag olika objekt av mina klasser som jag behöver i appen
 // LineManager lineManager_;

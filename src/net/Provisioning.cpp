@@ -3,7 +3,7 @@ using namespace net;
 
 // Justera vid behov
 static const char* kPop         = "abcd1234";         // Proof of Possession (PIN)
-static const char* kServiceName = "PHONE EXCHANGE";   // Namn som syns i Espressifs app
+static const char* kServiceName = "PHONE_EXCHANGE";   // Namn som syns i Espressifs app
 static const char* kServiceKey  = nullptr;            // Används bara för SoftAP
 static const bool  kResetProv   = false;              // Rensa ev. gammal prov-data?
 
@@ -21,8 +21,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
 
   // Om WifiClient redan har creds -> starta INTE provisioning
   if (wifi_->hasCredentials()) {
-    Serial.printf("Provisioning: Saved SSID in NVS (via WifiClient). Skipping BLE. SSID=\"%s\"\n",
-                  "<hidden>");
+    Serial.printf("Provisioning: Saved SSID in NVS (via WifiClient). Skipping BLE");
     // WifiClient kopplar upp i sin begin()/loop() – vi gör inget här.
     return;
   }

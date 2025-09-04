@@ -6,7 +6,8 @@ App::App()
   : mcpDriver_(),
     lineManager_(Settings::instance()),
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
-    lineAction_(lineManager_, Settings::instance()){
+    lineAction_(lineManager_, Settings::instance()),
+    webServer_(lineManager_, 80){
 }
 
 void App::begin() {
@@ -18,10 +19,12 @@ void App::begin() {
     i2cScan(Wire, i2c::SDA_PIN, i2c::SCL_PIN, 100000);
     Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
     mcpDriver_.begin();
-    settings.adjustActiveLines();
+    settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
     lineManager_.begin();
     wifiClient_.begin("phoneexchange");
-    provisioning_.begin(wifiClient_, "phoneexchange"); 
+    provisioning_.begin(wifiClient_, "phoneexchange");
+    webServer_.begin();
+    webServer_.listFS();
 }
 
 void App::loop() {

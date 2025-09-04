@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PhoneExchange Linjestatus</title>
+  <style>
+    :root {
+      --bg: #0b0c10; --fg: #e5e7eb; --muted: #9ca3af;
+      --card: #111827; --border:#1f2937; --accent:#60a5fa;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu; }
+    .wrap { max-width: 820px; margin:40px auto; padding:0 16px; }
+    h1 { font-size:1.8rem; margin:0 0 16px; }
+    .card { background:linear-gradient(180deg,#0f172a 0%,#0b1220 100%); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:16px; box-shadow:0 6px 30px rgba(0,0,0,.25); }
+    .row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:baseline; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06); }
+    .row:last-child { border-bottom:none; }
+    .k { color:var(--muted); } .v { font-weight:700; letter-spacing:.3px; }
+    .status { margin-top:10px; color:var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>PhoneExchange • Linjestatus</h1>
+
+    <section class="card">
+      <div id="lines"></div>
+      <div id="status" class="status">Ansluter till liveflöde…</div>
+    </section>
+  </main>
+
+  <script>
+    // Renderar linjer från JSON‑array
+    function renderLines(lines) {
+      const container = document.getElementById('lines');
+      container.innerHTML = '';
+      lines.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `<span class="k">Linje ${l.id}</span><span class="v">${l.status}</span>`;
+        container.appendChild(row);
+      });
+    }
+
+    // Hämta initial status via REST
+    fetch('/api/status').then(r => r.json()).then(updateUI).catch(()=>{});
+
+    // Lyssna på SSE för realtidsuppdateringar
+    const es = new EventSource('/events');
+    es.onopen  = () => setStatus('Live: Ansluten');
+    es.onerror = () => setStatus('Live: Problem med anslutning!');
+    es.onmessage = ev => {
+      try { updateUI(JSON.parse(ev.data)); } catch(e) {}
+    };
+
+    function setStatus(t){ document.getElementById('status').textContent = t; }
+
+    function updateUI(d) {
+      if (d && Array.isArray(d.lines)) {
+        renderLines(d.lines);
+      }
+    }
+  </script>
+</body>
+</html>
