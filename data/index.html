@@ -170,14 +170,14 @@
 
     // Delta: { line, status }
     es.addEventListener('lineStatus', ev => {
-      try{
+      try {
         const d = JSON.parse(ev.data);
-        if (typeof d.line === 'number' && typeof d.status === 'string'){
-          const i = linesCache.findIndex(x => x.id === d.line);
-          if (i >= 0) linesCache[i].status = d.status;
-          else linesCache.push({ id:d.line, status:d.status });
-          upsertLine(d.line, d.status);
-        }
+        if (!('line' in d) || !('status' in d)) return; // skydd
+        if (typeof d.line !== 'number' || typeof d.status !== 'string') return;
+        const i = linesCache.findIndex(x => x.id === d.line);
+        if (i >= 0) linesCache[i].status = d.status;
+        else linesCache.push({ id:d.line, status:d.status });
+        upsertLine(d.line, d.status);
       } catch {}
     });
 

@@ -38,7 +38,7 @@ void WebServer::initSse_() {
   events_.onConnect([this](AsyncEventSourceClient* client){
     Serial.println("WebServer: SSE-klient ansluten 📡");
     // Skicka initial data till den nya klienten
-    client->send(buildStatusJson_().c_str(), "lineStatus", millis());
+    client->send(buildStatusJson_().c_str(), nullptr, millis()); 
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
   });
   server_.addHandler(&events_);
@@ -155,12 +155,12 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   //settings_.save();
 
   // Spegla in masken i LineManager direkt (så UI och logik följer med)
-  lm_.update();
+  lm_.syncLineActive(line);
 
   // Skicka ut ny mask till alla via SSE
   sendActiveMaskSse();
 
-  if (settings_.debugWSLevel <= 1) {
+  if (settings_.debugWSLevel >= 1) {
     Serial.printf("WebServer: ActiveMask: 0x%02X -> 0x%02X\n", before, settings_.activeLinesMask);
   }
 }
@@ -199,7 +199,7 @@ String WebServer::buildActiveJson_(uint8_t mask) {
 
 void WebServer::sendFullStatusSse() {
   const String json = buildStatusJson_();
-  events_.send(json.c_str(), "lineStatus", millis());
+  events_.send(json.c_str(), nullptr, millis());
 
   Serial.println(settings_.debugWSLevel);
   if (settings_.debugWSLevel >= 1) {

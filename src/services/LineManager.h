@@ -7,7 +7,7 @@ class LineManager {
 public:
   LineManager(Settings& settings);
   void begin();
-  void update();
+  void syncLineActive(size_t i);
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
   void setLineTimer(int index, unsigned int limit);

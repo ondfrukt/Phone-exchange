@@ -24,13 +24,10 @@ void LineManager::begin() {
   }
 }
 
-void LineManager::update() {
-  // Hämta ev. ändrad mask under körning och spegla in i lineActive
+void LineManager::syncLineActive(size_t i) {
   auto& settings_ = Settings::instance();
-  for (size_t i = 0; i < lines.size(); ++i) {
-    bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;  // eller settings_.activeLinesMask
-    lines[i].lineActive = isActive;
-  }
+  bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;
+  lines[i].lineActive = isActive;
 }
 
 LineHandler& LineManager::getLine(int index) {
