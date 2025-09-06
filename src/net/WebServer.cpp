@@ -92,7 +92,7 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
-    Serial.printf("[API] toggle line=%d\n", line);
+    Serial.printf("API: toggle line=%d\n", line);
     toggleLineActiveBit_(line);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
@@ -118,7 +118,7 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
-    Serial.printf("[API] set line=%d active=%d\n", line, active);
+    Serial.printf("API: set line=%d active=%d\n", line, active);
     setLineActiveBit_(line, active != 0);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });

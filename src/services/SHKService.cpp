@@ -7,9 +7,15 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
   
   // Reads active lines from settings, ensures at least one line is active
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
+  
+  activeLines_ = 0;
+  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
+    if ((settings_.activeLinesMask >> i) & 1u) {
+      activeLines_ = i + 1;
+    }
+  }
+  
   lineState_.resize(maxPhysicalLines_);
-  activeLines_ = settings_.activeLinesMask;
-  if (activeLines_ > maxPhysicalLines_) activeLines_ = maxPhysicalLines_;
 
   // Initial read of SHK states. Assumes stable at startup.
   uint32_t raw = readShkMask_();
@@ -54,8 +60,12 @@ bool SHKService::needsTick(uint32_t nowMs) const {
 // Otherwise, it schedules the next tick after settings_.burstTickMs
 bool SHKService::tick(uint32_t nowMs) {
 
-  activeLines_ = settings_.activeLinesMask;
-  if (activeLines_ > maxPhysicalLines_) activeLines_ = maxPhysicalLines_;
+  activeLines_ = 0;
+  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
+    if ((settings_.activeLinesMask >> i) & 1u) {
+      activeLines_ = i + 1;
+    }
+  }
 
   if (!burstActive_ || nowMs < burstNextTickAtMs_) return false;
 
