@@ -11,19 +11,24 @@ public:
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
   void setLineTimer(int index, unsigned int limit);
-  
+
+  using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
+  using ActiveLinesChangedCallback = std::function<void(uint8_t)>;
+
+  // Callback functions for webserver
+  void setStatusChangedCallback(StatusChangedCallback cb);
+  void setActiveLinesChangedCallback(ActiveLinesChangedCallback cb);
 
   LineHandler& getLine(int index);
 
   uint8_t lineChangeFlag;
   uint8_t activeLineTimers; // Bitmask för aktiva linjetimers
 
-  using StatusChangedCb = std::function<void(int /*lineIndex*/, model::LineStatus)>;
-  void setStatusChangedCallback(StatusChangedCb cb);
-
 private:
+  // The vector that holds all LineHandler instances
   std::vector<LineHandler> lines;
-  Settings& settings_;
 
-  StatusChangedCb onStatusChanged_{nullptr};
+  Settings& settings_;
+  StatusChangedCallback pushStatusChanged_{nullptr};
+
 };

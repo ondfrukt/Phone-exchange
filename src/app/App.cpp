@@ -11,20 +11,28 @@ App::App()
 }
 
 void App::begin() {
-    auto& settings = Settings::instance();
-    settings.resetDefaults(); // sätt standardvärden. Används nu under utveckling
-    //settings.load();  // ladda sparade inställningar (om några) (ska användas i färdig produkt)
     Serial.begin(115200);
     Serial.println("App starting...");
+
+    auto& settings = Settings::instance();
+
+    settings.resetDefaults(); // sätt standardvärden. Används nu under utveckling
+    //settings.load();  // ladda sparade inställningar (om några) (ska användas i färdig produkt)
+    
+
     i2cScan(Wire, i2c::SDA_PIN, i2c::SCL_PIN, 100000);
     Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
+
     mcpDriver_.begin();
     settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
+
     lineManager_.begin();
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
     webServer_.begin();
     webServer_.listFS();
+
+    Serial.println("App setup complete");
 }
 
 void App::loop() {

@@ -3,19 +3,39 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PhoneExchange Linjestatus</title>
+  <title>PhoneExchange • Linjestatus</title>
   <style>
-    :root { --bg:#0b0c10; --fg:#e5e7eb; --muted:#9ca3af; --card:#111827; --border:#1f2937; --accent:#60a5fa; }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu}
-    .wrap{max-width:820px;margin:40px auto;padding:0 16px}
-    h1{font-size:1.8rem;margin:0 0 16px}
-    .card{background:linear-gradient(180deg,#0f172a 0%,#0b1220 100%);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 6px 30px rgba(0,0,0,.25)}
-    .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
-    .row:last-child{border-bottom:none}
-    .k{color:var(--muted)}
-    .v{font-weight:700;letter-spacing:.3px}
-    .status{margin-top:10px;color:var(--muted);font-size:.9rem}
+    :root {
+      --bg:#0b0c10; --fg:#e5e7eb; --muted:#9ca3af;
+      --card:#111827; --border:#1f2937; --accent:#60a5fa;
+      --ok:#16a34a; --no:#ef4444;
+    }
+    *{ box-sizing:border-box }
+    html,body{ margin:0; padding:0; background:var(--bg); color:var(--fg);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu }
+    .wrap{ max-width:820px; margin:40px auto; padding:0 16px }
+    h1{ font-size:1.8rem; margin:0 0 16px }
+    .card{ background:linear-gradient(180deg,#0f172a 0%,#0b1220 100%);
+      border:1px solid var(--border); border-radius:16px; padding:16px;
+      margin-bottom:16px; box-shadow:0 6px 30px rgba(0,0,0,.25) }
+
+    /* tre kolumner: Namn | Status | Aktiv-knapp */
+    .row{ display:grid; grid-template-columns:1fr auto auto; gap:10px;
+      align-items:baseline; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06) }
+    .row:last-child{ border-bottom:none }
+    .k{ color:var(--muted) }
+    .v{ font-weight:700; letter-spacing:.3px }
+
+    .badge{ font-size:.8rem; padding:2px 10px; border-radius:999px;
+      border:1px solid var(--border); user-select:none }
+    .badge.ok{ border-color:rgba(22,163,74,.4); background:rgba(22,163,74,.15) }
+    .badge.no{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.12) }
+
+    /* bara knappen får pekfinger */
+    .badge.clickable{ cursor:pointer }
+    .badge.working{ opacity:.6; pointer-events:none }
+
+    .status{ margin-top:10px; color:var(--muted); font-size:.9rem }
   </style>
 </head>
 <body>
@@ -28,59 +48,148 @@
   </main>
 
   <script>
-    const $lines = document.getElementById('lines');
+    const $lines  = document.getElementById('lines');
     const $status = document.getElementById('status');
 
-    function setStatus(t){ $status.textContent = t; }
+    let activeMask = 0;                 // bitmask 0..255
+    let linesCache = [];                // [{id, status}]
 
-    // Bygg/uppdatera EN rad i DOM:en
-    function upsertLine(lineId, status) {
+    const isActive = (id) => ((activeMask >> id) & 1) === 1;
+    const setStatus = (t) => { $status.textContent = t; };
+
+    // Bygg/uppdatera EN rad, inkl. badge, IDs och handlers
+    function upsertLine(lineId, status){
       let row = document.getElementById('line-'+lineId);
-      if (!row) {
+      if (!row){
         row = document.createElement('div');
         row.className = 'row';
         row.id = 'line-' + lineId;
-        row.innerHTML = `<span class="k">Linje ${lineId}</span><span class="v" id="line-${lineId}-status"></span>`;
+        row.innerHTML = `
+          <span class="k">Linje ${lineId}</span>
+          <span class="v" id="line-${lineId}-status"></span>
+          <span class="badge" id="line-${lineId}-active"
+                role="button" tabindex="0"
+                title="Klicka för att Aktivera/Inaktivera"></span>
+        `;
         $lines.appendChild(row);
+
+        // koppla klick endast på badgen
+        const aCell = row.querySelector(`#line-${lineId}-active`);
+        aCell.classList.add('clickable');
+        aCell.addEventListener('click', () => toggleLineActive(lineId, aCell));
+        aCell.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault(); toggleLineActive(lineId, aCell);
+          }
+        });
       }
-      const cell = document.getElementById(`line-${lineId}-status`);
-      if (cell) cell.textContent = status;
+
+      // statuscell
+      const sCell = document.getElementById(`line-${lineId}-status`);
+      if (sCell) sCell.textContent = status;
+
+      // badge enligt mask
+      updateActiveCell(lineId);
     }
 
-    // Rendera HEL lista
-    function renderLines(lines) {
+    // Uppdatera EN aktiv-badge utifrån activeMask
+    function updateActiveCell(lineId){
+      const aCell = document.getElementById(`line-${lineId}-active`);
+      if (!aCell) return;
+      const a = isActive(lineId);
+      aCell.textContent = a ? 'Aktiv' : 'Inaktiv';
+      aCell.classList.toggle('ok', a);
+      aCell.classList.toggle('no', !a);
+    }
+
+    // Rendera alla (rensar och bygger via upsertLine)
+    function renderAll(lines){
+      linesCache = lines.map(l => ({ id:l.id, status:l.status }));
       $lines.innerHTML = '';
-      lines.forEach(l => upsertLine(l.id, l.status));
+      for (const l of linesCache) upsertLine(l.id, l.status);
     }
 
-    // Hämta initial status (full lista)
+    // Toggle via API
+    async function toggleLineActive(lineId, badgeEl){
+      try{
+        badgeEl.classList.add('working');
+        const body = new URLSearchParams({ line:String(lineId) }).toString();
+        const r = await fetch('/api/active/toggle', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          body
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json(); // {mask, active:[...]}
+        if (typeof d.mask === 'number'){
+          activeMask = d.mask|0;
+          linesCache.forEach(l => updateActiveCell(l.id));
+        }
+        // SSE "activeMask" uppdaterar dessutom andra klienter
+      } catch(e){
+        console.warn('toggleLineActive error', e);
+        setStatus('Kunde inte uppdatera masken (se konsol).');
+      } finally {
+        badgeEl.classList.remove('working');
+      }
+    }
+
+    // ---- Initial inläsning ----
+    // 1) Full statuslista
     fetch('/api/status')
       .then(r => r.json())
-      .then(d => { if (d && Array.isArray(d.lines)) renderLines(d.lines); })
+      .then(d => { if (d && Array.isArray(d.lines)) renderAll(d.lines); })
       .catch(()=>{});
 
-    // SSE: lyssna både på default (full dump) och på namngivet "lineStatus" (delta)
-    const es = new EventSource('/events');
+    // 2) Aktuell activeMask
+    fetch('/api/active')
+      .then(r => r.json())
+      .then(d => {
+        if (d && typeof d.mask === 'number') {
+          activeMask = d.mask|0;
+          linesCache.forEach(l => updateActiveCell(l.id));
+        }
+      })
+      .catch(()=>{});
 
+    // ---- SSE (Server-Sent Events) ----
+    const es = new EventSource('/events');
     es.onopen  = () => setStatus('Live: Ansluten');
     es.onerror = () => setStatus('Live: Problem med anslutning!');
 
-    // Serverns sendFullStatusSse() skickar default-event (null) med HEL status
+    // Full snapshot: { lines:[...] }
     es.onmessage = ev => {
       try {
         const d = JSON.parse(ev.data);
-        if (d && Array.isArray(d.lines)) renderLines(d.lines);
-      } catch(e) {}
+        if (d && Array.isArray(d.lines)) {
+          linesCache = d.lines.map(l => ({ id:l.id, status:l.status }));
+          for (const l of linesCache) upsertLine(l.id, l.status);
+        }
+      } catch {}
     };
 
-    // Serverns attach() skickar "lineStatus" vid EN ändring
+    // Delta: { line, status }
     es.addEventListener('lineStatus', ev => {
-      try {
-        const d = JSON.parse(ev.data); // { line: <id>, status: "<text>" }
-        if (typeof d.line === 'number' && typeof d.status === 'string') {
+      try{
+        const d = JSON.parse(ev.data);
+        if (typeof d.line === 'number' && typeof d.status === 'string'){
+          const i = linesCache.findIndex(x => x.id === d.line);
+          if (i >= 0) linesCache[i].status = d.status;
+          else linesCache.push({ id:d.line, status:d.status });
           upsertLine(d.line, d.status);
         }
-      } catch(e) {}
+      } catch {}
+    });
+
+    // Delta: { mask }
+    es.addEventListener('activeMask', ev => {
+      try{
+        const d = JSON.parse(ev.data);
+        if (typeof d.mask === 'number'){
+          activeMask = d.mask|0;
+          linesCache.forEach(l => updateActiveCell(l.id));
+        }
+      } catch {}
     });
   </script>
 </body>

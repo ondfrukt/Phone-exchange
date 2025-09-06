@@ -26,9 +26,11 @@ void Settings::resetDefaults() {
   // Spara bara *inställningar*, inte körtidsstatus
   activeLinesMask       = 0x80;
   //debounceMs            = 25;
+
+  // -- Debug levels ---
   debugSHKLevel         = 0;
-  debugLmLevel          = 1;
-  debugWSLevel          = 1;
+  debugLmLevel          = 0;
+  debugWSLevel          = 0;
 
   pulseAdjustment       = 1;
 
@@ -62,12 +64,12 @@ bool Settings::load() {
 
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
-    hookStableConsec      = prefs.getUChar("hookStableConsec",     hookStableConsec);
+    hookStableConsec      = prefs.getUChar("hookStbCnt",     hookStableConsec);
     pulseGlitchMs         = prefs.getUInt ("pulseGlitchMs",        pulseGlitchMs);
     pulseLowMaxMs         = prefs.getUInt ("pulseLowMaxMs",        pulseLowMaxMs);
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
-    highMeansOffHook      = prefs.getBool ("highMeansOffHook",     highMeansOffHook);
+    highMeansOffHook      = prefs.getBool ("hiOffHook",     highMeansOffHook);
   }
   prefs.end();
   if (!ok) save();
@@ -85,12 +87,12 @@ void Settings::save() const {
 
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);
-  prefs.putUChar("hookStableConsec",     hookStableConsec);
+  prefs.putUChar("hookStbCnt",     hookStableConsec);
   prefs.putUInt ("pulseGlitchMs",        pulseGlitchMs);
   prefs.putUInt ("pulseLowMaxMs",        pulseLowMaxMs);
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
-  prefs.putBool ("highMeansOffHook",     highMeansOffHook);
+  prefs.putBool ("hiOffHook",     highMeansOffHook);
 
   prefs.end();
 }

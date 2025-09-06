@@ -26,9 +26,9 @@ void LineManager::begin() {
 
 void LineManager::update() {
   // Hämta ev. ändrad mask under körning och spegla in i lineActive
-  auto& s = Settings::instance();
+  auto& settings_ = Settings::instance();
   for (size_t i = 0; i < lines.size(); ++i) {
-    bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;  // eller s.activeLinesMask
+    bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;  // eller settings_.activeLinesMask
     lines[i].lineActive = isActive;
   }
 }
@@ -63,9 +63,9 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     Serial.println("LineManager: Callback function called");
   }
 
-  if (onStatusChanged_) onStatusChanged_(index, newStatus);  // 🔔 meddela observatörer
+  if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // 🔔 meddela observatörer
 
-  if (settings_.debugLmLevel >= 1) {
+  if (settings_.debugLmLevel >= 0) {
     Serial.print("LineManager: Line ");
     Serial.print(index);
     Serial.print(" status changed to ");
@@ -83,10 +83,6 @@ void LineManager::clearChangeFlag(int index) {
   lineChangeFlag &= ~(1 << index); 
 }
 
-
-void LineManager::setStatusChangedCallback(StatusChangedCb cb) {
-  if (settings_.debugLmLevel <= 1 ){
-    Serial.println("LineManager: Callback Set");
-  }
-  onStatusChanged_ = std::move(cb);
+void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
+  pushStatusChanged_ = std::move(cb);
 }

@@ -9,24 +9,37 @@ class LineManager;
 class WebServer {
 public:
   WebServer(Settings& settings, LineManager& lineManager, uint16_t port = 80);
-
+  
   bool begin();
+  void listFS();
+
   bool isReady() const { return serverStarted_ && fsMounted_; }
 
-  // Anropas vid behov (vi kallar den från callbacken i LineManager)
+  // Publika hjälpmetoder om du vill kunna pusha manuellt
   void sendFullStatusSse();
-  void listFS();
+  void sendActiveMaskSse();
 
 private:
   LineManager& lm_;
   Settings& settings_;
   AsyncWebServer server_;
   AsyncEventSource events_{"/events"};
-  bool fsMounted_ = false;
-  bool serverStarted_ = false;
 
+  bool serverStarted_ = false;
+  bool fsMounted_ = false;
+  
   void setupFilesystem_();
-  void setupRoutes_();
-  void attach(); // koppla till LineManager
-  String buildStatusJson_() const; // använder StatusSerializer
+  void initSse_();
+  void setupCallbacks_();
+  void setupLineManagerCallback_();
+  void setupApiRoutes_();
+  void setLineActiveBit_(int line, bool makeActive);
+
+  void toggleLineActiveBit_(int line);
+
+  void pushInitialSnapshot_();
+
+  // Help functions
+  String buildStatusJson_() const;
+  String buildActiveJson_(uint8_t mask);
 };
