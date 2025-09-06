@@ -13,14 +13,15 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
 
   // Initial read of SHK states. Assumes stable at startup.
   uint32_t raw = readShkMask_();
-  for (std::size_t i=0;i<activeLines_;++i) {
+  for (std::size_t i=0;i<7;++i) {
+    auto& line = lineManager_.getLine((int)i);
+    if(!line.lineActive) continue;
     bool rawHigh = (raw >> i) & 0x1;
     auto& s = lineState_[i];
     s.hookCand  = rawHigh;
     s.fastLevel = rawHigh;
     s.lastRaw   = rawHigh;
 
-    auto& line = lineManager_.getLine((int)i);
     bool offHook = rawToOffHook_(rawHigh);
     line.SHK = offHook;
     line.previousHookStatus = line.currentHookStatus;
@@ -32,7 +33,7 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
 void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs) {
   std::size_t a = settings_.activeLinesMask;
   if (a > maxPhysicalLines_) a = maxPhysicalLines_;
-  uint32_t allowMask = (a==32) ? 0xFFFFFFFFu : ((1u << a) - 1u);
+  uint32_t allowMask = settings_.activeLinesMask;
 
   changedMask &= allowMask;
   if (!changedMask) return;
