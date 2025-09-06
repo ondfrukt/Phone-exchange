@@ -40,6 +40,7 @@ void WebServer::initSse_() {
     // Skicka initial data till den nya klienten
     client->send(buildStatusJson_().c_str(), nullptr, millis()); 
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
+    client->send(buildDebugJson_().c_str(), "debug", millis());
   });
   server_.addHandler(&events_);
 }
@@ -123,6 +124,50 @@ void WebServer::setupApiRoutes_() {
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
 
+  server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
+    req->send(200, "application/json", buildDebugJson_());
+  });
+
+
+  server_.on("/api/debug/set", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getOptUChar = [req](const char* k, int& out) {
+      out = -1;
+      if (req->hasParam(k)) out = req->getParam(k)->value().toInt();
+      else if (req->hasParam(k, true)) out = req->getParam(k, true)->value().toInt();
+      return (out >= 0);
+    };
+
+    int shk=-1, lm=-1, ws=-1;
+    bool hasShk = getOptUChar("shk", shk);
+    bool hasLm  = getOptUChar("lm",  lm);
+    bool hasWs  = getOptUChar("ws",  ws);
+
+    if (!hasShk && !hasLm && !hasWs) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws\"}");
+      return;
+    }
+
+    auto inRange = [](int v){ return v>=0 && v<=2; };
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws))) {
+      req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
+      return;
+    }
+
+    // Uppdatera värden
+    if (hasShk) settings_.debugSHKLevel = (uint8_t)shk;
+    if (hasLm)  settings_.debugLmLevel  = (uint8_t)lm;
+    if (hasWs)  settings_.debugWSLevel  = (uint8_t)ws;
+
+    // Spara till NVS
+    settings_.save();
+
+    // Skicka live-uppdatering till andra klienter
+    sendDebugSse();
+
+    // Svara med aktuella nivåer
+    req->send(200, "application/json", buildDebugJson_());
+  });
+
 
   // Statisk filserver
   if (fsMounted_) {
@@ -195,6 +240,23 @@ String WebServer::buildActiveJson_(uint8_t mask) {
   }
   json += "]}";
   return json;
+}
+
+String WebServer::buildDebugJson_() const {
+  String json = "{";
+  json += "\"shk\":" + String(settings_.debugSHKLevel);
+  json += ",\"lm\":" + String(settings_.debugLmLevel);
+  json += ",\"ws\":" + String(settings_.debugWSLevel);
+  json += "}";
+  return json;
+}
+
+void WebServer::sendDebugSse() {
+  const String json = buildDebugJson_();
+  events_.send(json.c_str(), "debug", millis());
+  if (settings_.debugWSLevel >= 1) {
+    Serial.println("[WebServer] Debug levels skickade via SSE");
+  }
 }
 
 void WebServer::sendFullStatusSse() {

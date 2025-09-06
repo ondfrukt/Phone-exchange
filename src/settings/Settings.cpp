@@ -50,26 +50,30 @@ void Settings::resetDefaults() {
 
 bool Settings::load() {
   Preferences prefs;
-  if (!prefs.begin(kNamespace, /*read only*/true)) {
+  if (!prefs.begin(kNamespace, true)) {
     Serial.println("No NVS namespace found for settings");
     return false;
   }
-  
   uint16_t v = prefs.getUShort("ver", 0);
   bool ok = (v == kVersion);
   if (ok) {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
     debounceMs            = prefs.getUShort("debounceMs", debounceMs);
-    debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel);
 
+    // --- Debug nivåer ---
+    debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel); // befintlig nyckel
+    debugLmLevel          = prefs.getUChar ("debugLm",    debugLmLevel);  // NY
+    debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);  // NY
+
+    // --- Övrigt ---
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
-    hookStableConsec      = prefs.getUChar("hookStbCnt",     hookStableConsec);
+    hookStableConsec      = prefs.getUChar("hookStbCnt",           hookStableConsec);
     pulseGlitchMs         = prefs.getUInt ("pulseGlitchMs",        pulseGlitchMs);
     pulseLowMaxMs         = prefs.getUInt ("pulseLowMaxMs",        pulseLowMaxMs);
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
-    highMeansOffHook      = prefs.getBool ("hiOffHook",     highMeansOffHook);
+    highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
   }
   prefs.end();
   if (!ok) save();
@@ -78,21 +82,26 @@ bool Settings::load() {
 
 void Settings::save() const {
   Preferences prefs;
-  if (!prefs.begin(kNamespace, /*ro*/false)) return;
+  if (!prefs.begin(kNamespace, false)) return;
   prefs.putUShort("ver", kVersion);
 
   prefs.putUChar ("activeMask", activeLinesMask);
   prefs.putUShort("debounceMs", debounceMs);
-  prefs.putUChar ("debugSHKLevel", debugSHKLevel);
 
+  // --- Debug nivåer ---
+  prefs.putUChar ("debugLevel", debugSHKLevel); // behåll kompatibilitet
+  prefs.putUChar ("debugLm",    debugLmLevel);  // NY
+  prefs.putUChar ("debugWs",    debugWSLevel);  // NY
+
+  // --- Övrigt ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);
-  prefs.putUChar("hookStbCnt",     hookStableConsec);
+  prefs.putUChar("hookStbCnt",           hookStableConsec);
   prefs.putUInt ("pulseGlitchMs",        pulseGlitchMs);
   prefs.putUInt ("pulseLowMaxMs",        pulseLowMaxMs);
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
-  prefs.putBool ("hiOffHook",     highMeansOffHook);
+  prefs.putBool ("hiOffHook",            highMeansOffHook);
 
   prefs.end();
 }

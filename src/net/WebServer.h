@@ -18,6 +18,7 @@ public:
   // Publika hjälpmetoder om du vill kunna pusha manuellt
   void sendFullStatusSse();
   void sendActiveMaskSse();
+  void sendDebugSse();
 
 private:
   LineManager& lm_;
@@ -42,4 +43,5 @@ private:
   // Help functions
   String buildStatusJson_() const;
   String buildActiveJson_(uint8_t mask);
+  String buildDebugJson_() const;
 };

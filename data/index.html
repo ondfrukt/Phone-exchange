@@ -45,11 +45,66 @@
       <div id="lines"></div>
       <div id="status" class="status">Ansluter till liveflöde…</div>
     </section>
+
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Inställningar • Debug</h2>
+      <div class="row">
+        <span class="k">SHK-nivå</span>
+        <span class="v">
+          <select id="dbg-shk">
+            <option value="0">0 – Av</option>
+            <option value="1">1 – Låg</option>
+            <option value="2">2 – Hög</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+      <div class="row">
+        <span class="k">LineManager-nivå</span>
+        <span class="v">
+          <select id="dbg-lm">
+            <option value="0">0 – Av</option>
+            <option value="1">1 – Låg</option>
+            <option value="2">2 – Hög</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+      <div class="row">
+        <span class="k">WebServer-nivå</span>
+        <span class="v">
+          <select id="dbg-ws">
+            <option value="0">0 – Av</option>
+            <option value="1">1 – Låg</option>
+            <option value="2">2 – Hög</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Uppdatera
+        </button>
+        <div id="dbg-status" class="status"></div>
+      </div>
+    </section>
+
+
   </main>
 
   <script>
     const $lines  = document.getElementById('lines');
     const $status = document.getElementById('status');
+
+    // --- Debug UI ---
+    const $dbgShk = document.getElementById('dbg-shk');
+    const $dbgLm  = document.getElementById('dbg-lm');
+    const $dbgWs  = document.getElementById('dbg-ws');
+    const $dbgBtn = document.getElementById('dbg-save');
+    const $dbgMsg = document.getElementById('dbg-status');
+
+
 
     let activeMask = 0;                 // bitmask 0..255
     let linesCache = [];                // [{id, status}]
@@ -134,6 +189,63 @@
       }
     }
 
+    function setDbgMsg(t){ $dbgMsg.textContent = t; }
+
+    function updateActiveCell(lineId){
+      const aCell = document.getElementById(`line-${lineId}-active`);
+      if (!aCell) return;
+      const a = isActive(lineId);
+      aCell.textContent = a ? 'Aktiv' : 'Inaktiv';
+      aCell.classList.toggle('ok', a);
+      aCell.classList.toggle('no', !a);
+      aCell.setAttribute('aria-pressed', a ? 'true' : 'false');
+    }
+
+    async function loadDebug() {
+      try{
+        const r = await fetch('/api/debug');
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        const d = await r.json(); // {shk,lm,ws}
+        if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
+        if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
+        if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
+      } catch(e){
+        setDbgMsg('Kunde inte läsa debug-nivåer.');
+        console.warn(e);
+      }
+    }
+
+    async function saveDebug() {
+      try{
+        $dbgBtn.classList.add('working');
+        setDbgMsg('Sparar…');
+        const body = new URLSearchParams({
+          shk: $dbgShk.value, lm: $dbgLm.value, ws: $dbgWs.value
+        }).toString();
+        const r = await fetch('/api/debug/set', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          body
+        });
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        const d = await r.json();
+        // UI kommer dessutom att uppdateras av SSE "debug"
+        setDbgMsg('Sparat.');
+      } catch(e){
+        setDbgMsg('Misslyckades att spara.');
+        console.warn(e);
+      } finally {
+        $dbgBtn.classList.remove('working');
+        setTimeout(()=> setDbgMsg(''), 1500);
+      }
+    }
+
+    $dbgBtn?.addEventListener('click', saveDebug);
+
+    loadDebug();
+
+
+
     // ---- Initial inläsning ----
     // 1) Full statuslista
     fetch('/api/status')
@@ -191,6 +303,18 @@
         }
       } catch {}
     });
+
+    // lyssna på SSE för live-uppdatering
+    es.addEventListener('debug', ev => {
+      try{
+        const d = JSON.parse(ev.data);
+        if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
+        if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
+        if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
+      } catch {}
+    });
+
+    window.addEventListener('beforeunload', () => { try { es.close(); } catch {} });
   </script>
 </body>
 </html>
