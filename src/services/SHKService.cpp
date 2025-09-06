@@ -19,7 +19,7 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
 
   // Initial read of SHK states. Assumes stable at startup.
   uint32_t raw = readShkMask_();
-  for (std::size_t i=0;i<7;++i) {
+  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
     auto& line = lineManager_.getLine((int)i);
     if(!line.lineActive) continue;
     bool rawHigh = (raw >> i) & 0x1;
@@ -37,17 +37,15 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
 
 // Member to notifi when MCP reports changes (bitmask per line)
 void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs) {
-  std::size_t a = settings_.activeLinesMask;
-  if (a > maxPhysicalLines_) a = maxPhysicalLines_;
-  uint32_t allowMask = settings_.activeLinesMask;
-
+  uint32_t allowMask = settings_.activeLinesMask & settings_.allowMask;
   changedMask &= allowMask;
   if (!changedMask) return;
 
-  activeMask_   |= changedMask;
-  burstActive_   = true;
+  activeMask_ |= changedMask;
+  burstActive_ = true;
   if (nowMs >= burstNextTickAtMs_) burstNextTickAtMs_ = nowMs;
 }
+
 
 // Chek if it's time for a tick (returns true if so)
 bool SHKService::needsTick(uint32_t nowMs) const {
@@ -73,13 +71,13 @@ bool SHKService::tick(uint32_t nowMs) {
   uint32_t nextActiveMask = 0;
 
   for (std::size_t lineIndex = 0; lineIndex < maxPhysicalLines_; ++lineIndex) {
-    // Bearbeta endast de logiskt aktiva
-    if (lineIndex >= activeLines_) {
+    // Bearbeta bara linjer som nyss ändrats/är aktiva i burst…
+    if ((activeMask_ & (1u << lineIndex)) == 0) {
+      // …men nollställ gärna ev. pulstillstånd:
       resetPulseState_(static_cast<int>(lineIndex));
       continue;
     }
 
-    // ev. require att LineManager säger att linjen är aktiv
     auto& line = lineManager_.getLine(static_cast<int>(lineIndex));
     if (!line.lineActive) {
       resetPulseState_(static_cast<int>(lineIndex));
@@ -93,20 +91,22 @@ bool SHKService::tick(uint32_t nowMs) {
     const auto& s = lineState_[lineIndex];
     bool hookUnstable =
       ((settings_.hookStableConsec > 0 && s.hookCandConsec < settings_.hookStableConsec) ||
-       ((nowMs - s.hookCandSince) < settings_.hookStableMs));
+      ((nowMs - s.hookCandSince) < settings_.hookStableMs));
     bool pdActive = (s.pdState != PerLine::PDState::Idle);
 
+    // Fortsätt bara ticka de linjer som ännu inte “lagt sig”
     if (hookUnstable || pdActive) nextActiveMask |= (1u << lineIndex);
   }
 
-  activeMask_ = nextActiveMask;
-  if (activeMask_ == 0) {
-    burstActive_ = false;
-  } else {
-    burstNextTickAtMs_ = nowMs + settings_.burstTickMs;
-  }
 
-  return true;
+    activeMask_ = nextActiveMask;
+    if (activeMask_ == 0) {
+      burstActive_ = false;
+    } else {
+      burstNextTickAtMs_ = nowMs + settings_.burstTickMs;
+    }
+
+    return true;
 }
 
 // Read SHK pin states from MCP and return as bitmask
