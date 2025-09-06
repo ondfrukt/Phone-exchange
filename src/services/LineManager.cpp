@@ -58,6 +58,11 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
 
 
   lineChangeFlag |= (1 << index); // Set the change flag for the specified line
+  
+  if (settings_.debugLmLevel >= 1){
+    Serial.println("LineManager: Callback function called");
+  }
+
   if (onStatusChanged_) onStatusChanged_(index, newStatus);  // 🔔 meddela observatörer
 
   if (settings_.debugLmLevel >= 1) {
@@ -80,5 +85,8 @@ void LineManager::clearChangeFlag(int index) {
 
 
 void LineManager::setStatusChangedCallback(StatusChangedCb cb) {
+  if (settings_.debugLmLevel <= 1 ){
+    Serial.println("LineManager: Callback Set");
+  }
   onStatusChanged_ = std::move(cb);
 }

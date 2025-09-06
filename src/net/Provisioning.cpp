@@ -21,7 +21,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
 
   // Om WifiClient redan har creds -> starta INTE provisioning
   if (wifi_->hasCredentials()) {
-    Serial.printf("Provisioning: Saved SSID in NVS (via WifiClient). Skipping BLE");
+    Serial.println("Provisioning: Saved SSID in NVS (via WifiClient). Skipping BLE");
     // WifiClient kopplar upp i sin begin()/loop() – vi gör inget här.
     return;
   }
@@ -94,9 +94,9 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
     //  Serial.printf("[WIFI] Got IP: %s\n", WiFi.localIP().toString().c_str());
     //  break;
 
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Serial.println("[WIFI] Disconnected.");
-      break;
+    // case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+    //   Serial.println("[WIFI] Disconnected.");
+    //   break;
 
     default:
       break;

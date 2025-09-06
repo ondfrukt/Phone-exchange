@@ -17,8 +17,6 @@ public:
   void sendFullStatusSse();
   void listFS();
 
-  void attachToLineManager();
-
 private:
   LineManager& lm_;
   Settings& settings_;

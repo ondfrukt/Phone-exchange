@@ -7,7 +7,7 @@ App::App()
     lineManager_(Settings::instance()),
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
     lineAction_(lineManager_, Settings::instance()),
-    webServer_(lineManager_, 80){
+    webServer_(Settings::instance(), lineManager_, 80){
 }
 
 void App::begin() {

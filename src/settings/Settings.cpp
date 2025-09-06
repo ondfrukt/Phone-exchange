@@ -28,6 +28,7 @@ void Settings::resetDefaults() {
   //debounceMs            = 25;
   debugSHKLevel         = 0;
   debugLmLevel          = 1;
+  debugWSLevel          = 1;
 
   pulseAdjustment       = 1;
 
