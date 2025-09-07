@@ -1,5 +1,6 @@
 #pragma once
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #include <Preferences.h>
 
 namespace net {
@@ -17,6 +18,8 @@ public:
     // Status
     bool isConnected() const;
     String getIp() const;
+    String getHostname() const { return hostname_; }
+    String getMac() const;
 
     // Hantering av credentials (kan sättas av provisioning)
     void saveCredentials(const char* ssid, const char* password);
@@ -28,12 +31,14 @@ public:
 private:
     void connect_();
     void onWiFiEvent_(WiFiEvent_t event);
+    String makeDefaultHostname_(); 
 
     Preferences prefs_;
     String ssid_;
     String password_;
     String hostname_;
     bool connecting_;
+    bool mdnsStarted_ = false; 
 };
 
 } // namespace net

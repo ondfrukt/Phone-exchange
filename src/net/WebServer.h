@@ -2,14 +2,16 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
+#include "net/WifiClient.h"
 #include "settings/settings.h"
+
+namespace net { class WifiClient; } 
 
 class LineManager;
 
 class WebServer {
 public:
-  WebServer(Settings& settings, LineManager& lineManager, uint16_t port = 80);
-  
+  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, uint16_t port = 80);
   bool begin();
   void listFS();
 
@@ -21,10 +23,11 @@ public:
   void sendDebugSse();
 
 private:
-  LineManager& lm_;
   Settings& settings_;
+  LineManager& lm_;
   AsyncWebServer server_;
   AsyncEventSource events_{"/events"};
+  net::WifiClient& wifi_;
 
   bool serverStarted_ = false;
   bool fsMounted_ = false;

@@ -2,8 +2,8 @@
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
 
-WebServer::WebServer(Settings& settings, LineManager& lineManager, uint16_t port)
-: settings_ (settings), lm_(lineManager), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi ,uint16_t port)
+: settings_ (settings), lm_(lineManager), wifi_(wifi), server_(port) {}
 
 bool WebServer::begin() {
 
@@ -167,6 +167,24 @@ void WebServer::setupApiRoutes_() {
     // Svara med aktuella nivåer
     req->send(200, "application/json", buildDebugJson_());
   });
+
+  server_.on("/api/info", HTTP_GET, [this](AsyncWebServerRequest* req){
+  // Hämta hostname från din WifiClient, eller via WiFi.getHostname()
+  String hn = wifi_.getHostname();
+  if (hn.isEmpty()) hn = "phoneexchange";
+
+  String mac = wifi_.getMac();   // "AA:BB:CC:DD:EE:FF"
+  String ip  = wifi_.getIp();
+
+  String json = "{";
+  json += "\"hostname\":\"" + hn + "\",";
+  json += "\"ip\":\"" + ip + "\",";
+  json += "\"mac\":\"" + mac + "\"";
+  json += "}";
+
+  req->send(200, "application/json", json);
+  });
+
 
 
   // Statisk filserver
