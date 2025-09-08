@@ -8,16 +8,18 @@ The goal is for the network to behave just like it did back in the day. Features
 This is a learning project and my personal introduction to programming, Arduino, HTML, and electronics. It might eventually result in nothing more than a pile of electronic scrap and hundreds of non-functional lines of code—but it will definitely provide me with valuable knowledge and a steep learning curve.
 
 
-
-
-
-### Typical behaviour ###
+### Typical behaviour for all call ###
 
 A typical procedure of the system will be as shown below.
 - A hook is lifted, and the status of the line changes from "idle" to "ready."
 - A phone number is dialed using pulse dialing or DTMF tones, and the digits are captured by the microcontroller.
 - Ring pulses are generated for the dialed line. Once the hook is picked up, the audio lines are connected between the two lines and the conversation can begin
 - Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends
+
+
+### Hardware ###
+
+
 
 #### Line Statuses ####
 
