@@ -3,80 +3,61 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PhoneExchange • Linjestatus</title>
-  <style>
-    :root {
-      --bg:#0b0c10; --fg:#e5e7eb; --muted:#9ca3af;
-      --card:#111827; --border:#1f2937; --accent:#60a5fa;
-      --ok:#16a34a; --no:#ef4444;
-    }
-    *{ box-sizing:border-box }
-    html,body{ margin:0; padding:0; background:var(--bg); color:var(--fg);
-      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu }
-    .wrap{ max-width:820px; margin:40px auto; padding:0 16px }
-    h1{ font-size:1.8rem; margin:0 0 16px }
-    .card{ background:linear-gradient(180deg,#0f172a 0%,#0b1220 100%);
-      border:1px solid var(--border); border-radius:16px; padding:16px;
-      margin-bottom:16px; box-shadow:0 6px 30px rgba(0,0,0,.25) }
+  <title>PhoneExchange</title>
 
-    /* tre kolumner: Namn | Status | Aktiv-knapp */
-    .row{ display:grid; grid-template-columns:1fr auto auto; gap:10px;
-      align-items:baseline; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06) }
-    .row:last-child{ border-bottom:none }
-    .k{ color:var(--muted) }
-    .v{ font-weight:700; letter-spacing:.3px }
+  <!-- Länk till extern CSS -->
+  <link rel="stylesheet" href="style.css">
 
-    .badge{ font-size:.8rem; padding:2px 10px; border-radius:999px;
-      border:1px solid var(--border); user-select:none }
-    .badge.ok{ border-color:rgba(22,163,74,.4); background:rgba(22,163,74,.15) }
-    .badge.no{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.12) }
-
-    /* bara knappen får pekfinger */
-    .badge.clickable{ cursor:pointer }
-    .badge.working{ opacity:.6; pointer-events:none }
-
-    .status{ margin-top:10px; color:var(--muted); font-size:.9rem }
-  </style>
+  <!-- Länk till extern JS -->
+  <script src="app.js" defer></script>
 </head>
 <body>
   <main class="wrap">
-    <h1>PhoneExchange • Linjestatus</h1>
+    <h1>PhoneExchange</h1>
+
+    <!-- Kort för linjer och status -->
     <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Line statuses</h2>
       <div id="lines"></div>
-      <div id="status" class="status">Ansluter till liveflöde…</div>
+      <div id="status" class="status">Connectiong to the exchange…</div>
     </section>
 
+    <!-- Kort för debuginställningar -->
     <section class="card">
-      <h2 style="margin:0 0 12px; font-size:1.2rem">Inställningar • Debug</h2>
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Debug levels</h2>
+
       <div class="row">
-        <span class="k">SHK-nivå</span>
+        <span class="k">SHKService</span>
         <span class="v">
           <select id="dbg-shk">
-            <option value="0">0 – Av</option>
-            <option value="1">1 – Låg</option>
-            <option value="2">2 – Hög</option>
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
           </select>
         </span>
         <span></span>
       </div>
+
       <div class="row">
-        <span class="k">LineManager-nivå</span>
+        <span class="k">LineManager</span>
         <span class="v">
           <select id="dbg-lm">
-            <option value="0">0 – Av</option>
-            <option value="1">1 – Låg</option>
-            <option value="2">2 – Hög</option>
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
           </select>
         </span>
         <span></span>
       </div>
+
       <div class="row">
-        <span class="k">WebServer-nivå</span>
+        <span class="k">WebServer
+        </span>
         <span class="v">
           <select id="dbg-ws">
-            <option value="0">0 – Av</option>
-            <option value="1">1 – Låg</option>
-            <option value="2">2 – Hög</option>
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
           </select>
         </span>
         <span></span>
@@ -84,237 +65,11 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Uppdatera
+          Uppdate
         </button>
         <div id="dbg-status" class="status"></div>
       </div>
     </section>
-
-
   </main>
-
-  <script>
-    const $lines  = document.getElementById('lines');
-    const $status = document.getElementById('status');
-
-    // --- Debug UI ---
-    const $dbgShk = document.getElementById('dbg-shk');
-    const $dbgLm  = document.getElementById('dbg-lm');
-    const $dbgWs  = document.getElementById('dbg-ws');
-    const $dbgBtn = document.getElementById('dbg-save');
-    const $dbgMsg = document.getElementById('dbg-status');
-
-
-
-    let activeMask = 0;                 // bitmask 0..255
-    let linesCache = [];                // [{id, status}]
-
-    const isActive = (id) => ((activeMask >> id) & 1) === 1;
-    const setStatus = (t) => { $status.textContent = t; };
-
-    // Bygg/uppdatera EN rad, inkl. badge, IDs och handlers
-    function upsertLine(lineId, status){
-      let row = document.getElementById('line-'+lineId);
-      if (!row){
-        row = document.createElement('div');
-        row.className = 'row';
-        row.id = 'line-' + lineId;
-        row.innerHTML = `
-          <span class="k">Linje ${lineId}</span>
-          <span class="v" id="line-${lineId}-status"></span>
-          <span class="badge" id="line-${lineId}-active"
-                role="button" tabindex="0"
-                title="Klicka för att Aktivera/Inaktivera"></span>
-        `;
-        $lines.appendChild(row);
-
-        // koppla klick endast på badgen
-        const aCell = row.querySelector(`#line-${lineId}-active`);
-        aCell.classList.add('clickable');
-        aCell.addEventListener('click', () => toggleLineActive(lineId, aCell));
-        aCell.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault(); toggleLineActive(lineId, aCell);
-          }
-        });
-      }
-
-      // statuscell
-      const sCell = document.getElementById(`line-${lineId}-status`);
-      if (sCell) sCell.textContent = status;
-
-      // badge enligt mask
-      updateActiveCell(lineId);
-    }
-
-    // Uppdatera EN aktiv-badge utifrån activeMask
-    function updateActiveCell(lineId){
-      const aCell = document.getElementById(`line-${lineId}-active`);
-      if (!aCell) return;
-      const a = isActive(lineId);
-      aCell.textContent = a ? 'Aktiv' : 'Inaktiv';
-      aCell.classList.toggle('ok', a);
-      aCell.classList.toggle('no', !a);
-    }
-
-    // Rendera alla (rensar och bygger via upsertLine)
-    function renderAll(lines){
-      linesCache = lines.map(l => ({ id:l.id, status:l.status }));
-      $lines.innerHTML = '';
-      for (const l of linesCache) upsertLine(l.id, l.status);
-    }
-
-    // Toggle via API
-    async function toggleLineActive(lineId, badgeEl){
-      try{
-        badgeEl.classList.add('working');
-        const body = new URLSearchParams({ line:String(lineId) }).toString();
-        const r = await fetch('/api/active/toggle', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-          body
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json(); // {mask, active:[...]}
-        if (typeof d.mask === 'number'){
-          activeMask = d.mask|0;
-          linesCache.forEach(l => updateActiveCell(l.id));
-        }
-        // SSE "activeMask" uppdaterar dessutom andra klienter
-      } catch(e){
-        console.warn('toggleLineActive error', e);
-        setStatus('Kunde inte uppdatera masken (se konsol).');
-      } finally {
-        badgeEl.classList.remove('working');
-      }
-    }
-
-    function setDbgMsg(t){ $dbgMsg.textContent = t; }
-
-    function updateActiveCell(lineId){
-      const aCell = document.getElementById(`line-${lineId}-active`);
-      if (!aCell) return;
-      const a = isActive(lineId);
-      aCell.textContent = a ? 'Aktiv' : 'Inaktiv';
-      aCell.classList.toggle('ok', a);
-      aCell.classList.toggle('no', !a);
-      aCell.setAttribute('aria-pressed', a ? 'true' : 'false');
-    }
-
-    async function loadDebug() {
-      try{
-        const r = await fetch('/api/debug');
-        if (!r.ok) throw new Error('HTTP '+r.status);
-        const d = await r.json(); // {shk,lm,ws}
-        if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
-        if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
-        if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
-      } catch(e){
-        setDbgMsg('Kunde inte läsa debug-nivåer.');
-        console.warn(e);
-      }
-    }
-
-    async function saveDebug() {
-      try{
-        $dbgBtn.classList.add('working');
-        setDbgMsg('Sparar…');
-        const body = new URLSearchParams({
-          shk: $dbgShk.value, lm: $dbgLm.value, ws: $dbgWs.value
-        }).toString();
-        const r = await fetch('/api/debug/set', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-          body
-        });
-        if (!r.ok) throw new Error('HTTP '+r.status);
-        const d = await r.json();
-        // UI kommer dessutom att uppdateras av SSE "debug"
-        setDbgMsg('Sparat.');
-      } catch(e){
-        setDbgMsg('Misslyckades att spara.');
-        console.warn(e);
-      } finally {
-        $dbgBtn.classList.remove('working');
-        setTimeout(()=> setDbgMsg(''), 1500);
-      }
-    }
-
-    $dbgBtn?.addEventListener('click', saveDebug);
-
-    loadDebug();
-
-
-
-    // ---- Initial inläsning ----
-    // 1) Full statuslista
-    fetch('/api/status')
-      .then(r => r.json())
-      .then(d => { if (d && Array.isArray(d.lines)) renderAll(d.lines); })
-      .catch(()=>{});
-
-    // 2) Aktuell activeMask
-    fetch('/api/active')
-      .then(r => r.json())
-      .then(d => {
-        if (d && typeof d.mask === 'number') {
-          activeMask = d.mask|0;
-          linesCache.forEach(l => updateActiveCell(l.id));
-        }
-      })
-      .catch(()=>{});
-
-    // ---- SSE (Server-Sent Events) ----
-    const es = new EventSource('/events');
-    es.onopen  = () => setStatus('Live: Ansluten');
-    es.onerror = () => setStatus('Live: Problem med anslutning!');
-
-    // Full snapshot: { lines:[...] }
-    es.onmessage = ev => {
-      try {
-        const d = JSON.parse(ev.data);
-        if (d && Array.isArray(d.lines)) {
-          linesCache = d.lines.map(l => ({ id:l.id, status:l.status }));
-          for (const l of linesCache) upsertLine(l.id, l.status);
-        }
-      } catch {}
-    };
-
-    // Delta: { line, status }
-    es.addEventListener('lineStatus', ev => {
-      try {
-        const d = JSON.parse(ev.data);
-        if (!('line' in d) || !('status' in d)) return; // skydd
-        if (typeof d.line !== 'number' || typeof d.status !== 'string') return;
-        const i = linesCache.findIndex(x => x.id === d.line);
-        if (i >= 0) linesCache[i].status = d.status;
-        else linesCache.push({ id:d.line, status:d.status });
-        upsertLine(d.line, d.status);
-      } catch {}
-    });
-
-    // Delta: { mask }
-    es.addEventListener('activeMask', ev => {
-      try{
-        const d = JSON.parse(ev.data);
-        if (typeof d.mask === 'number'){
-          activeMask = d.mask|0;
-          linesCache.forEach(l => updateActiveCell(l.id));
-        }
-      } catch {}
-    });
-
-    // lyssna på SSE för live-uppdatering
-    es.addEventListener('debug', ev => {
-      try{
-        const d = JSON.parse(ev.data);
-        if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
-        if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
-        if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
-      } catch {}
-    });
-
-    window.addEventListener('beforeunload', () => { try { es.close(); } catch {} });
-  </script>
 </body>
 </html>

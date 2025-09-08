@@ -1,5 +1,8 @@
 # Phone Exchange #
 
+## Thanks to! ##
+
+
 ## Goal whit the project ##
 This project aims to create a local wired phone network that supports both old rotary phones and newer DTMF tone-dialing phones. No intelligence or electronics will be built into the phones themselves; all logic and switching will be handled by the exchange unit. The network will follow a star topology, with two wires leading to each phone.
 
@@ -17,7 +20,25 @@ A typical procedure of the system will be as shown below.
 - Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends
 
 
-### Hardware ###
+## Hardware ##
+
+### ESP32-S3-WROOM module ###
+I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost.
+
+This module includes 8 MB of flash memory — an important improvement, since the 4 MB version ran out of space during earlier POC work. Like most ESP chips, it also provides both WiFi and Bluetooth, which are used here for the webserver and WiFi provisioning.
+
+The ESP32-C6 was initially considered due to its support for Matter and Zigbee. However, at the time it was not supported in PlatformIO, so the more common ESP32-S3 was selected for this project.
+
+### MT8816 ###
+
+### MT8870 ###
+
+### MCP23017 ###
+
+### AD9833 module ###
+
+### KS0835F ###
+
 
 <img src="docs/Block Diagram Hardware.drawio.svg" alt="System Overview" width="600">
 
