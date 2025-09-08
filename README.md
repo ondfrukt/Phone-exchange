@@ -19,7 +19,7 @@ A typical procedure of the system will be as shown below.
 
 ### Hardware ###
 
-![System Overview](Block Diagram Hardware.drawio.png)
+<img src="docs/Block Diagram Hardware.drawio.svg" alt="System Overview" width="600">
 
 #### Line Statuses ####
 
