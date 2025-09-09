@@ -2,6 +2,13 @@
 
 ## Thanks to! ##
 
+First of all, I want to thank my partner Amanda, who has beed som patiant whit me - spending countless hours and weekends by my computer while I, for example, trying to figure out a way to capture pulses from rotary phones, or comforting during mental breakdowns when I was sodering without realizing I was using to low temperatur. If you are reading this - which you might not, since you're probebly so tierd of this project - I just want to say that i love you, and do that even more for standing out with me and my stupid phones.
+
+I would also like to thank two GitHub members from whom I’ve drawn a lot of inspiration.
+
+1. [GadgetReboot](https://github.com/GadgetReboot) with his YouTube videos and repositories about the KS0835F SLIC module and the MT8816 switch matrix, really made this project possible.
+
+3. [Ktownsen](https://github.com/ktownsend-personal/) and his repository [RetroPhone](https://github.com/ktownsend-personal/RetroPhone) showed me that there is someone else out there who thinks an old wired phone network would be cool, and who shares the same passion for making vintage phones work just like they did back in the day. My call process modes and flows are heavily inspired by his work.
 
 ## Goal whit the project ##
 This project aims to create a local wired phone network that supports both old rotary phones and newer DTMF tone-dialing phones. No intelligence or electronics will be built into the phones themselves; all logic and switching will be handled by the exchange unit. The network will follow a star topology, with two wires leading to each phone.
@@ -18,7 +25,6 @@ A typical procedure of the system will be as shown below.
 - A phone number is dialed using pulse dialing or DTMF tones, and the digits are captured by the microcontroller.
 - Ring pulses are generated for the dialed line. Once the hook is picked up, the audio lines are connected between the two lines and the conversation can begin
 - Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends
-
 
 ## Hardware ##
 <p align="center">
@@ -41,6 +47,17 @@ The ESP32-C6 was initially considered due to its support for Matter and Zigbee. 
 ### AD9833 module ###
 
 ### KS0835F ###
+
+| Component   | Description |
+|-------------|-------------|
+| ESP32-S3<br>![ESP32-S3-WROOM](docs/ESP32-S3-WROOM.jpg)  | - I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost. <br> - This module includes 8 MB of flash memory — an important improvement, since the 4 MB version ran out of space during earlier POC work. <br> - Like most ESP chips, it also provides both WiFi and Bluetooth, which are used here for the webserver and WiFi provisioning. The ESP32-C6 was initially considered due to its support for Matter and Zigbee. However, at the time it was not supported in PlatformIO, so the more common ESP32-S3 was selected for this project.
+| MT8816<br>![MT8816](docs/MT8816.jpg)      |             |
+| MT8870<br>![MT8870](docs/MT8870.jpg)      |             |
+| MCP23017<br>![MCP23017](docs/MCP23017.jpg)    |             |
+| AD9833 module<br>![AD9833](docs/AD9833.jpg) |           |
+| KS0835F<br>![KS0835F](docs/KS0835F.jpg)     |        test     |
+| Webserver   |             |
+
 
 ## Webserver ##
 I thought it would be good to have an interface where you could manage the phone system in some way, such as assigning a phone number to a specific line, activating/deactivating lines, changing the ring tone length, and adding some more features. During operation, access to the serial monitor will be limited, so having a way to easily tweak settings and access some debugging information would be useful.
@@ -72,3 +89,16 @@ To handle the logics in the exchange system, all lines has a current status whis
 | abandoned     | Line was abandoned                    | ⚪ OFF   | ✅    | ➖    | ✅   |
 | incoming      | Incoming call                         | ✅ ON    | ❌    | ➖    | ❌   |
 | operator      | Connected to operator                 | ➖       | ❌    | ➖    | ❌   |
+
+
+
+## Challenges ##
+
+- **Identify DTMF-toned to a line**
+
+It is quite difficult to identify which phone line is actually starting to tone dial. The lines and tones from them are all sent into the DTMF decoder on just one line, and if, for example, two phones have both gone off-hook and are ready to dial, how can you tell which one the tone is coming from?
+My solution to this is simply to assume that the last phone picked up is the one entering a DTMF number. I have a maximum of 8 lines in my project, so this approach works for me — but it’s not an ideal solution.
+
+
+
+
