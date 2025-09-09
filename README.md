@@ -31,32 +31,14 @@ A typical procedure of the system will be as shown below.
 <img src="docs/Block Diagram Hardware.drawio.svg" alt="System Overview" width="600">
 </p>
 
-### ESP32-S3-WROOM module ###
-I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost.
-
-This module includes 8 MB of flash memory — an important improvement, since the 4 MB version ran out of space during earlier POC work. Like most ESP chips, it also provides both WiFi and Bluetooth, which are used here for the webserver and WiFi provisioning.
-
-The ESP32-C6 was initially considered due to its support for Matter and Zigbee. However, at the time it was not supported in PlatformIO, so the more common ESP32-S3 was selected for this project.
-
-### MT8816 ###
-
-### MT8870 ###
-
-### MCP23017 ###
-
-### AD9833 module ###
-
-### KS0835F ###
-
 | Component   | Description |
 |-------------|-------------|
-| ESP32-S3<br>![ESP32-S3-WROOM](docs/ESP32-S3-WROOM.jpg)  | - I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost. <br> - This module includes 8 MB of flash memory — an important improvement, since the 4 MB version ran out of space during earlier POC work. <br> - Like most ESP chips, it also provides both WiFi and Bluetooth, which are used here for the webserver and WiFi provisioning. The ESP32-C6 was initially considered due to its support for Matter and Zigbee. However, at the time it was not supported in PlatformIO, so the more common ESP32-S3 was selected for this project.
-| MT8816<br>![MT8816](docs/MT8816.jpg)      |             |
-| MT8870<br>![MT8870](docs/MT8870.jpg)      |             |
-| MCP23017<br>![MCP23017](docs/MCP23017.jpg)    |             |
-| AD9833 module<br>![AD9833](docs/AD9833.jpg) |           |
-| KS0835F<br>![KS0835F](docs/KS0835F.jpg)     |        test     |
-| Webserver   |             |
+| ESP32-S3<br><img src="docs/ESP32-S3-WROOM.jpg" width="180">  | - I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost. <br> - This module includes 8 MB of flash memory — an important improvement, since the 4 MB version ran out of space during earlier POC work. <br> - Like most ESP chips, it also provides both WiFi and Bluetooth, which are used here for the webserver and WiFi provisioning. The ESP32-C6 was initially considered due to its support for Matter and Zigbee. However, at the time it was not supported in PlatformIO, so the more common ESP32-S3 was selected for this project.
+| MT8816<br><img src="docs/MT8816AF.jpg" width="180">               |                 |
+| MT8870<br><img src="docs/MT8870.jpg" width="180">            |                 |
+| MCP23017<img src="docs/MCP23017.jpg" width="180">            |                 |
+| AD9833 module<img src="docs/AD9833.jpg" width="180">         |                 |
+| KS0835F<br><img src="docs/KS0835F.jpg" width="180">          |        test     |
 
 
 ## Webserver ##
