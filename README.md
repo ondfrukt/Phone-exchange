@@ -21,6 +21,9 @@ A typical procedure of the system will be as shown below.
 
 
 ## Hardware ##
+<p align="center">
+<img src="docs/Block Diagram Hardware.drawio.svg" alt="System Overview" width="600">
+</p>
 
 ### ESP32-S3-WROOM module ###
 I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost.
@@ -39,8 +42,11 @@ The ESP32-C6 was initially considered due to its support for Matter and Zigbee. 
 
 ### KS0835F ###
 
+## Webserver ##
+I thought it would be good to have an interface where you could manage the phone system in some way, such as assigning a phone number to a specific line, activating/deactivating lines, changing the ring tone length, and adding some more features. During operation, access to the serial monitor will be limited, so having a way to easily tweak settings and access some debugging information would be useful.
 
-<img src="docs/Block Diagram Hardware.drawio.svg" alt="System Overview" width="600">
+## MQTT ##
+Having an MQTT function is also a goal so that the server can potentially interact with a smart home system such as Home Assistant, opening up the possibility to control home functions — just for fun!
 
 #### Line Statuses ####
 
