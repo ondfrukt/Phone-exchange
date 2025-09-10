@@ -52,6 +52,30 @@ The Action is essentially the **brain** that decides the behavior based on line 
 1. A line (`LineHandler`) changes status → e.g., from *Idle* to *Ringing*.  
 2. `LineManager` detects the change in its update loop.  
 3. `LineManager` forwards the line to `LineAction`.  
-4. `LineAction` executes the corresponding logic (e.g., play ringing tone, connect to another line).  
+4. `LineAction` executes the corresponding logic (e.g., play ringing tone, connect to another line).
 
 ---
+
+## 🟨 SHK (Hook) Service (e.g. `SHKService`)
+**Responsibility:**  
+Monitors the physical hook (on-hook / off-hook) for each line, debounces raw signals, and triggers state transitions (e.g. `idle → ready`). It tells the rest of the system which line just became active or returned to rest.
+
+**What it does:**
+- Samples hook inputs (GPIO / expander).
+- Debounces noisy mechanical changes.
+- Keeps a lightweight hook state per line.
+- Notifies when a line goes off-hook (start dial tone logic) or on-hook (call teardown).
+- Provides the “most recently lifted” line reference for dialing (pulse or DTMF).
+
+**Typical trigger chain:**
+1. Handset lifted → stable off-hook detected.  
+2. `SHKService` marks line as active.  
+3. Manager / Action logic moves line to `ready` and starts dial tone / timers.  
+4. Handset returned → `SHKService` reports on-hook → Action logic ends or resets call state.  
+
+**Provides (examples):**
+- `isOffHook(line)`  
+- `wasJustLifted(line)`  
+- `wasJustHungUp(line)`  
+
+Keeps the hook layer clean so higher-level logic only reacts to stable, meaningful changes.
