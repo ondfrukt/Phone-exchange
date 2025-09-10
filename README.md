@@ -11,7 +11,7 @@ I would also like to thank two GitHub members from whom I’ve drawn a lot of in
 3. [Ktownsen](https://github.com/ktownsend-personal/) and his repository [RetroPhone](https://github.com/ktownsend-personal/RetroPhone) showed me that there is someone else out there who thinks an old wired phone network would be cool, and who shares the same passion for making vintage phones work just like they did back in the day. My call process modes and flows are heavily inspired by his work.
 
 ## Goal whit the project ##
-This project aims to create a local wired phone network that supports both old rotary phones and newer DTMF tone-dialing phones. No intelligence or electronics will be built into the phones themselves; all logic and switching will be handled by the exchange unit. The network will follow a star topology, with two wires leading to each phone.
+The project aims to create a local wired phone network that supports both old rotary phones and newer DTMF tone-dialing phones. No intelligence or electronics will be built into the phones themselves; all logic and switching will be handled by the exchange unit. The network will follow a star topology, with two wires leading to each phone.
 
 The goal is for the network to behave just like it did back in the day. Features such as ringing behavior, tones, and call logic will be implemented.
 
@@ -34,15 +34,16 @@ A typical procedure of the system will be as shown below.
 | Component   | Description |
 |-------------|-------------|
 | ESP32-S3<br><img src="docs/ESP32-S3-WROOM.jpg" width="180">  | - I have always appreciated the ESP family of microcontrollers. After first experimenting with Arduino modules such as the Arduino Uno and Arduino Uno WiFi, it quickly became clear that the ESP32 offered significantly more features at a lower cost. <br> - This module includes 8 MB of flash memory — an important improvement, since the 4 MB version ran out of space during earlier POC work. <br> - Like most ESP chips, it also provides both WiFi and Bluetooth, which are used here for the webserver and WiFi provisioning. The ESP32-C6 was initially considered due to its support for Matter and Zigbee. However, at the time it was not supported in PlatformIO, so the more common ESP32-S3 was selected for this project.
-| MT8816<br><img src="docs/MT8816AF.jpg" width="180">               |                 |
-| MT8870<br><img src="docs/MT8870.jpg" width="180">            |                 |
-| MCP23017<img src="docs/MCP23017.jpg" width="180">            |                 |
-| AD9833 module<img src="docs/AD9833.jpg" width="180">         |                 |
-| KS0835F<br><img src="docs/KS0835F.jpg" width="180">          |        test     |
-
+| MT8816<br><img src="docs/MT8816AF.jpg" width="180">               | The MT8816 is a crosspoint swich matrix where you can connect one phone lines audio out to a certain lines audio in, and of course also in the opposite direction so a full audio connection is established more about how it works can be found [here](src/services/Readme.md)       | 
+| MT8870<br><img src="docs/MT8870.jpg" width="180">            | This circuit translates all tones from DTMF phones into digits.     |
+| MCP23017<img src="docs/MCP23017.jpg" width="180">            | GPIO expanders because the ESP32 do not have enough GPIO ports to control all devices                  |
+| AD9833 module<img src="docs/AD9833.jpg" width="180">         | The AD9833 module, which I have three of in the exchange Is sending out tones into the swich matrix and then thuther to lines.               |
+| KS0835F<br><img src="docs/KS0835F.jpg" width="180">          | This module may be the most important one on the breadboard. It handles the phone's behavior and converts it into signals that my ESP can process. It detects whether the phone's hook is on or off and can generate a ring frequency, which would otherwise be very complicated to produce.     |
 
 ## Webserver ##
 I thought it would be good to have an interface where you could manage the phone system in some way, such as assigning a phone number to a specific line, activating/deactivating lines, changing the ring tone length, and adding some more features. During operation, access to the serial monitor will be limited, so having a way to easily tweak settings and access some debugging information would be useful.
+
+The webserver can be reached at http://phoneexchange.local/ after the provisioning is completed
 
 ## MQTT ##
 Having an MQTT function is also a goal so that the server can potentially interact with a smart home system such as Home Assistant, opening up the possibility to control home functions — just for fun!
