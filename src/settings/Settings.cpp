@@ -25,12 +25,12 @@ void Settings::adjustActiveLines() {
 void Settings::resetDefaults() {
   // Spara bara *inställningar*, inte körtidsstatus
   activeLinesMask       = 0b11110000;
-  //debounceMs            = 25;
 
   // -- Debug levels ---
   debugSHKLevel         = 1;
   debugLmLevel          = 0;
   debugWSLevel          = 0;
+  debugLALevel          = 0;
 
   pulseAdjustment       = 1;
 
@@ -38,6 +38,7 @@ void Settings::resetDefaults() {
   hookStableMs          = 50;
   hookStableConsec      = 2;
   pulseGlitchMs         = 2;
+  debounceMs            = 25;
   pulseLowMaxMs         = 150;
   digitGapMinMs         = 600;
   globalPulseTimeoutMs  = 500;
@@ -64,7 +65,7 @@ bool Settings::load() {
     debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel); // befintlig nyckel
     debugLmLevel          = prefs.getUChar ("debugLm",    debugLmLevel);  // NY
     debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);  // NY
-
+    debugLALevel          = prefs.getUChar ("debugLa",    debugLALevel);  // NY
     // --- Övrigt ---
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
@@ -92,7 +93,7 @@ void Settings::save() const {
   prefs.putUChar ("debugLevel", debugSHKLevel); // behåll kompatibilitet
   prefs.putUChar ("debugLm",    debugLmLevel);  // NY
   prefs.putUChar ("debugWs",    debugWSLevel);  // NY
-
+  prefs.putUChar ("debugLa",    debugLALevel);  // NY
   // --- Övrigt ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);

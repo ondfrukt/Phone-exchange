@@ -31,15 +31,13 @@ void App::begin() {
     provisioning_.begin(wifiClient_, "phoneexchange");
     webServer_.begin();
     webServer_.listFS();
-
     Serial.println("App setup complete");
 }
 
 void App::loop() {
-    // Hantera SLIC‑1 avbrott
 
     wifiClient_.loop();
-
+    lineAction_.update(); // Check for line status changes and timers
 
     for (int i=0; i<16; ++i) {
         IntResult r = mcpDriver_.handleSlic1Interrupt();
@@ -49,7 +47,6 @@ void App::loop() {
         yield();
         }
     }
-
         for (int i=0; i<16; ++i) {
         IntResult r = mcpDriver_.handleSlic2Interrupt();
         if (r.hasEvent && r.line < 8) {

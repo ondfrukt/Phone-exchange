@@ -8,14 +8,31 @@ LineAction::LineAction(LineManager& lineManager, Settings& settings)
 
 void LineAction::update() {
 
-  if(lineManager_.lineChangeFlag != 0){
 
-  uint8_t changes = lineManager_.lineChangeFlag & settings_.activeLinesMask;
-  for (int idx = 0; idx < 8; ++idx)
-      if (changes & (1 << idx)) {
-        lineManager_.clearChangeFlag(idx); // Rensa flaggan direkt
-        action(idx);
-    } 
+  // Check if any line has changed status
+  if(lineManager_.lineChangeFlag != 0){
+    uint8_t changes = lineManager_.lineChangeFlag & settings_.activeLinesMask;
+    for (int index = 0; index < 8; ++index)
+        if (changes & (1 << index)) {
+          lineManager_.clearChangeFlag(index); // Rensa flaggan direkt
+          action(index);
+      } 
+  }
+  // Check if any line timers have expired
+  if(lineManager_.activeTimersMask != 0){
+    unsigned long currentTime = millis();
+    uint8_t timers = lineManager_.activeTimersMask & settings_.activeLinesMask;
+    
+
+    for (int index = 0; index < 8; ++index)
+        if (timers & (1 << index)) {
+          LineHandler& line = lineManager_.getLine(index);
+          if (line.lineTimerEnd != -1 && currentTime >= line.lineTimerEnd) {
+            // Timer has expired
+            lineManager_.activeTimersMask &= ~(1 << index); // Clear the timer active flag
+            timerExpired(line);
+          }
+      } 
   }
 }
 
@@ -43,6 +60,9 @@ void LineAction::action(int index) {
     
     case LineStatus::PulseDialing:
     Serial.println("LineAction: Line " + String(index) + " entered PulseDialing state.");
+    lineManager_.activeTimersMask |= (1 << index);              // Mark timer as active
+    line.lineTimerEnd = millis() + settings_.timer_pulsDialing; // Start timer
+
     //   mqttHandler.publishMQTT(line, line_pulse_dialing);
     //   Line[line].startLineTimer(statusTimer_pulsDialing);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
@@ -152,6 +172,51 @@ void LineAction::action(int index) {
     //   break;
     default:
     //   // Handle unexpected status
+      break;
+  }
+}
+
+void LineAction::timerExpired(LineHandler& line) {
+  using namespace model;
+  int index = line.lineNumber;
+  LineStatus currentStatus = line.currentLineStatus;
+
+  if (settings_.debugLALevel >= 1) {
+    Serial.println("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus));
+  }
+
+  switch (currentStatus) {
+    case LineStatus::Ready:
+
+      break;
+
+    case LineStatus::PulseDialing:
+    case LineStatus::ToneDialing:
+
+      break;
+
+    case LineStatus::Ringing:
+
+      break;
+
+    case LineStatus::Busy:
+
+      break;
+
+    case LineStatus::Fail:
+
+      break;
+
+    case LineStatus::Disconnected:
+
+      break;
+
+    case LineStatus::Timeout:
+
+      break;
+
+    default:
+
       break;
   }
 }

@@ -13,4 +13,5 @@ public:
 private:
   LineManager& lineManager_;
   Settings&    settings_;
+  void timerExpired(LineHandler& line);
 };

@@ -27,6 +27,7 @@ public:
   uint8_t debugSHKLevel;          // 0=ingen, 1=lite, 2=mycket
   uint8_t debugLmLevel;           // 0=ingen, 1=lite, 2=mycket
   uint8_t debugWSLevel;           // 0=ingen, 1=lite, 2=mycket
+  uint8_t debugLALevel;           // 0=ingen, 1=lite, 2=mycket
 
   uint8_t pulseAdjustment;         // Pulsjustering (1 ger att 1 puls = 0, 2 pulser = 1 osv)
 
@@ -49,9 +50,15 @@ public:
   bool mcpMt8816Present= false;
 
   // Timers
-
-  
-
+  unsigned long timer_Ready = 240000;
+  unsigned long timer_Dialing = 5000;
+  unsigned long timer_Ringing = 10000;
+  unsigned long timer_pulsDialing = 3000;
+  unsigned long timer_toneDialing = 3000;
+  unsigned long timer_fail = 30000;
+  unsigned long timer_disconnected = 60000;
+  unsigned long timer_timeout = 60000;
+  unsigned long timer_busy = 30000;
 
   inline uint8_t activeLinesCount() const {
     uint8_t x = activeLinesMask, c = 0;
