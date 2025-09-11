@@ -48,10 +48,11 @@ The webserver can be reached at http://phoneexchange.local/ after the provisioni
 ## MQTT ##
 Having an MQTT function is also a goal so that the server can potentially interact with a smart home system such as Home Assistant, opening up the possibility to control home functions — just for fun!
 
-#### Line Statuses ####
+## Line Statuses ##
 
 To handle the logics in the exchange system, all lines has a current status whish triggers different logics in the system when they are changed.
 
+### Status table ###
 - Hook  :telephone_receiver: - If the phone hook is on or off due to the status
 - Timer :stopwatch: - If the new status initiate a timer
 - Audio :loud_sound: -  If a audio is played to the line due to the status (might not be implemented)
@@ -73,7 +74,12 @@ To handle the logics in the exchange system, all lines has a current status whis
 | incoming      | Incoming call                         | ✅ ON    | ❌    | ➖    | ❌   |
 | operator      | Connected to operator                 | ➖       | ❌    | ➖    | ❌   |
 
+### Status flow chart ###
+The flowchart below shows how the statuses change based on the behavior of the phone hooks or when status timers expire.
 
+  <a href="https://raw.githubusercontent.com/ondfrukt/phone-exchange/main/docs/StatusflowChart.drawio.svg">
+    <img src="docs/StatusflowChart.drawio.svg" width="800" alt="Diagram (SVG)">
+  </a>
 
 ## Challenges ##
 
