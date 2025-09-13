@@ -19,6 +19,7 @@ public:
   // Anropa från app.loop()
   bool needsTick(uint32_t nowMs) const;
   bool tick(uint32_t nowMs);
+  void update();
 
 private:
   struct PerLine {

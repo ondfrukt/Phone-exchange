@@ -38,26 +38,6 @@ void App::loop() {
 
     wifiClient_.loop();
     lineAction_.update(); // Check for line status changes and timers
+    SHKService_.update(); // Check for SHK changes and process pulses
 
-    for (int i=0; i<16; ++i) {
-        IntResult r = mcpDriver_.handleSlic1Interrupt();
-        if (r.hasEvent && r.line < 8) {
-        uint32_t mask = (1u << r.line);
-        SHKService_.notifyLinesPossiblyChanged(mask, millis());
-        yield();
-        }
-    }
-        for (int i=0; i<16; ++i) {
-        IntResult r = mcpDriver_.handleSlic2Interrupt();
-        if (r.hasEvent && r.line < 8) {
-        uint32_t mask = (1u << r.line);
-        SHKService_.notifyLinesPossiblyChanged(mask, millis());
-        yield();
-        }
-    }
-
-    uint32_t nowMs = millis();
-    if (SHKService_.needsTick(nowMs)) {
-        SHKService_.tick(nowMs); // uppdaterar hook‑status och pulser
-    }
 }

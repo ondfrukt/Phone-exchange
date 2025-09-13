@@ -14,7 +14,7 @@ void LineAction::update() {
     uint8_t changes = lineManager_.lineChangeFlag & settings_.activeLinesMask;
     for (int index = 0; index < 8; ++index)
         if (changes & (1 << index)) {
-          lineManager_.clearChangeFlag(index); // Rensa flaggan direkt
+          lineManager_.clearChangeFlag(index); // Clear the change flag
           action(index);
       } 
   }
@@ -50,7 +50,6 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Ready:
-    Serial.println("LineAction: Line " + String(index) + " entered Ready state.");
       // mqttHandler.publishMQTT(line, line_ready);
       // mt8816.connect(DTMF_line, line);
       // lastLineReady = line;
@@ -59,16 +58,18 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::PulseDialing:
-    Serial.println("LineAction: Line " + String(index) + " entered PulseDialing state.");
-    lineManager_.activeTimersMask |= (1 << index);              // Mark timer as active
-    line.lineTimerEnd = millis() + settings_.timer_pulsDialing; // Start timer
+    // Timers for pulse dialing is handled when a digit is received
 
+    
     //   mqttHandler.publishMQTT(line, line_pulse_dialing);
     //   Line[line].startLineTimer(statusTimer_pulsDialing);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
       break;
     
     case LineStatus::ToneDialing:
+    // Timer for tone dialing is handled when a digit is received
+
+
     //   mqttHandler.publishMQTT(line, line_tone_dialing);
     //   mt8816.connect(DTMF_line, line);
     //   Line[line].startLineTimer(statusTimer_toneDialing);
@@ -76,6 +77,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Busy:
+      lineManager_.setLineTimer(index, settings_.timer_busy); // Set timer for Busy state
     //   mqttHandler.publishMQTT(line, line_busy);
     //   Line[line].startLineTimer(statusTimer_busy);
     //   mt8816.connect(DTMF_line, line);
@@ -83,6 +85,7 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Fail:
+      lineManager_.setLineTimer(index, settings_.timer_fail); // Set timer for Fail state
     //   mqttHandler.publishMQTT(line, line_fail);
     //   Line[line].resetDialedDigits();
     //   Line[line].startLineTimer(statusTimer_fail);
@@ -91,7 +94,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Ringing:
-
+      lineManager_.setLineTimer(index, settings_.timer_Ringing); // Set timer for Ringing state
     // Serial.println("Line " + String(line) + " dialed digits: " + Line[line].dialedDigits);
     // for (int i = 0; i < activeLines; i++) {
 
@@ -145,6 +148,7 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Disconnected:
+      lineManager_.setLineTimer(index, settings_.timer_disconnected); // Set timer for Disconnected state
     //   mqttHandler.publishMQTT(line, line_disconnected);
     //   Line[line].startLineTimer(statusTimer_disconnected);
       
@@ -156,11 +160,14 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Timeout:
+      lineManager_.setLineTimer(index, settings_.timer_timeout); // Set timer for Timeout state
     //   mqttHandler.publishMQTT(line, line_timeout);
     //   Line[line].startLineTimer(statusTimer_timeout);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
     //   break;
     case LineStatus::Abandoned:
+      lineManager_.setLineTimer(index, settings_.timer_timeout); // Set timer for Abandoned state
+    //   Line[line].resetDialedDigits();
     // mqttHandler.publishMQTT(line, line_abandoned);
     // break;
     case LineStatus::Incoming:

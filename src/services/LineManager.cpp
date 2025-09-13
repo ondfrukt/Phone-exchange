@@ -93,3 +93,20 @@ void LineManager::clearChangeFlag(int index) {
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
   pushStatusChanged_ = std::move(cb);
 }
+
+void LineManager::setLineTimer(int index, unsigned int limit) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setLineTimer - ogiltigt index: ");
+    Serial.println(index);
+    return;
+  }
+  if (limit == 0) {
+    // Disable timer
+    lines[index].lineTimerEnd = -1;
+    activeTimersMask &= ~(1 << index); // Clear the timer active flag
+  } else {
+    // Set timer end time
+    lines[index].lineTimerEnd = millis() + limit;
+    activeTimersMask |= (1 << index);  // Set the timer active flag
+  }
+}
