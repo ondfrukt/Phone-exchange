@@ -1,5 +1,6 @@
 #include "app/App.h"
 #include "util/i2CScanner.h"
+#include <Wire.h> // Ensure Wire is included
 using namespace cfg;
 
 App::App()
@@ -35,9 +36,7 @@ void App::begin() {
 }
 
 void App::loop() {
-
     wifiClient_.loop();
     lineAction_.update(); // Check for line status changes and timers
     SHKService_.update(); // Check for SHK changes and process pulses
-
 }

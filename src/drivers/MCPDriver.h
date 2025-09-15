@@ -65,6 +65,9 @@ private:
   // Aktivera INT på SLIC-SHK-pinnarna, CHANGE-trigger
   void enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp);
 
+  // Aktivera INT på MAIN, ex. knapp på GPB0
+  void enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp);
+
   // Applicera pinlägen från cfg::mcp::MCP_* arrayer
   bool applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]);
 

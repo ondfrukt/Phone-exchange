@@ -115,6 +115,10 @@ bool MCPDriver::begin() {
     splitPinTable(mcp::MCP_MAIN, modes, initial);
     if (!applyPinModes_(mcpMain_, modes, initial)) return false;
     (void)programIOCON(mcp::MCP_MAIN_ADDRESS);
+
+    // Aktivera interrupts för MCP_MAIN (ex. knapp på GPB0)
+    enableMainInterrupts_(mcp::MCP_MAIN_ADDRESS, mcpMain_);
+
   }
   // Configure MCP_SLIC1 pins
   if (haveSlic1_) {
@@ -363,6 +367,47 @@ void MCPDriver::enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp
   writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
   writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
 
+  (void)mcp.readGPIOAB();
+}
+
+// Aktiverar interrupts för MCP_MAIN, ex. knapp på GPB0
+void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
+  uint8_t gpintena=0, gpintenb=0;
+  uint8_t intcona=0, intconb=0;
+  uint8_t gppua=0, gppub=0;
+
+  // Läs befintliga värden
+  (void)readReg8_OK_(i2cAddr, REG_GPINTENA, gpintena);
+  (void)readReg8_OK_(i2cAddr, REG_GPINTENB, gpintenb);
+  (void)readReg8_OK_(i2cAddr, REG_INTCONA,  intcona);
+  (void)readReg8_OK_(i2cAddr, REG_INTCONB,  intconb);
+  (void)readReg8_OK_(i2cAddr, REG_GPPUA,    gppua);
+  (void)readReg8_OK_(i2cAddr, REG_GPPUB,    gppub);
+
+  // ---- Här väljer du vilka pinnar som ska ha interrupt ----
+  // Exempel: GPB0 (pin 8) med intern pull-up
+  gpintenb |= (1u << 1);   // B1 = bit 1 i port B
+  gppub    |= (1u << 1);   // aktivera pull-up på B1
+
+  // Interrupt on change (jämförelse med föregående värde)
+  // => INTCON=0 betyder jämför med tidigare GPIO
+  intconb &= ~(1u << 1);
+
+  // DEFVAL sätts till 0, används ej här
+  writeReg8_(i2cAddr, REG_DEFVALA, 0x00);
+  writeReg8_(i2cAddr, REG_DEFVALB, 0x00);
+
+  // Skriv tillbaka nya registervärden
+  writeReg8_(i2cAddr, REG_GPPUA, gppua);
+  writeReg8_(i2cAddr, REG_GPPUB, gppub);
+
+  writeReg8_(i2cAddr, REG_INTCONA, intcona);
+  writeReg8_(i2cAddr, REG_INTCONB, intconb);
+
+  writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
+  writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
+
+  // Läser ut för att kvittera hängande flaggor
   (void)mcp.readGPIOAB();
 }
 

@@ -30,11 +30,4 @@ private:
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
     WebServer webServer_;
-
-// Här skapar jag olika objekt av mina klasser som jag behöver i appen
-// LineManager lineManager_;
-// MT8816Driver mt8816Driver_;
-// WifiClient wifiClient_;
-// WebServer  webServer_;
-// Osv.....
 };
