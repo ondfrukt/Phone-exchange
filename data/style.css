@@ -37,11 +37,32 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 
 /* Badges */
 .badge{
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   display:inline-block; min-width:72px; text-align:center;
-  color:var(--fg); font-size:.8rem; padding:2px 10px;
-  border-radius:999px; border:1px solid var(--border);
+  color:var(--fg); 
+  font-size:.8rem; 
+  padding:2px 10px;
+  border-radius:999px; 
+  border:1px solid var(--border);
 }
 .badge.ok{ border-color:rgba(22,163,74,.4); background:rgba(22,163,74,.15) }
 .badge.no{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.12) }
 .badge.clickable{ cursor:pointer }
 .badge.working{ opacity:.6; pointer-events:none }
+
+#dbg-save {
+  border-color: var(--accent);
+  background: rgba(96, 165, 250, 0.15);
+}
+#dbg-save:hover {
+  background: rgba(96, 165, 250, 0.25);
+}
+#dbg-restart {
+  border-color: var(--no);
+  background: rgba(239, 68, 68, 0.15);
+}
+#dbg-restart:hover {
+  background: rgba(239, 68, 68, 0.25);
+}

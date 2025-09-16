@@ -104,8 +104,7 @@ bool MCPDriver::begin() {
   }
 
   // Lambda to program IOCON register
-  auto programIOCON = [&](uint8_t addr){
-    const uint8_t iocon = 0x4A;
+  auto programIOCON = [&](uint8_t addr, uint8_t iocon){
     return writeReg8_(addr, REG_IOCON, iocon) && writeReg8_(addr, REG_IOCON+1, iocon);
   };
 
@@ -114,11 +113,8 @@ bool MCPDriver::begin() {
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_MAIN, modes, initial);
     if (!applyPinModes_(mcpMain_, modes, initial)) return false;
-    (void)programIOCON(mcp::MCP_MAIN_ADDRESS);
-
-    // Aktivera interrupts för MCP_MAIN (ex. knapp på GPB0)
-    enableMainInterrupts_(mcp::MCP_MAIN_ADDRESS, mcpMain_);
-
+    programIOCON(cfg::mcp::MCP_MAIN_ADDRESS, 0x44);   // MAIN: aktiv låg, open-drain, mirror
+    enableMainInterrupts_(cfg::mcp::MCP_MAIN_ADDRESS, mcpMain_);
   }
   // Configure MCP_SLIC1 pins
   if (haveSlic1_) {
@@ -137,7 +133,7 @@ bool MCPDriver::begin() {
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_MT8816, modes, initial);
     if (!applyPinModes_(mcpMT8816_, modes, initial)) return false;
-    (void)programIOCON(mcp::MCP_MT8816_ADDRESS);
+    programIOCON(cfg::mcp::MCP_MT8816_ADDRESS, 0x4A);
   }
 
   // Configure interrupts for SLIC1
@@ -254,30 +250,57 @@ IntResult MCPDriver::handleMT8816Interrupt() {
 IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mcp, uint8_t addr) {
   bool fired=false;
   noInterrupts();
-  fired = flag; flag = false;
+  fired = flag;
+  flag  = false;
   interrupts();
-  IntResult r; r.i2c_addr = addr;
+
+  IntResult r;
+  r.i2c_addr = addr;
   if (!fired) return r;
 
   int8_t pin = mcp.getLastInterruptPin();
   if (pin >= 0 && pin <= 15) {
-    r.pin      = static_cast<uint8_t>(pin);
+    r.pin = static_cast<uint8_t>(pin);
 
-    uint16_t intcap=0;
-
+    uint16_t intcap = 0;
     if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r;
-    r.level    = (intcap & (1u<<pin)) != 0;
+
+    r.level    = (intcap & (1u << r.pin)) != 0;
     r.hasEvent = true;
 
-    // Map SLIC pin to line number if applicable
+    // SLIC: mappa till line (ingen return här)
     if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
       int8_t line = mapSlicPinToLine_(addr, r.pin);
       r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
     }
+
+    // Extra clear efter INTCAP (oskyldigt, men gör kvittering superstabil)
+    uint16_t dummy = 0;
+    (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
+
+    // Synka DEFVAL till fångad nivå (endast MAIN; kräver INTCON=1 på pinnen)
+    if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
+      if (r.pin < 8) {
+        uint8_t defvala = 0;
+        if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {
+          if (r.level) defvala |=  (1u << r.pin);
+          else         defvala &= ~(1u << r.pin);
+          (void)writeReg8_(addr, REG_DEFVALA, defvala);
+        }
+      } else {
+        uint8_t bit = r.pin - 8; // 0..7
+        uint8_t defvalb = 0;
+        if (readReg8_OK_(addr, REG_DEFVALB, defvalb)) {
+          if (r.level) defvalb |=  (1u << bit);
+          else         defvalb &= ~(1u << bit);
+          (void)writeReg8_(addr, REG_DEFVALB, defvalb);
+        }
+      }
+    }
     return r;
   }
 
-  // Fallback if no interrupt pin found
+  // Fallback om "last pin" inte fås från drivrutinen
   r = readIntfIntcapFallback_(addr);
   return r;
 }
@@ -375,6 +398,7 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   uint8_t gpintena=0, gpintenb=0;
   uint8_t intcona=0, intconb=0;
   uint8_t gppua=0, gppub=0;
+  uint8_t defvala=0, defvalb=0;
 
   // Läs befintliga värden
   (void)readReg8_OK_(i2cAddr, REG_GPINTENA, gpintena);
@@ -383,32 +407,47 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   (void)readReg8_OK_(i2cAddr, REG_INTCONB,  intconb);
   (void)readReg8_OK_(i2cAddr, REG_GPPUA,    gppua);
   (void)readReg8_OK_(i2cAddr, REG_GPPUB,    gppub);
+  (void)readReg8_OK_(i2cAddr, REG_DEFVALA,  defvala);
+  (void)readReg8_OK_(i2cAddr, REG_DEFVALB,  defvalb);
 
-  // ---- Här väljer du vilka pinnar som ska ha interrupt ----
-  // Exempel: GPB0 (pin 8) med intern pull-up
-  gpintenb |= (1u << 1);   // B1 = bit 1 i port B
-  gppub    |= (1u << 1);   // aktivera pull-up på B1
-
-  // Interrupt on change (jämförelse med föregående värde)
-  // => INTCON=0 betyder jämför med tidigare GPIO
-  intconb &= ~(1u << 1);
+// ---- Välj pinnen som ska ha interrupt (TEST_BUTTON) ----
+uint8_t p = cfg::mcp::TEST_BUTTON;
+if (p < 8) {
+  // Port A
+  gpintena |= (1u << p);   // enable INT
+  gppua    |= (1u << p);   // pull-up
+  intcona  &= ~(1u << p);  // CHANGE mode (ignorera DEFVAL)
+  // defvala-bit för p behöver inte sättas i CHANGE-läge
+} else {
+  // Port B
+  uint8_t bit = p - 8;
+  gpintenb |= (1u << bit); // enable INT
+  gppub    |= (1u << bit); // pull-up
+  intconb  &= ~(1u << bit); // CHANGE mode
+  // defvalb-bit för p behöver inte sättas i CHANGE-läge
+}
 
   // DEFVAL sätts till 0, används ej här
-  writeReg8_(i2cAddr, REG_DEFVALA, 0x00);
-  writeReg8_(i2cAddr, REG_DEFVALB, 0x00);
+  writeReg8_(i2cAddr, REG_DEFVALA, defvala);
+  writeReg8_(i2cAddr, REG_DEFVALB, defvalb);
 
-  // Skriv tillbaka nya registervärden
+  // Skriv tillbaka
   writeReg8_(i2cAddr, REG_GPPUA, gppua);
   writeReg8_(i2cAddr, REG_GPPUB, gppub);
 
   writeReg8_(i2cAddr, REG_INTCONA, intcona);
   writeReg8_(i2cAddr, REG_INTCONB, intconb);
 
+  writeReg8_(i2cAddr, REG_DEFVALA, defvala);
+  writeReg8_(i2cAddr, REG_DEFVALB, defvalb);
+
   writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
   writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
 
-  // Läser ut för att kvittera hängande flaggor
-  (void)mcp.readGPIOAB();
+  // Kvittera eventuella hängande flaggor (läs INTCAP följt av GPIO)
+  uint16_t dummy=0;
+  (void)readRegPair16_OK_(i2cAddr, REG_INTCAPA, dummy);
+  (void)readRegPair16_OK_(i2cAddr, REG_GPIOA,   dummy);
 }
 
 // Reads the 16-bit GPIO value from both ports of an MCP device

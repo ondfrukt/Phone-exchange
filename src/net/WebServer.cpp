@@ -13,6 +13,9 @@ bool WebServer::begin() {
   setupApiRoutes_();
   pushInitialSnapshot_();
 
+  if (settings_.debugWSLevel >= 1) {
+    listFS();
+  }
 
   server_.begin();
   serverStarted_ = true;
@@ -26,12 +29,11 @@ void WebServer::listFS() {
   }
 }
 
-
 // --- Private ---
 
 void WebServer::setupFilesystem_() {
   fsMounted_ = LittleFS.begin(true);
-  if (!fsMounted_) Serial.println("[WebServer] LittleFS mount misslyckades.");
+  if (!fsMounted_) Serial.println("WebServer: LittleFS mount misslyckades.");
 }
 
 void WebServer::initSse_() {
@@ -74,7 +76,6 @@ void WebServer::setupApiRoutes_() {
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
 
-
   // Toggle: POST /api/active/toggle  (body: line=3)
   server_.on("/api/active/toggle", HTTP_POST, [this](AsyncWebServerRequest* req){
     int line = -1;
@@ -92,8 +93,9 @@ void WebServer::setupApiRoutes_() {
       req->send(400, "application/json", "{\"error\":\"missing/invalid line\"}");
       return;
     }
-
-    Serial.printf("API: toggle line=%d\n", line);
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: API toggle line=%d\n", line);
+    }
     toggleLineActiveBit_(line);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
@@ -128,7 +130,6 @@ void WebServer::setupApiRoutes_() {
     req->send(200, "application/json", buildDebugJson_());
   });
 
-
   server_.on("/api/debug/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getOptUChar = [req](const char* k, int& out) {
       out = -1;
@@ -159,7 +160,7 @@ void WebServer::setupApiRoutes_() {
     if (hasWs)  settings_.debugWSLevel  = (uint8_t)ws;
 
     // Spara till NVS
-    settings_.save();
+    //settings_.save();
 
     // Skicka live-uppdatering till andra klienter
     sendDebugSse();
@@ -185,7 +186,19 @@ void WebServer::setupApiRoutes_() {
   req->send(200, "application/json", json);
   });
 
+  // Restart: POST /api/restart
+  server_.on("/api/restart", HTTP_POST, [this](AsyncWebServerRequest* req){
+    // Svara först, sedan schemalägg omstart så HTTP-svaret hinner ut
+    req->send(200, "application/json", "{\"ok\":true}");
 
+    // Schemalägg omstart i separat FreeRTOS-task (icke-blockerande)
+    xTaskCreate([](void* arg){
+      auto self = static_cast<WebServer*>(arg);
+      vTaskDelay(pdMS_TO_TICKS(1000)); // 1s grace
+      self->restartDevice_();
+      vTaskDelete(nullptr);
+    }, "restartTask", 2048, this, 1, nullptr);
+  });
 
   // Statisk filserver
   if (fsMounted_) {
@@ -232,13 +245,27 @@ void WebServer::toggleLineActiveBit_(int line) {
   if (line < 0 || line > 7) return;
   bool wasActive = (settings_.activeLinesMask >> line) & 0x01;
   setLineActiveBit_(line, !wasActive);
+
+  if (settings_.debugWSLevel >= 1) {
+    Serial.printf("WebServer: Toggle line %d: %d -> %d\n", line, wasActive ? 1 : 0, wasActive ? 0 : 1);
+  }
+
 }
 
 void WebServer::pushInitialSnapshot_() {
   sendFullStatusSse();
   sendActiveMaskSse();
+
+  if (settings_.debugWSLevel >= 1) {
+    Serial.println("WebServer: Initial snapshot skickad via SSE");
+  }
 }
 
+void WebServer::restartDevice_() {
+  Serial.println("WebServer: Startar om enheten");
+  delay(3000);
+  ESP.restart();
+}
 
 // --- Help functions ---
 
@@ -273,7 +300,7 @@ void WebServer::sendDebugSse() {
   const String json = buildDebugJson_();
   events_.send(json.c_str(), "debug", millis());
   if (settings_.debugWSLevel >= 1) {
-    Serial.println("[WebServer] Debug levels skickade via SSE");
+    Serial.println("WebServer: Debug levels skickade via SSE");
   }
 }
 
@@ -283,7 +310,7 @@ void WebServer::sendFullStatusSse() {
 
   Serial.println(settings_.debugWSLevel);
   if (settings_.debugWSLevel >= 1) {
-    Serial.println("[WebServer] Full status skickad via SSE");
+    Serial.println("WebServer: Full status skickad via SSE");
   }
 }
 
@@ -291,6 +318,6 @@ void WebServer::sendActiveMaskSse() {
   const String json = buildActiveJson_(settings_.activeLinesMask);
   events_.send(json.c_str(), "activeMask", millis());
   if (settings_.debugWSLevel >= 1) {
-    Serial.println("[WebServer] Active mask skickad via SSE");
+    Serial.println("WebServer: Active mask skickad via SSE");
   }
 }

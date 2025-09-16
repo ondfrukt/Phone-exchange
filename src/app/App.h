@@ -11,6 +11,10 @@
 #include "net/WifiClient.h"
 #include "net/Provisioning.h"
 #include "net/WebServer.h"
+#include "esp_system.h"
+
+#include "util/TestButton.h"
+#include "util/I2CScanner.h"
 
 // #include "drivers/ToneOut.h"
 // #include "net/WebServer.h"
@@ -22,12 +26,16 @@ public:
     void begin();
     void loop();
 
-private:
     MCPDriver mcpDriver_;
+
+private:
+    
     LineManager lineManager_;
     SHKService SHKService_;
     LineAction lineAction_;
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
     WebServer webServer_;
+    TestButton testButton_;
+    I2CScanner i2cScanner{Wire, Serial};
 };

@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgWs  = document.getElementById('dbg-ws');
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
+  const $restartBtn = document.getElementById('dbg-restart');
 
   let activeMask = 0;                 // bitmask 0..255
   let linesCache = [];                // [{id, status}]
@@ -135,7 +136,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function restartDevice() {
+    if (!confirm('Are you sure you want to restart the device?')) return;
+    try{
+      const r = await fetch('/api/restart', { method:'POST' });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      await r.json();
+    } catch(e){
+      setStatus('Kunde inte starta om enheten (se konsol).');
+      console.warn(e);
+    }
+  }
+
+  async function restartDevice() {
+    if (!confirm('Are you sure you want to restart the device?')) return;
+    try{
+      const r = await fetch('/api/restart', { method:'POST' });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      // Svara gärna i UI
+      setDbgMsg('Restarting…');
+      // Efter detta tappar sidan kontakt när ESP32 startar om
+    } catch(e){
+      setStatus('Kunde inte starta om enheten (se konsol).');
+      console.warn(e);
+    }
+  }
+
   $dbgBtn?.addEventListener('click', saveDebug);
+  $restartBtn?.addEventListener('click', restartDevice);
 
   // ---- Initial inläsning ----
   // 1) Full statuslista
