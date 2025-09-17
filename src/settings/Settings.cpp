@@ -67,6 +67,7 @@ bool Settings::load() {
     debugLmLevel          = prefs.getUChar ("debugLm",    debugLmLevel);  // NY
     debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);  // NY
     debugLALevel          = prefs.getUChar ("debugLa",    debugLALevel);  // NY
+    debugMTLevel          = prefs.getUChar ("debugMt",    debugMTLevel);  // NY
     // --- Övrigt ---
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
@@ -95,6 +96,7 @@ void Settings::save() const {
   prefs.putUChar ("debugLm",    debugLmLevel);  // NY
   prefs.putUChar ("debugWs",    debugWSLevel);  // NY
   prefs.putUChar ("debugLa",    debugLALevel);  // NY
+  prefs.putUChar ("debugMt",    debugMTLevel);  // NY
   // --- Övrigt ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);

@@ -34,10 +34,10 @@ namespace cfg {
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x27;
-    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23;
-    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
-    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x27;   //A0=GND, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=GND, A1=VCC, A2=VCC
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21;  //BEHÖVER ÄNDRAS!
 
     struct PinModeEntry {
     uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP
@@ -160,12 +160,12 @@ namespace cfg {
     };
 
     constexpr uint8_t SHK_PINS[8] = {
-      4,   // Line 0 MCP_SLIC1, GPA4
-      5,   // Line 1 MCP_SLIC1, GPA5
+      5,   // Line 0 MCP_SLIC1, GPA5
+      4,   // Line 1 MCP_SLIC1, GPA4
       8,   // Line 2 MCP_SLIC1, GPB0
       11,  // Line 3 MCP_SLIC1, GPB3
-      4,   // Line 4 MCP_SLIC2, GPA4
-      5,   // Line 5 MCP_SLIC2, GPA5
+      5,   // Line 4 MCP_SLIC2, GPA5
+      4,   // Line 5 MCP_SLIC2, GPA4
       8,   // Line 6 MCP_SLIC2, GPB0
       11   // Line 7 MCP_SLIC2, GPB3
     };
