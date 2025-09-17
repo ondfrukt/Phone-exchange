@@ -28,6 +28,7 @@ public:
   uint8_t debugLmLevel;           // 0=ingen, 1=lite, 2=mycket
   uint8_t debugWSLevel;           // 0=ingen, 1=lite, 2=mycket
   uint8_t debugLALevel;           // 0=ingen, 1=lite, 2=mycket
+  uint8_t debugMTLevel;           // 0=ingen, 1=lite, 2=mycket
 
   uint8_t pulseAdjustment;         // Pulsjustering (1 ger att 1 puls = 0, 2 pulser = 1 osv)
 

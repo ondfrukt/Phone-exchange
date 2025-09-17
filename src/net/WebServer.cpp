@@ -138,18 +138,20 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
+    bool hasLa  = getOptUChar("la",  la);
+    bool hasMt  = getOptUChar("mt",  mt);
 
-    if (!hasShk && !hasLm && !hasWs) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -158,6 +160,8 @@ void WebServer::setupApiRoutes_() {
     if (hasShk) settings_.debugSHKLevel = (uint8_t)shk;
     if (hasLm)  settings_.debugLmLevel  = (uint8_t)lm;
     if (hasWs)  settings_.debugWSLevel  = (uint8_t)ws;
+    if (hasLa)  settings_.debugLALevel  = (uint8_t)la;
+    if (hasMt)  settings_.debugMTLevel  = (uint8_t)mt;
 
     // Spara till NVS
     //settings_.save();
@@ -292,6 +296,8 @@ String WebServer::buildDebugJson_() const {
   json += "\"shk\":" + String(settings_.debugSHKLevel);
   json += ",\"lm\":" + String(settings_.debugLmLevel);
   json += ",\"ws\":" + String(settings_.debugWSLevel);
+  json += ",\"la\":" + String(settings_.debugLALevel);
+  json += ",\"mt\":" + String(settings_.debugMTLevel);
   json += "}";
   return json;
 }

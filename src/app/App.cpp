@@ -1,5 +1,4 @@
 #include "app/App.h"
-#include <Wire.h> // Ensure Wire is included
 using namespace cfg;
 
 App::App()
@@ -10,7 +9,6 @@ App::App()
     webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
     testButton_(mcpDriver_) {
 }
-
 
 void App::begin() {
     Serial.begin(115200);

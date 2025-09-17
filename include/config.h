@@ -118,6 +118,8 @@ namespace cfg {
       /*15*/ {OUTPUT, LOW},  // GPB7 Not in use
     };
 
+
+
     // MCP SLIC
 
     constexpr uint8_t FR_15 = 2;
@@ -233,8 +235,12 @@ namespace cfg {
     constexpr uint8_t STROBE    = 2; // GPA2
     constexpr uint8_t CS        = 3; // GPA3
 
-    constexpr uint8_t ax_pins[4] = {8, 9, 10, 11}; // GPB0-GPB3
-    constexpr uint8_t ay_pins[3] = {12, 13, 14}; // GPB4-GPB6
-  }
+    constexpr uint8_t ax_pins[4] = {mcp::AX0, mcp::AX1, mcp::AX2, mcp::AX3}; // GPB0-GPB3
+    constexpr uint8_t ay_pins[3] = {mcp::AY0, mcp::AY1, mcp::AY2}; // GPB4-GPB6
 
+    constexpr uint8_t  DAC1 = 12;
+    constexpr uint8_t  DAC2 = 13;
+    constexpr uint8_t  DAC3 = 14;
+    constexpr uint8_t  DAC4 = 15;
+  }
 }

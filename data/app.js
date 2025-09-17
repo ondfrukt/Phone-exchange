@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgShk = document.getElementById('dbg-shk');
   const $dbgLm  = document.getElementById('dbg-lm');
   const $dbgWs  = document.getElementById('dbg-ws');
+  const $dbgLa  = document.getElementById('dbg-la');
+  const $dbgMt  = document.getElementById('dbg-mt');
+
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
   const $restartBtn = document.getElementById('dbg-restart');
@@ -105,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
       if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
       if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
+      if (typeof d.la  === 'number') $dbgLa.value  = String(d.la|0);
+      if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -230,6 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
       if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
       if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
+      if (typeof d.la  === 'number') $dbgLa.value  = String(d.la|0);
+      if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
     } catch {}
   });
 
