@@ -241,6 +241,6 @@ namespace cfg {
     constexpr uint8_t  DAC1 = 12;
     constexpr uint8_t  DAC2 = 13;
     constexpr uint8_t  DAC3 = 14;
-    constexpr uint8_t  DAC4 = 15;
+    constexpr uint8_t  DTMF = 15;
   }
 }

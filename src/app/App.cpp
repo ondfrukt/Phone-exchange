@@ -3,12 +3,12 @@ using namespace cfg;
 
 App::App()
   : mcpDriver_(),
+    mt8816Driver_(mcpDriver_, Settings::instance()),
     lineManager_(Settings::instance()),
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
-    lineAction_(lineManager_, Settings::instance()),
+    lineAction_(lineManager_, Settings::instance(), mt8816Driver_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
-    testButton_(mcpDriver_) {
-}
+    testButton_(mcpDriver_) {}
 
 void App::begin() {
     Serial.begin(115200);

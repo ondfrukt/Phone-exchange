@@ -24,7 +24,7 @@ void Settings::adjustActiveLines() {
 
 void Settings::resetDefaults() {
   // Spara bara *inställningar*, inte körtidsstatus
-  activeLinesMask       = 0b11110000;
+  activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
   debugSHKLevel         = 1;

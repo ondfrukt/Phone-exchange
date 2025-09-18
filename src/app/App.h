@@ -7,6 +7,7 @@
 #include "services/SHKService.h"
 #include "services/LineAction.h"
 #include "drivers/MCPDriver.h"
+#include "drivers/MT8816Driver.h"
 #include "settings/settings.h"
 #include "net/WifiClient.h"
 #include "net/Provisioning.h"
@@ -27,11 +28,13 @@ public:
     void loop();
 
     MCPDriver mcpDriver_;
+    MT8816Driver mt8816Driver_;
 
 private:
     
     LineManager lineManager_;
     SHKService SHKService_;
+    
     LineAction lineAction_;
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;

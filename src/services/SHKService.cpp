@@ -1,4 +1,3 @@
-// src/telephony/SHKService.cpp
 #include "SHKService.h"
 
 // Constructor: Initializes SHKService with references to LineManager, MCPDriver, and Settings.
@@ -7,14 +6,6 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
 
   // Set maximum number of physical lines.
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
-
-  // Determine number of active lines from settings.
-  activeLines_ = 0;
-  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-    if ((settings_.activeLinesMask >> i) & 1u) {
-      activeLines_ = i + 1;
-    }
-  }
 
   // Prepare state storage for each line.
   lineState_.resize(maxPhysicalLines_);
@@ -58,14 +49,6 @@ bool SHKService::needsTick(uint32_t nowMs) const {
 // If no lines remain active after processing, the service goes idle.
 // Otherwise, schedules the next tick after settings_.burstTickMs.
 bool SHKService::tick(uint32_t nowMs) {
-
-  // Update number of active lines.
-  activeLines_ = 0;
-  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-    if ((settings_.activeLinesMask >> i) & 1u) {
-      activeLines_ = i + 1;
-    }
-  }
 
   if (!burstActive_ || nowMs < burstNextTickAtMs_) return false;
 
@@ -275,10 +258,6 @@ bool SHKService::pulseModeAllowed_(const LineHandler& line) const {
 // Updates pulse detector state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'.
 void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
 
-  if (settings_.debugSHKLevel >= 2){
-    Serial.printf("SHKService: Line %d updatePulseDetector_ rawHigh=%d\n", (int)idx, (int)rawHigh);
-  }
-
   auto& s   = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
 
@@ -390,7 +369,7 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
       s.pdState     = PerLine::PDState::BetweenPulses;
       s.lastEdgeMs  = nowMs; // Start digit gap measurement.
 
-      if (settings_.debugSHKLevel >= 1) {
+      if (settings_.debugSHKLevel >= 2) {
         Serial.printf("SHKService: Line %d pulsCountWork %d \n", (int)idx, (int)s.pulseCountWork);
       }
 

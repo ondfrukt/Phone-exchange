@@ -9,59 +9,43 @@ MT8816Driver::MT8816Driver(MCPDriver& mcpDriver, Settings& settings) : mcpDriver
 
 void MT8816Driver::begin()
 {
-    // Reset MCP
-    reset();
-    Serial.println("MT8816 initialized successfully.");
+	// Reset MCP
+	reset();
+	Serial.println("MT8816 initialized successfully.");
 }
 
-void MT8816Driver::CDLines(uint8_t LineA, uint8_t LineB, bool state) {
-    setAddress(LineA, LineB);
-    mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::DATA, state ? HIGH : LOW);
-    delay(10);  // Short delay to ensure data pin is stable
-    strobe();
-    connections[LineA][LineB] = state;
+void MT8816Driver::SetAudioConnection(uint8_t line, uint8_t audio, bool state) {
+	SetConnection(line, audio, state);
 
-    setAddress(LineB, LineA);
-    mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::DATA, state ? HIGH : LOW);
-    delay(10);  // Short delay to ensure data pin is stable
-    strobe();
-    connections[LineB][LineA] = state;
+	if (settings_.debugMTLevel >= 1) {
+		Serial.print("MT8816Driver: Audio connection for line ");
+		Serial.print(line);
+		Serial.print(" and audio ");
+		Serial.print(audio);
+		Serial.print(" set to ");
+		Serial.println(state ? "CONNECTED" : "DISCONNECTED");
+	}
+}
+void MT8816Driver::SetLineConnection(uint8_t lineA, uint8_t lineB, bool state) {
+    SetConnection(lineA, lineB, state);
+    SetConnection(lineB, lineA, state);
 
-    if (settings_.debugMTLevel >= 1) {
-        Serial.print("MT8816Driver: ");
-        Serial.print(LineA);
-        Serial.print(" <-> ");
-        Serial.print(LineB);
-        Serial.print(" set to ");
-        Serial.println(state ? "CONNECTED" : "DISCONNECTED");
-    }
-
-    if (settings_.debugMTLevel >= 2) {
-        printConnections();
-    }
-
+	if (settings_.debugMTLevel >= 1) {
+		Serial.print("MT8816Driver: Line connection between ");
+		Serial.print(lineA);
+		Serial.print(" and ");
+		Serial.print(lineB);
+		Serial.print(" set to ");
+		Serial.println(state ? "CONNECTED" : "DISCONNECTED");
+	}
 }
 
-void MT8816Driver::CDaudio(uint8_t line, uint8_t audio, bool state) {
-
-    setAddress(line, audio);
+void MT8816Driver::SetConnection(uint8_t x, uint8_t y, bool state) {
+    setAddress(x, y);
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::DATA, state ? HIGH : LOW);
     delay(10);  // Short delay to ensure data pin is stable
     strobe();
-    connections[line][audio] = state;
-
-    if (settings_.debugMTLevel >= 1) {
-        Serial.print("MT8816Driver: ");
-        Serial.print(line);
-        Serial.print(" <-> Audio ");
-        Serial.print(audio);
-        Serial.print(" set to ");
-        Serial.println(state ? "CONNECTED" : "DISCONNECTED");
-    }
-
-    if (settings_.debugMTLevel >= 2) {
-        printConnections();
-    }
+    connections[x][y] = state;
 }
 
 bool MT8816Driver::getConnection(int x, int y) {

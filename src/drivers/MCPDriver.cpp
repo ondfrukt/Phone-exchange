@@ -338,6 +338,12 @@ int8_t MCPDriver::mapSlicPinToLine_(uint8_t addr, uint8_t pin) const {
   return -1;
 }
 
+void MCPDriver::mt8816PowerControl(bool set) {
+  mt8816Powered_ = set;
+  digitalWriteMCP(cfg::mcp::MCP_MT8816_ADDRESS, cfg::mcp::PWDN_MT8870, set);
+}
+
+
 // Applies pin modes and initial values to an MCP device
 bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]) {
   for (uint8_t p=0;p<16;p++) {

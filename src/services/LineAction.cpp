@@ -1,8 +1,8 @@
 #include "LineAction.h"
 
 
-LineAction::LineAction(LineManager& lineManager, Settings& settings)
-: lineManager_(lineManager), settings_(settings) {
+LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver)
+: lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver) {
   // ev. startlogik
 };
 
@@ -36,6 +36,8 @@ void LineAction::update() {
   }
 }
 
+
+// Handles actions based on new line status
 void LineAction::action(int index) {
   using namespace model;
   LineHandler& line = lineManager_.getLine(index);
@@ -51,16 +53,16 @@ void LineAction::action(int index) {
 
     case LineStatus::Ready:
       // mqttHandler.publishMQTT(line, line_ready);
-      // mt8816.connect(DTMF_line, line);
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
+
       // lastLineReady = line;
       // Line[line].startLineTimer(statusTimer_Ready);
       // toneGen1.setMode(ToneGenerator::TONE_READY);
       break;
     
     case LineStatus::PulseDialing:
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
     // Timers for pulse dialing is handled when a digit is received
-
-    
     //   mqttHandler.publishMQTT(line, line_pulse_dialing);
     //   Line[line].startLineTimer(statusTimer_pulsDialing);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
