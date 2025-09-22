@@ -27,7 +27,6 @@ namespace cfg {
     constexpr int MOSI_PIN = 1;
   }
 
-
   namespace mcp {
 
     inline constexpr int MCP_MAIN_INT_PIN = 18;
@@ -219,21 +218,7 @@ namespace cfg {
     constexpr int LED_L7 = 0; // GPA0
   }
 
-  namespace MT8870 {
-    constexpr int Q1 = 8; // GPB0
-    constexpr int Q2 = 7; // GPA7
-    constexpr int Q3 = 6; // GPA6
-    constexpr int Q4 = 5; // GPA5
-
-    constexpr int STD = 11; // GPB3
-    constexpr int PWDN = 10; // GPB2
-  }
-
   namespace mt8816 {
-    constexpr uint8_t RESET     = 0; // GPA0
-    constexpr uint8_t DATA      = 1; // GPA1
-    constexpr uint8_t STROBE    = 2; // GPA2
-    constexpr uint8_t CS        = 3; // GPA3
 
     constexpr uint8_t ax_pins[4] = {mcp::AX0, mcp::AX1, mcp::AX2, mcp::AX3}; // GPB0-GPB3
     constexpr uint8_t ay_pins[3] = {mcp::AY0, mcp::AY1, mcp::AY2}; // GPB4-GPB6

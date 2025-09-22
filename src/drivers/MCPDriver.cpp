@@ -399,7 +399,7 @@ void MCPDriver::enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp
   (void)mcp.readGPIOAB();
 }
 
-// Aktiverar interrupts för MCP_MAIN, ex. knapp på GPB0
+// Aktiverar interrupts för MCP_MAIN, ex. knapp och MT8870 STD
 void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   uint8_t gpintena=0, gpintenb=0;
   uint8_t intcona=0, intconb=0;
@@ -416,26 +416,37 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   (void)readReg8_OK_(i2cAddr, REG_DEFVALA,  defvala);
   (void)readReg8_OK_(i2cAddr, REG_DEFVALB,  defvalb);
 
-// ---- Välj pinnen som ska ha interrupt (TEST_BUTTON) ----
-uint8_t p = cfg::mcp::TEST_BUTTON;
-if (p < 8) {
-  // Port A
-  gpintena |= (1u << p);   // enable INT
-  gppua    |= (1u << p);   // pull-up
-  intcona  &= ~(1u << p);  // CHANGE mode (ignorera DEFVAL)
-  // defvala-bit för p behöver inte sättas i CHANGE-läge
-} else {
-  // Port B
-  uint8_t bit = p - 8;
-  gpintenb |= (1u << bit); // enable INT
-  gppub    |= (1u << bit); // pull-up
-  intconb  &= ~(1u << bit); // CHANGE mode
-  // defvalb-bit för p behöver inte sättas i CHANGE-läge
-}
+  // ---- TEST_BUTTON: CHANGE-läge med pull-up ----
+  {
+    uint8_t p = cfg::mcp::TEST_BUTTON;
+    if (p < 8) {
+      gpintena |= (1u << p);   // enable INT
+      gppua    |= (1u << p);   // pull-up
+      intcona  &= ~(1u << p);  // CHANGE mode (ignorera DEFVAL)
+    } else {
+      uint8_t bit = p - 8;
+      gpintenb |= (1u << bit); // enable INT
+      gppub    |= (1u << bit); // pull-up
+      intconb  &= ~(1u << bit); // CHANGE mode
+    }
+  }
 
-  // DEFVAL sätts till 0, används ej här
-  writeReg8_(i2cAddr, REG_DEFVALA, defvala);
-  writeReg8_(i2cAddr, REG_DEFVALB, defvalb);
+  // ---- MT8870 STD: compare-to-DEFVAL (INTCON=1). DEFVAL synkas i handleInterrupt_ ----
+  {
+    uint8_t p = cfg::mcp::STD; // GPB3 enligt konfig
+    if (p < 8) {
+      gpintena |= (1u << p);
+      // STD drivs av MT8870 => pull-up ofta onödig, låt gppua vara oförändrad
+      intcona  |= (1u << p);  // enable compare-to-DEFVAL
+      // DEFVALA lämnas orörd här; uppdateras av handleInterrupt_ efter varje fångad nivå
+    } else {
+      uint8_t bit = p - 8;
+      gpintenb |= (1u << bit);
+      // STD drivs av MT8870 => lämna gppub som är
+      intconb  |= (1u << bit); // enable compare-to-DEFVAL
+      // DEFVALB uppdateras dynamiskt av handleInterrupt_
+    }
+  }
 
   // Skriv tillbaka
   writeReg8_(i2cAddr, REG_GPPUA, gppua);

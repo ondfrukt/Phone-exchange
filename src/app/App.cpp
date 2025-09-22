@@ -25,7 +25,7 @@ void App::begin() {
 
 		// ---- Drivrutiner och tjänster ----
     mcpDriver_.begin();
-		// MT8816Driver_.begin();
+		mt8816Driver_.begin();
 
     lineManager_.begin();
     settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv

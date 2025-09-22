@@ -66,7 +66,6 @@ private:
   Settings&    settings_;
 
   std::vector<PerLine> lineState_;
-  // std::size_t  activeLines_ = 0;
 
   uint32_t activeMask_ = 0;
   bool     burstActive_     = false;

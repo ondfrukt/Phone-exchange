@@ -47,6 +47,11 @@ void LineAction::action(int index) {
   switch (newStatus) {
     
     case LineStatus::Idle:
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC1, false); // Disconnect any audio connections
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC2, false); // Disconnect any audio connections
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC3, false); // Disconnect any audio connections
+      
       // mqttHandler.publishMQTT(line, line_idle);
       // toneGen1.setMode(ToneGenerator::TONE_OFF);
       break;

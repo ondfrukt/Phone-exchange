@@ -25,6 +25,9 @@ void MT8816Driver::SetAudioConnection(uint8_t line, uint8_t audio, bool state) {
 		Serial.print(" set to ");
 		Serial.println(state ? "CONNECTED" : "DISCONNECTED");
 	}
+    if (settings_.debugMTLevel >= 2) {
+        printConnections();
+    }
 }
 void MT8816Driver::SetLineConnection(uint8_t lineA, uint8_t lineB, bool state) {
     SetConnection(lineA, lineB, state);
@@ -38,19 +41,22 @@ void MT8816Driver::SetLineConnection(uint8_t lineA, uint8_t lineB, bool state) {
 		Serial.print(" set to ");
 		Serial.println(state ? "CONNECTED" : "DISCONNECTED");
 	}
+    if (settings_.debugMTLevel >= 2) {
+        printConnections();
+    }
 }
 
 void MT8816Driver::SetConnection(uint8_t x, uint8_t y, bool state) {
     setAddress(x, y);
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::DATA, state ? HIGH : LOW);
-    delay(10);  // Short delay to ensure data pin is stable
+    delayMicroseconds(10);  // Short delay to ensure data pin is stable
     strobe();
     connections[x][y] = state;
 }
 
 bool MT8816Driver::getConnection(int x, int y) {
     // Check if the coordinates are within the valid range
-    if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+    if (x >= 0 && x < 16 && y >= 0 && y < 8) {
         return connections[x][y];
     } else {
         // Handle invalid coordinates, e.g., by returning a default value or throwing an exception
