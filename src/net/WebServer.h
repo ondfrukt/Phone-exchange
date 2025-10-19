@@ -51,4 +51,7 @@ private:
   String buildStatusJson_() const;
   String buildActiveJson_(uint8_t mask);
   String buildDebugJson_() const;
+
+  // Bind the util::Console sink to forward JSON messages to SSE "console"
+  void bindConsoleSink_();
 };

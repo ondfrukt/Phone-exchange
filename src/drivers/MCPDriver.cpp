@@ -241,6 +241,7 @@ IntResult MCPDriver::handleSlic2Interrupt()  {
   return r;
 }
 // Handles interrupts for MCP_MT8816
+
 IntResult MCPDriver::handleMT8816Interrupt() {
   if (!haveMT8816_) return {};
   return handleInterrupt_(mt8816IntFlag_, mcpMT8816_, mcp::MCP_MT8816_ADDRESS);
@@ -338,11 +339,11 @@ int8_t MCPDriver::mapSlicPinToLine_(uint8_t addr, uint8_t pin) const {
   return -1;
 }
 
+
 void MCPDriver::mt8816PowerControl(bool set) {
   mt8816Powered_ = set;
   digitalWriteMCP(cfg::mcp::MCP_MT8816_ADDRESS, cfg::mcp::PWDN_MT8870, set);
 }
-
 
 // Applies pin modes and initial values to an MCP device
 bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]) {

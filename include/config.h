@@ -103,20 +103,21 @@ namespace cfg {
       /*1*/  {OUTPUT, LOW},  // GPA1 -> DATA
       /*2*/  {OUTPUT, LOW},  // GPA2 -> STROBE
       /*3*/  {OUTPUT, LOW},  // GPA3 -> CS
-      /*4*/  {OUTPUT, LOW},  // GPA4 -> AX0
-      /*5*/  {OUTPUT, LOW},  // GPA5 -> AX1
-      /*6*/  {OUTPUT, LOW},  // GPA6 -> AX2
-      /*7*/  {OUTPUT, LOW},  // GPA7 -> AY0
-      /*8*/  {OUTPUT, LOW},  // GPB0 -> AY1
-      /*9*/  {OUTPUT, LOW},  // GPB1 -> AY2
-      /*10*/ {OUTPUT, LOW},  // GPB2 -> X0
-      /*11*/ {OUTPUT, LOW},  // GPB3 -> EX1
-      /*12*/ {OUTPUT, LOW},  // GPB4 -> EX2
-      /*13*/ {OUTPUT, LOW},  // GPB5 -> EX3
-      /*14*/ {OUTPUT, LOW},  // GPB6 -> EX4
-      /*15*/ {OUTPUT, LOW},  // GPB7 Not in use
+      /*4*/  {OUTPUT, LOW},  // GPA4 -> EX1
+      /*5*/  {OUTPUT, LOW},  // GPA5 -> EX2
+      /*6*/  {OUTPUT, LOW},  // GPA6 -> EX3
+      /*7*/  {OUTPUT, LOW},  // GPA7 -> EX4
+      /*8*/  {OUTPUT, LOW},  // GPB0 -> AX0
+      /*9*/  {OUTPUT, LOW},  // GPB1 -> AX1
+      /*10*/ {OUTPUT, LOW},  // GPB2 -> AX2
+      /*11*/ {OUTPUT, LOW},  // GPB3 -> AX3
+      /*12*/ {OUTPUT, LOW},  // GPB4 -> AY0
+      /*13*/ {OUTPUT, LOW},  // GPB5 -> AY1
+      /*14*/ {OUTPUT, LOW},  // GPB6 -> AY2
+      /*15*/ {OUTPUT, LOW},  // GPB7 -> EX5
     };
 
+    
 
 
     // MCP SLIC

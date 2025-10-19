@@ -1,6 +1,7 @@
 #include "WebServer.h"
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
+#include "util/UIConsole.h"
 
 WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi ,uint16_t port)
 : settings_ (settings), lm_(lineManager), wifi_(wifi), server_(port) {}
@@ -8,6 +9,9 @@ WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClie
 bool WebServer::begin() {
 
   setupFilesystem_();
+  // Initialize Console buffering (safe to call even if already init'd)
+  util::UIConsole::init(200);
+
   initSse_();
   setupCallbacks_();
   setupApiRoutes_();
@@ -19,6 +23,10 @@ bool WebServer::begin() {
 
   server_.begin();
   serverStarted_ = true;
+
+  // Bind console sink after server is started so messages are forwarded to SSE
+  bindConsoleSink_();
+
   return serverStarted_ && fsMounted_;
 }
 
@@ -43,8 +51,20 @@ void WebServer::initSse_() {
     client->send(buildStatusJson_().c_str(), nullptr, millis()); 
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
     client->send(buildDebugJson_().c_str(), "debug", millis());
+    // Note: console-history (buffrade meddelanden) flushas av util::Console när sink registreras.
   });
   server_.addHandler(&events_);
+}
+
+void WebServer::bindConsoleSink_() {
+  // Register the sink that forwards Console JSON strings to SSE "console"
+  util::UIConsole::setSink([this](const String& json) {
+    // Forward the ready-made JSON to SSE clients
+    events_.send(json.c_str(), "console", millis());
+    if (settings_.debugWSLevel >= 2) {
+      Serial.println("WebServer: forwarded console message to SSE");
+    }
+  });
 }
 
 void WebServer::setupCallbacks_() {
@@ -80,12 +100,9 @@ void WebServer::setupApiRoutes_() {
   server_.on("/api/active/toggle", HTTP_POST, [this](AsyncWebServerRequest* req){
     int line = -1;
 
-    // 1) försök läsa från URL (?line=3)
     if (req->hasParam("line")) {
       line = req->getParam("line")->value().toInt();
-    }
-    // 2) annars försök läsa från POST-body (Content-Type: application/x-www-form-urlencoded)
-    else if (req->hasParam("line", /*post=*/true)) {
+    } else if (req->hasParam("line", /*post=*/true)) {
       line = req->getParam("line", /*post=*/true)->value().toInt();
     }
 
@@ -174,20 +191,19 @@ void WebServer::setupApiRoutes_() {
   });
 
   server_.on("/api/info", HTTP_GET, [this](AsyncWebServerRequest* req){
-  // Hämta hostname från din WifiClient, eller via WiFi.getHostname()
-  String hn = wifi_.getHostname();
-  if (hn.isEmpty()) hn = "phoneexchange";
+    String hn = wifi_.getHostname();
+    if (hn.isEmpty()) hn = "phoneexchange";
 
-  String mac = wifi_.getMac();   // "AA:BB:CC:DD:EE:FF"
-  String ip  = wifi_.getIp();
+    String mac = wifi_.getMac();   // "AA:BB:CC:DD:EE:FF"
+    String ip  = wifi_.getIp();
 
-  String json = "{";
-  json += "\"hostname\":\"" + hn + "\",";
-  json += "\"ip\":\"" + ip + "\",";
-  json += "\"mac\":\"" + mac + "\"";
-  json += "}";
+    String json = "{";
+    json += "\"hostname\":\"" + hn + "\",";
+    json += "\"ip\":\"" + ip + "\",";
+    json += "\"mac\":\"" + mac + "\"";
+    json += "}";
 
-  req->send(200, "application/json", json);
+    req->send(200, "application/json", json);
   });
 
   // Restart: POST /api/restart

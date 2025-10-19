@@ -4,14 +4,16 @@ The MT8816 switch matrix is the component that makes it possible to route audio 
 
 When a connection is established, A_out from Line 1 must be routed to A_in at Line 2 and vice versa.
 
+
+
 <style>
 .table_component {
     overflow: auto;
-    width: 80%;
+    width: 50%;
 }
 
 .table_component table {
-    border: 2px solid #dededf;
+    border: 2px solid #ffffffff;
     height: 100%;
     width: 100%;
     table-layout: fixed;
@@ -27,15 +29,15 @@ When a connection is established, A_out from Line 1 must be routed to A_in at Li
 
 .table_component th {
     border: 1px solid #dededf;
-    background-color: #5684a3ff;
-    color: #000000;
+    background-color: #586874ff;
+    color: #000000ff;
     padding: 5px;
 }
 
 .table_component td {
     border: 1px solid #dededf;
     background-color: #49a4a4ff;
-    color: #000000;
+    color: #000000ff;
     padding: 1px;
 }
 
@@ -43,8 +45,24 @@ When a connection is established, A_out from Line 1 must be routed to A_in at Li
 .table_component th:last-child,
 .table_component td:last-child {
     min-width: 100px;
-    width: 70px;
+    width: 20px;
     text-align: left;
+}
+
+/* Gör första kolumnen grå */
+.table_component th:first-child,
+.table_component td:first-child {
+    background-color: #586874ff;
+    width: 30px;
+}
+
+/* Sätt bredd för alla kolumner utom första och sista */
+/* Här kan du ändra bredden för de "inre" kolumnerna */
+.table_component th:not(:first-child):not(:last-child),
+.table_component td:not(:first-child):not(:last-child) {
+    min-width: 1px; /* justera minbredd här */
+    max-width: 10px;
+    width: 60px;     /* justera fast bredd här */
 }
 
 /* Rotera texten på sista raden 90 grader motsols */
@@ -285,7 +303,7 @@ When a connection is established, A_out from Line 1 must be routed to A_in at Li
             <td></td>
             <td></td>
             <td></td>
-            <td>Audio_SLIC</td>
+            <td>DTMF</td>
         </tr>
         <tr>
             <td></td>

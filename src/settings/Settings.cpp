@@ -31,7 +31,7 @@ void Settings::resetDefaults() {
   debugLmLevel          = 0;
   debugWSLevel          = 0;
   debugLALevel          = 0;
-  debugMTLevel          = 2;
+  debugMTLevel          = 0;
 
   pulseAdjustment       = 1;
 

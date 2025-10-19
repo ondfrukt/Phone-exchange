@@ -10,7 +10,7 @@ void TestButton::update() {
     static uint32_t pressedAtMs  = 0;
     static uint32_t lastEvtMs    = 0;
 
-    IntResult r = mcpDriver_.handleMainInterrupt();
+    auto r = mcpDriver_.handleMainInterrupt();
     if (r.hasEvent && r.pin == cfg::mcp::TEST_BUTTON) {
         uint32_t now = millis();
         if (now - lastEvtMs < 20) return;

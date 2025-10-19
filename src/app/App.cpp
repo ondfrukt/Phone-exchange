@@ -12,7 +12,10 @@ App::App()
 
 void App::begin() {
     Serial.begin(115200);
+    util::UIConsole::init(200); 
+    Serial.println();
     Serial.println("----- App starting -----");
+    util::UIConsole::log("----- App starting -----", "App");
 
 		// ----  Settings ----
     auto& settings = Settings::instance();
@@ -34,9 +37,10 @@ void App::begin() {
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
     webServer_.begin();
-    Serial.println("----- App setup complete -----");
-}
 
+    Serial.println("----- App setup complete -----");
+    util::UIConsole::log("----- App setup complete -----", "App");
+}
 
 void App::loop() {
 	wifiClient_.loop();

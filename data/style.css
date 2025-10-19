@@ -66,3 +66,19 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 #dbg-restart:hover {
   background: rgba(239, 68, 68, 0.25);
 }
+
+/* Console styles (mottagare only) */
+.console-log{
+  background: rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.04);
+  padding:12px;
+  border-radius:8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+  font-size:0.85rem;
+  line-height:1.4;
+  max-height:280px;
+  overflow:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+  margin:0;
+}

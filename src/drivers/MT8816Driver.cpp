@@ -11,11 +11,12 @@ void MT8816Driver::begin()
 {
 	// Reset MCP
 	reset();
-	Serial.println("MT8816 initialized successfully.");
+	Serial.println("MT8816: Initialized successfully.");
 }
 
 void MT8816Driver::SetAudioConnection(uint8_t line, uint8_t audio, bool state) {
-	SetConnection(line, audio, state);
+	//SetConnection(line, audio, state); 
+    SetConnection(line, audio, state); //Temporary
 
 	if (settings_.debugMTLevel >= 1) {
 		Serial.print("MT8816Driver: Audio connection for line ");
@@ -29,6 +30,7 @@ void MT8816Driver::SetAudioConnection(uint8_t line, uint8_t audio, bool state) {
         printConnections();
     }
 }
+
 void MT8816Driver::SetLineConnection(uint8_t lineA, uint8_t lineB, bool state) {
     SetConnection(lineA, lineB, state);
     SetConnection(lineB, lineA, state);
@@ -119,7 +121,10 @@ void MT8816Driver::reset()
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::RESET, HIGH);
     delay(100);  
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::RESET, LOW);
-    Serial.println("MT8816 reset performed.");
+
+    if (settings_.debugMTLevel >= 1) {
+        Serial.println("MT8816: reset performed.");
+    }
 }
 
 void MT8816Driver::strobe()

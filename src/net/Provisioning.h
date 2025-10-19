@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <WiFiProv.h>
 #include "net/WifiClient.h"
+#include "net/WebServer.h"
 
 namespace net {
 
@@ -15,6 +16,7 @@ public:
   static void factoryReset();
 
 private:
+
   static void onSysEvent_(arduino_event_t *sys_event);
 
   static inline WifiClient* wifi_ = nullptr;  // pekare till din WifiClient

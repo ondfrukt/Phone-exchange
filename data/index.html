@@ -22,80 +22,95 @@
       <div id="status" class="status">Connectiong to the exchange…</div>
     </section>
 
-    <!-- Kort för debuginställningar -->
+    <!-- Kort för debuginställningar (fällbar) -->
     <section class="card">
-      <h2 style="margin:0 0 12px; font-size:1.2rem">Debug levels</h2>
-
-      <div class="row">
-        <span class="k">SHKService</span>
-        <span class="v">
-          <select id="dbg-shk">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
-          </select>
-        </span>
-        <span></span>
+      <div style="display:flex; align-items:center; justify-content:space-between">
+        <h2 style="margin:0 0 12px; font-size:1.2rem">Debug levels</h2>
+        <button id="dbg-toggle" class="badge clickable" aria-expanded="false" title="Visa/Dölj debugnivåer">Visa</button>
       </div>
 
-      <div class="row">
-        <span class="k">LineManager</span>
-        <span class="v">
-          <select id="dbg-lm">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
-          </select>
-        </span>
-        <span></span>
-      </div>
+      <!-- Detta innehåll är dolt tills användaren fäller ut vyn -->
+      <div id="dbg-body" style="display:none; margin-top:8px">
+        <div class="row">
+          <span class="k">SHKService</span>
+          <span class="v">
+            <select id="dbg-shk">
+              <option value="0">0 – Off</option>
+              <option value="1">1 – Low</option>
+              <option value="2">2 – High</option>
+            </select>
+          </span>
+          <span></span>
+        </div>
 
-      <div class="row">
-        <span class="k">WebServer
-        </span>
-        <span class="v">
-          <select id="dbg-ws">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
-          </select>
-        </span>
-        <span></span>
-      </div>
+        <div class="row">
+          <span class="k">LineManager</span>
+          <span class="v">
+            <select id="dbg-lm">
+              <option value="0">0 – Off</option>
+              <option value="1">1 – Low</option>
+              <option value="2">2 – High</option>
+            </select>
+          </span>
+          <span></span>
+        </div>
 
-      <div class="row">
-        <span class="k">LineAction</span>
-        <span class="v">
-          <select id="dbg-la">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
-          </select>
-        </span>
-        <span></span>
-      </div>
+        <div class="row">
+          <span class="k">WebServer
+          </span>
+          <span class="v">
+            <select id="dbg-ws">
+              <option value="0">0 – Off</option>
+              <option value="1">1 – Low</option>
+              <option value="2">2 – High</option>
+            </select>
+          </span>
+          <span></span>
+        </div>
 
-      <div class="row">
-        <span class="k">MT8816Driver</span>
-        <span class="v">
-          <select id="dbg-mt">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
-          </select>
-        </span>
-        <span></span>
-      </div>
+        <div class="row">
+          <span class="k">LineAction</span>
+          <span class="v">
+            <select id="dbg-la">
+              <option value="0">0 – Off</option>
+              <option value="1">1 – Low</option>
+              <option value="2">2 – High</option>
+            </select>
+          </span>
+          <span></span>
+        </div>
 
-      <div style="display:flex; gap:10px; margin-top:10px">
-        <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Uppdate
-        </button>
-        <button id="dbg-restart" class="badge clickable" style="border:1px solid var(--no)">
-          Restart device
-        </button>
-        <div id="dbg-status" class="status"></div>
+        <div class="row">
+          <span class="k">MT8816Driver</span>
+          <span class="v">
+            <select id="dbg-mt">
+              <option value="0">0 – Off</option>
+              <option value="1">1 – Low</option>
+              <option value="2">2 – High</option>
+            </select>
+          </span>
+          <span></span>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:10px">
+          <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
+            Uppdate
+          </button>
+          <button id="dbg-restart" class="badge clickable" style="border:1px solid var(--no)">
+            Restart device
+          </button>
+          <div id="dbg-status" class="status"></div>
+        </div>
       </div>
+    </section>
+
+    <!-- Console -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Console</h2>
+
+      <pre id="console-log" class="console-log" aria-live="polite" role="log"></pre>
+
+      <div style="margin-top:8px"></div>
     </section>
   </main>
 </body>
