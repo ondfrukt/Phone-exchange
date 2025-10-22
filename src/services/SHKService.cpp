@@ -347,7 +347,6 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
   }
 }
 
-
 // Handles rising edge (end of pulse) for line 'idx'.
 void SHKService::pulseRising_(int idx, uint32_t nowMs) {
   auto& s = lineState_[idx];

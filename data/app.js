@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const isActive  = (id) => ((activeMask >> id) & 1) === 1;
   const setStatus = (t) => { $status.textContent = t; };
   const setDbgMsg = (t) => { $dbgMsg.textContent = t; };
+  let restartInProgress = false;
+
 
   // Uppdatera visibilitet/statuscell för en rad beroende på aktiv-status
   function updateStatusVisibility(lineId){
@@ -206,8 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       const r = await fetch('/api/restart', { method:'POST' });
       if (!r.ok) throw new Error('HTTP '+r.status);
+      restartInProgress = true;
       setDbgMsg('Restarting…');
     } catch(e){
+      restartInProgress = false;
       setStatus('Kunde inte starta om enheten (se konsol).');
       console.warn(e);
     }
@@ -221,11 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const opened = dbgBody.style.display !== 'none';
     if (opened) {
       dbgBody.style.display = 'none';
-      dbgToggle.textContent = 'Visa';
+      dbgToggle.textContent = 'Show';
       dbgToggle.setAttribute('aria-expanded', 'false');
     } else {
       dbgBody.style.display = '';
-      dbgToggle.textContent = 'Dölj';
+      dbgToggle.textContent = 'Hide';
       dbgToggle.setAttribute('aria-expanded', 'true');
       loadDebug();
     }

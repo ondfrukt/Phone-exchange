@@ -15,6 +15,7 @@ void App::begin() {
     util::UIConsole::init(200); 
     Serial.println();
     Serial.println("----- App starting -----");
+    util::UIConsole::log("", "App");
     util::UIConsole::log("----- App starting -----", "App");
 
 		// ----  Settings ----
