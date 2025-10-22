@@ -15,7 +15,8 @@ void WifiClient::begin(const char* hostname) {
 
   // 2) Sätt hostname FÖRE WiFi.begin()
   if (!WiFi.setHostname(hostname_.c_str())) {
-    Serial.println("WifiClient: ⚠️ setHostname misslyckades (fortsätter ändå)");
+    Serial.println("WifiClient: Failed to set hostname.");
+    util::UIConsole::log("Failed to set hostname.", "WifiClient");
   }
 
   // 3) Registrera eventlyssnare (innan connect)
@@ -29,6 +30,7 @@ void WifiClient::begin(const char* hostname) {
     connect_();
   } else {
     Serial.println("WifiClient: No saved credentials, waiting for provisioning...");
+    util::UIConsole::log("No saved credentials, waiting for provisioning...", "WifiClient");
   }
 }
 
@@ -58,6 +60,7 @@ void WifiClient::saveCredentials(const char* ssid, const char* password) {
   ssid_ = ssid;
   password_ = password;
   Serial.println("WifiClient: Credentials saved");
+  util::UIConsole::log("Credentials saved", "WifiClient");
 }
 
 bool WifiClient::loadCredentials(String& ssid, String& password) {
@@ -68,6 +71,7 @@ bool WifiClient::loadCredentials(String& ssid, String& password) {
 
 void WifiClient::connect_() {
   Serial.printf("WifiClient: Connecting to %s… (host=%s)\n", ssid_.c_str(), hostname_.c_str());
+  util::UIConsole::log("Connecting to " + ssid_ + "...", "WifiClient");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid_.c_str(), password_.c_str());
   connecting_ = true;
@@ -77,10 +81,12 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
   switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("WifiClient: Connected to AP");
+      util::UIConsole::log("Connected to AP", "WifiClient");
       break;
 
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: {
       Serial.print("WifiClient: Got IP: ");
+      util::UIConsole::log("Got IP: " + WiFi.localIP().toString(), "WifiClient");
       Serial.println(WiFi.localIP());
       connecting_ = false;
 
@@ -90,8 +96,10 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
           mdnsStarted_ = true;
           MDNS.addService("http", "tcp", 80);
           Serial.printf("WifiClient: mDNS igång → http://%s.local/\n", hostname_.c_str());
+          util::UIConsole::log("mDNS running → http://" + hostname_ + ".local/", "WifiClient");
         } else {
           Serial.println("WifiClient: ⚠️ MDNS.begin misslyckades");
+          util::UIConsole::log("⚠️ MDNS.begin failed", "WifiClient");
         }
       }
       break;
@@ -99,6 +107,7 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       Serial.println("WifiClient: Disconnected, retrying…");
+      util::UIConsole::log("Disconnected, retrying...", "WifiClient");
       connecting_ = false;
       // Stäng mDNS tills vi åter har IP
       if (mdnsStarted_) {

@@ -24,7 +24,10 @@ void App::begin() {
 
 		// ---- I2C och I2C-scanner ----
 		Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
-		i2cScanner.scan();
+
+    // I2C-scanner if debug is enabled
+    if (settings.debugI2CLevel >= 1) i2cScanner.scan();
+		
 
 		// ---- Drivrutiner och tjänster ----
     mcpDriver_.begin();

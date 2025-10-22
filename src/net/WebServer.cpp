@@ -47,6 +47,7 @@ void WebServer::setupFilesystem_() {
 void WebServer::initSse_() {
   events_.onConnect([this](AsyncEventSourceClient* client){
     Serial.println("WebServer: SSE-klient ansluten 📡");
+    util::UIConsole::log("SSE client connected.", "WebServer");
     // Skicka initial data till den nya klienten
     client->send(buildStatusJson_().c_str(), nullptr, millis());
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
@@ -65,6 +66,7 @@ void WebServer::bindConsoleSink_() {
     events_.send(json.c_str(), "console", millis());
     if (settings_.debugWSLevel >= 2) {
       Serial.println("WebServer: forwarded console message to SSE");
+      util::UIConsole::log("Forwarded console message to SSE", "WebServer");
     }
   });
 }
@@ -260,6 +262,7 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
 
   if (settings_.debugWSLevel >= 1) {
     Serial.printf("WebServer: ActiveMask: 0x%02X -> 0x%02X\n", before, settings_.activeLinesMask);
+    util::UIConsole::log("ActiveMask: 0x" + String(before, HEX) + " -> 0x" + String(settings_.activeLinesMask, HEX), "WebServer");
   }
 }
 
@@ -270,6 +273,7 @@ void WebServer::toggleLineActiveBit_(int line) {
 
   if (settings_.debugWSLevel >= 1) {
     Serial.printf("WebServer: Toggle line %d: %d -> %d\n", line, wasActive ? 1 : 0, wasActive ? 0 : 1);
+    util::UIConsole::log("Toggle line " + String(line) + ": " + String(wasActive ? 1 : 0) + " -> " + String(wasActive ? 0 : 1), "WebServer");
   }
 
 }
@@ -280,11 +284,13 @@ void WebServer::pushInitialSnapshot_() {
 
   if (settings_.debugWSLevel >= 1) {
     Serial.println("WebServer: Initial snapshot skickad via SSE");
+    util::UIConsole::log("Initial snapshot sent via SSE", "WebServer");
   }
 }
 
 void WebServer::restartDevice_() {
   Serial.println("WebServer: Startar om enheten");
+  util::UIConsole::log("Restarting device...", "WebServer");
   delay(3000);
   ESP.restart();
 }
@@ -325,6 +331,7 @@ void WebServer::sendDebugSse() {
   events_.send(json.c_str(), "debug", millis());
   if (settings_.debugWSLevel >= 1) {
     Serial.println("WebServer: Debug levels skickade via SSE");
+    util::UIConsole::log("Debug levels sent via SSE", "WebServer");
   }
 }
 
@@ -335,6 +342,7 @@ void WebServer::sendFullStatusSse() {
   Serial.println(settings_.debugWSLevel);
   if (settings_.debugWSLevel >= 1) {
     Serial.println("WebServer: Full status skickad via SSE");
+    util::UIConsole::log("Full status sent via SSE", "WebServer");
   }
 }
 
@@ -343,5 +351,6 @@ void WebServer::sendActiveMaskSse() {
   events_.send(json.c_str(), "activeMask", millis());
   if (settings_.debugWSLevel >= 1) {
     Serial.println("WebServer: Active mask skickad via SSE");
+    util::UIConsole::log("Active mask sent via SSE", "WebServer");
   }
 }

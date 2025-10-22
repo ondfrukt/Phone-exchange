@@ -342,6 +342,7 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
     s.lastEdgeMs = nowMs;
     if (settings_.debugSHKLevel >= 2)
       Serial.printf("SHKService: Line %d pulse falling \n", idx);
+      util::UIConsole::log("SHKService: Line " + String(idx) + " pulse falling", "SHKService");
   }
 }
 
@@ -355,6 +356,7 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
     s.lastEdgeMs = nowMs;                   // Rising edge.
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: Line %d pulse low duration %d ms\n", (int)idx, (int)lowDur);
+      util::UIConsole::log("SHKService: Line " + String(idx) + " pulse low duration " + String(lowDur) + " ms", "SHKService");
     }
 
     // Validate pulse low time: min = debounceMs, max = pulseLowMaxMs.
@@ -371,6 +373,7 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
 
       if (settings_.debugSHKLevel >= 2) {
         Serial.printf("SHKService: Line %d pulsCountWork %d \n", (int)idx, (int)s.pulseCountWork);
+        util::UIConsole::log("SHKService: Line " + String(idx) + " pulseCountWork " + String(s.pulseCountWork), "SHKService");
       }
 
     } else {
@@ -393,6 +396,8 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
     if (settings_.debugSHKLevel >= 1) {
       Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
       Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+      util::UIConsole::log("Line " + String(idx) + " digit '" + String(d) + "' (pulses=" + String(s.pulseCountWork) + ")", "SHKService");
+      util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
     }
   }
   resetPulseState_(idx);

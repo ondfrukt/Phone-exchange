@@ -4,6 +4,7 @@
 #include <WiFiProv.h>
 #include "net/WifiClient.h"
 #include "net/WebServer.h"
+#include "util/UIConsole.h"
 
 namespace net {
 

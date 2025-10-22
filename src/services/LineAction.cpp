@@ -197,6 +197,7 @@ void LineAction::timerExpired(LineHandler& line) {
 
   if (settings_.debugLALevel >= 1) {
     Serial.println("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus));
+    util::UIConsole::log("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus), "LineAction");
   }
 
   switch (currentStatus) {

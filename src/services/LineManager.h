@@ -1,6 +1,7 @@
 #pragma once
 #include "settings/settings.h"
 #include "model/Types.h"
+#include "util/UIConsole.h"
 #include "LineHandler.h"
 
 class LineManager {

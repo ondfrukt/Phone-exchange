@@ -12,6 +12,7 @@ void MT8816Driver::begin()
 	// Reset MCP
 	reset();
 	Serial.println("MT8816: Initialized successfully.");
+    util::UIConsole::log("Initialized successfully.", "MT8816Driver");
 }
 
 void MT8816Driver::SetAudioConnection(uint8_t line, uint8_t audio, bool state) {
@@ -25,6 +26,7 @@ void MT8816Driver::SetAudioConnection(uint8_t line, uint8_t audio, bool state) {
 		Serial.print(audio);
 		Serial.print(" set to ");
 		Serial.println(state ? "CONNECTED" : "DISCONNECTED");
+        util::UIConsole::log("Audio connection for line " + String(line) + " and audio " + String(audio) + " set to " + (state ? "CONNECTED" : "DISCONNECTED"), "MT8816Driver");
 	}
     if (settings_.debugMTLevel >= 2) {
         printConnections();
@@ -42,6 +44,7 @@ void MT8816Driver::SetLineConnection(uint8_t lineA, uint8_t lineB, bool state) {
 		Serial.print(lineB);
 		Serial.print(" set to ");
 		Serial.println(state ? "CONNECTED" : "DISCONNECTED");
+        util::UIConsole::log("Line connection between " + String(lineA) + " and " + String(lineB) + " set to " + (state ? "CONNECTED" : "DISCONNECTED"), "MT8816Driver");
 	}
     if (settings_.debugMTLevel >= 2) {
         printConnections();
@@ -67,6 +70,7 @@ bool MT8816Driver::getConnection(int x, int y) {
         Serial.print(", ");
         Serial.print(y);
         Serial.println(").");
+        util::UIConsole::log("GetConnection: - ogiltiga koordinater: (" + String(x) + ", " + String(y) + ")", "MT8816Driver");
         return false;
     }
 }
@@ -124,6 +128,7 @@ void MT8816Driver::reset()
 
     if (settings_.debugMTLevel >= 1) {
         Serial.println("MT8816: reset performed.");
+        util::UIConsole::log("Reset performed.", "MT8816Driver");
     }
 }
 

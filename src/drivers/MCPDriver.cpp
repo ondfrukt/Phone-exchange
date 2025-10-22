@@ -91,15 +91,35 @@ bool MCPDriver::begin() {
   settings.mcpMt8816Present = haveMT8816_;
 
   // Print MCP detection status
+  if (settings.mcpSlic1Present) {
   Serial.println(F("MCP init:"));
-  if (haveMain_)   Serial.println(F(" - MCP_MAIN   hittad")); else Serial.println(F(" - MCP_MAIN   saknas"));
-  if (haveSlic1_)  Serial.println(F(" - MCP_SLIC1  hittad")); else Serial.println(F(" - MCP_SLIC1  saknas"));
-  if (haveSlic2_)  Serial.println(F(" - MCP_SLIC2  hittad")); else Serial.println(F(" - MCP_SLIC2  saknas"));
-  if (haveMT8816_) Serial.println(F(" - MCP_MT8816 hittad")); else Serial.println(F(" - MCP_MT8816 saknas"));
+    util::UIConsole::log("MCP init:", "MCPDriver");
+    if (haveMain_) {
+      Serial.println(F(" - MCP_MAIN   hittad")); util::UIConsole::log(" - MCP_MAIN   hittad", "MCPDriver");
+    } else {
+      Serial.println(F(" - MCP_MAIN   saknas")); util::UIConsole::log(" - MCP_MAIN   saknas", "MCPDriver");
+    }
+    if (haveSlic1_) {
+      Serial.println(F(" - MCP_SLIC1  hittad")); util::UIConsole::log(" - MCP_SLIC1  hittad", "MCPDriver");
+    } else {
+      Serial.println(F(" - MCP_SLIC1  saknas")); util::UIConsole::log(" - MCP_SLIC1  saknas", "MCPDriver");
+    }
+    if (haveSlic2_) {
+      Serial.println(F(" - MCP_SLIC2  hittad")); util::UIConsole::log(" - MCP_SLIC2  hittad", "MCPDriver");
+    } else {
+      Serial.println(F(" - MCP_SLIC2  saknas")); util::UIConsole::log(" - MCP_SLIC2  saknas", "MCPDriver");
+    }
+    if (haveMT8816_) {
+      Serial.println(F(" - MCP_MT8816 hittad")); util::UIConsole::log(" - MCP_MT8816 hittad", "MCPDriver");
+    } else {
+      Serial.println(F(" - MCP_MT8816 saknas")); util::UIConsole::log(" - MCP_MT8816 saknas", "MCPDriver");
+    }
+  }
 
   // Abort if no MCP found
   if (!(haveMain_ || haveSlic1_ || haveSlic2_ || haveMT8816_ )) {
     Serial.println(F("Ingen MCP hittades, avbryter."));
+    util::UIConsole::log("Ingen MCP hittades, avbryter.", "MCPDriver");
     return false;
   }
 

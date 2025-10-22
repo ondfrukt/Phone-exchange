@@ -26,6 +26,7 @@ void TestButton::update() {
 
                 if (held >= 5000) {
                     Serial.println("Long press (>5s): running special method");
+                    
                     // myLongPressAction();
                 } else {
                     Serial.println("Short press: restart om 2s...");

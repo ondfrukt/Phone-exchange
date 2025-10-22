@@ -1,29 +1,29 @@
 #include "settings.h"
 
 Settings::Settings() {
-  resetDefaults();        // se till att fälten har startvärden
+  resetDefaults();        // ensure fields have initial values
 }
 
 
 void Settings::adjustActiveLines() {
-  // Justera activeLinesMask så den tar hänsyn till fysiska MCP-anslutningar
+  // Adjust activeLinesMask to take physical MCP connections into account
   uint8_t userMask = activeLinesMask;
   if (mcpSlic1Present && !mcpSlic2Present) {
-    // Bara SLIC1 finns: tillåt endast linjer 0–3
+    // Only SLIC1 exists: allow only lines 0–3
     allowMask = 0b00001111;
   } else if (!mcpSlic1Present && mcpSlic2Present) {
-    // Bara SLIC2 finns: tillåt endast linjer 4–7
+    // Only SLIC2 exists: allow only lines 4–7
     allowMask = 0b11110000;
   } else {
-    // Båda finns: tillåt alla linjer
+    // Both exist: allow all lines
     allowMask = 0b11111111;
   }
-  // Maskera användarens mask så att otillåtna linjer alltid blir inaktiva
+  // Mask the user's mask so disallowed lines are always inactive
   activeLinesMask = userMask & allowMask;
 }
 
 void Settings::resetDefaults() {
-  // Spara bara *inställningar*, inte körtidsstatus
+  // Save only *settings*, not runtime status
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
@@ -32,6 +32,7 @@ void Settings::resetDefaults() {
   debugWSLevel          = 0;
   debugLALevel          = 0;
   debugMTLevel          = 0;
+  debugMCPLevel         = 0;
 
   pulseAdjustment       = 1;
 
@@ -45,15 +46,17 @@ void Settings::resetDefaults() {
   globalPulseTimeoutMs  = 500;
   highMeansOffHook      = true;
 
-  // körtidsflaggor hålls false här; sätts av MCPDriver::begin()
+  // Runtime flags kept false here; set by MCPDriver::begin()
   mcpSlic1Present = mcpSlic2Present = mcpMainPresent = mcpMt8816Present = false;
   Serial.println("Settings reset to defaults");
+  util::UIConsole::log("Settings reset to defaults", "Settings");
 }
 
 bool Settings::load() {
   Preferences prefs;
   if (!prefs.begin(kNamespace, true)) {
     Serial.println("No NVS namespace found for settings");
+    util::UIConsole::log("No NVS namespace found for settings", "Settings");
     return false;
   }
   uint16_t v = prefs.getUShort("ver", 0);
@@ -62,13 +65,16 @@ bool Settings::load() {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
     debounceMs            = prefs.getUShort("debounceMs", debounceMs);
 
-    // --- Debug nivåer ---
-    debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel); // befintlig nyckel
-    debugLmLevel          = prefs.getUChar ("debugLm",    debugLmLevel);  // NY
-    debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);  // NY
-    debugLALevel          = prefs.getUChar ("debugLa",    debugLALevel);  // NY
-    debugMTLevel          = prefs.getUChar ("debugMt",    debugMTLevel);  // NY
-    // --- Övrigt ---
+    // --- Debug levels ---
+    debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel);
+    debugLmLevel          = prefs.getUChar ("debugLm",    debugLmLevel);
+    debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);
+    debugLALevel          = prefs.getUChar ("debugLa",    debugLALevel);
+    debugMTLevel          = prefs.getUChar ("debugMt",    debugMTLevel);
+    debugMCPLevel         = prefs.getUChar ("debugMCP",   debugMCPLevel);
+    debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
+
+    // --- Other settings ---    
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
     hookStableConsec      = prefs.getUChar("hookStbCnt",           hookStableConsec);
@@ -91,13 +97,16 @@ void Settings::save() const {
   prefs.putUChar ("activeMask", activeLinesMask);
   prefs.putUShort("debounceMs", debounceMs);
 
-  // --- Debug nivåer ---
-  prefs.putUChar ("debugLevel", debugSHKLevel); // behåll kompatibilitet
-  prefs.putUChar ("debugLm",    debugLmLevel);  // NY
-  prefs.putUChar ("debugWs",    debugWSLevel);  // NY
-  prefs.putUChar ("debugLa",    debugLALevel);  // NY
-  prefs.putUChar ("debugMt",    debugMTLevel);  // NY
-  // --- Övrigt ---
+  // --- Debug levels ---
+  prefs.putUChar ("debugLevel", debugSHKLevel);
+  prefs.putUChar ("debugLm",    debugLmLevel);
+  prefs.putUChar ("debugWs",    debugWSLevel);
+  prefs.putUChar ("debugLa",    debugLALevel);
+  prefs.putUChar ("debugMt",    debugMTLevel);
+  prefs.putUChar ("debugMCP",   debugMCPLevel);
+  prefs.putUChar ("debugI2C",   debugI2CLevel);
+
+  // --- Other settings ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);
   prefs.putUChar("hookStbCnt",           hookStableConsec);

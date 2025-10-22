@@ -35,6 +35,7 @@ LineHandler& LineManager::getLine(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::getLine - ogiltigt index: ");
     Serial.println(index);
+    util::UIConsole::log("LineManager::getLine - ogiltigt index: " + String(index), "LineManager");
     // Undvik exceptions i Arduino-miljö; returnera första som “safe fallback”
     return lines[0];
   }
@@ -44,6 +45,8 @@ LineHandler& LineManager::getLine(int index) {
 void LineManager::setStatus(int index, LineStatus newStatus) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setStatus - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setStatus - ogiltigt index: " + String(index), "LineManager");
     return;
   }
 
@@ -68,6 +71,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   
   if (settings_.debugLmLevel >= 1){
     Serial.println("LineManager: Callback function called");
+    util::UIConsole::log("LineManager: Callback function called", "LineManager");
   }
 
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
@@ -77,6 +81,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     Serial.print(index);
     Serial.print(" status changed to ");
     Serial.println(model::toString(newStatus));
+    util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
   }
 }
 
@@ -84,6 +89,7 @@ void LineManager::clearChangeFlag(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::clearChangeFlag - ogiltigt index: ");
     Serial.println(index);
+    util::UIConsole::log("LineManager::clearChangeFlag - ogiltigt index: " + String(index), "LineManager");
     return;
   }
   // Clear the change flag for the specified line
@@ -98,6 +104,7 @@ void LineManager::setLineTimer(int index, unsigned int limit) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setLineTimer - ogiltigt index: ");
     Serial.println(index);
+    util::UIConsole::log("LineManager::setLineTimer - ogiltigt index: " + String(index), "LineManager");
     return;
   }
   if (limit == 0) {

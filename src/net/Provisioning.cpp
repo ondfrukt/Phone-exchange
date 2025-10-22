@@ -22,6 +22,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   // Om WifiClient redan har creds -> starta INTE provisioning
   if (wifi_->hasCredentials()) {
     Serial.println("Provisioning: Saved SSID in NVS (via WifiClient). Skipping BLE");
+    util::UIConsole::log("Saved SSID in NVS (via WifiClient). Skipping BLE", "Provisioning");
     // WifiClient kopplar upp i sin begin()/loop() – vi gör inget här.
     return;
   }
@@ -30,6 +31,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   startedProvisioning_ = true;
 
   Serial.println("Provisioning: Open Espressif BLE Provisioning app to configure Wi-Fi.");
+  util::UIConsole::log("Open Espressif BLE Provisioning app to configure Wi-Fi.", "Provisioning");
   WiFiProv.beginProvision(
     WIFI_PROV_SCHEME_BLE,                 // Transport: BLE
     WIFI_PROV_SCHEME_HANDLER_FREE_BTDM,   // Frigör BT-minne efter provisioning
@@ -44,6 +46,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
 
 void Provisioning::factoryReset() {
   Serial.println("Provisioning: Factory reset: erasing Wi-Fi creds (NVS) and restarting...");
+  util::UIConsole::log("Factory reset: erasing Wi-Fi creds (NVS) and restarting...", "Provisioning");
   WiFi.disconnect(true /*wifioff*/, true /*erase NVS*/);
   delay(250);
   ESP.restart();
@@ -53,12 +56,14 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
   switch (sys_event->event_id) {
     case ARDUINO_EVENT_PROV_START:
       Serial.println("Provisioning: Provisioning started. Open Espressif BLE Provisioning app.");
+      util::UIConsole::log("Provisioning started. Open Espressif BLE Provisioning app.", "Provisioning");
       break;
 
     case ARDUINO_EVENT_PROV_CRED_RECV: {
       const char* ssid = (const char*)sys_event->event_info.prov_cred_recv.ssid;
       const char* pwd  = (const char*)sys_event->event_info.prov_cred_recv.password;
       Serial.printf("Provisioning: Received Wi-Fi creds. SSID=\"%s\"\n", ssid);
+      util::UIConsole::log("Received Wi-Fi creds. SSID=\"" + String(ssid) + "\"", "Provisioning");
 
       // Spara via WifiClient (i NVS via Preferences)
       if (wifi_) {
@@ -69,14 +74,17 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
 
     case ARDUINO_EVENT_PROV_CRED_SUCCESS:
       Serial.println("Provisioning: Credentials accepted.");
+      util::UIConsole::log("Credentials accepted.", "Provisioning");
       break;
 
     case ARDUINO_EVENT_PROV_CRED_FAIL:
       Serial.println("Provisioning: Credentials failed (wrong password or AP not found).");
+      util::UIConsole::log("Credentials failed (wrong password or AP not found).", "Provisioning");
       break;
 
     case ARDUINO_EVENT_PROV_END:
       Serial.println("Provisioning: Provisioning finished.");
+      util::UIConsole::log("Provisioning finished.", "Provisioning");
       startedProvisioning_ = false;
 
       // INTE WiFi.begin() här. WifiClient tar det.

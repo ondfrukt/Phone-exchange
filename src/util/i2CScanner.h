@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include "util/UIConsole.h"
 
 class I2CScanner {
 public:

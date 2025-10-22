@@ -3,6 +3,7 @@
 #include <Wire.h> 
 #include <Adafruit_MCP23X17.h>
 #include "settings/settings.h"
+#include "util/UIConsole.h"
 #include "config.h"
 
 // ======= Returnpaket för interrupt-händelser =======
