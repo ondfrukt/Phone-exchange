@@ -340,11 +340,13 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
     s.pdState   = PerLine::PDState::InPulse;
     s.lowStartMs = nowMs;
     s.lastEdgeMs = nowMs;
-    if (settings_.debugSHKLevel >= 2)
+    if (settings_.debugSHKLevel >= 2){
       Serial.printf("SHKService: Line %d pulse falling \n", idx);
-      util::UIConsole::log("SHKService: Line " + String(idx) + " pulse falling", "SHKService");
+      util::UIConsole::log("Line " + String(idx) + " pulse falling", "SHKService");
+    }
   }
 }
+
 
 // Handles rising edge (end of pulse) for line 'idx'.
 void SHKService::pulseRising_(int idx, uint32_t nowMs) {

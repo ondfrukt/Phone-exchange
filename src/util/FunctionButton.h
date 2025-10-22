@@ -2,10 +2,10 @@
 #include "drivers/MCPDriver.h"
 #include "config.h"
 
-class TestButton {
+class FunctionButton {
 
 public:
-    TestButton(MCPDriver& mcpDriver) : mcpDriver_(mcpDriver) {};
+    FunctionButton(MCPDriver& mcpDriver) : mcpDriver_(mcpDriver) {};
     void update();
 private:
     MCPDriver& mcpDriver_;

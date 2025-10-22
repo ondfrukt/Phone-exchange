@@ -1,7 +1,7 @@
-#include "util/TestButton.h"
+#include "util/FunctionButton.h"
 
 
-void TestButton::update() {
+void FunctionButton::update() {
     // Static variables for debouncing and tracking button state:
     // btnDown: tracks if the button is currently pressed
     // pressedAtMs: timestamp when the button was pressed
@@ -11,7 +11,7 @@ void TestButton::update() {
     static uint32_t lastEvtMs    = 0;
 
     auto r = mcpDriver_.handleMainInterrupt();
-    if (r.hasEvent && r.pin == cfg::mcp::TEST_BUTTON) {
+    if (r.hasEvent && r.pin == cfg::mcp::FUNCTION_BUTTON) {
         uint32_t now = millis();
         if (now - lastEvtMs < 20) return;
         lastEvtMs = now;

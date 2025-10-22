@@ -50,7 +50,7 @@ namespace cfg {
     constexpr uint8_t Q4 = 12;
     constexpr uint8_t STD = 11;
     constexpr uint8_t PWDN_MT8870 = 10;
-    constexpr uint8_t TEST_BUTTON = 9;
+    constexpr uint8_t FUNCTION_BUTTON = 9;
     constexpr uint8_t LED_0 = 7;
     constexpr uint8_t LED_1 = 6;
     constexpr uint8_t LED_2 = 5;

@@ -8,7 +8,7 @@ App::App()
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
-    testButton_(mcpDriver_) {}
+    functionButton_(mcpDriver_) {}
 
 void App::begin() {
     Serial.begin(115200);
@@ -49,5 +49,5 @@ void App::loop() {
 	wifiClient_.loop();
 	lineAction_.update(); // Check for line status changes and timers
 	SHKService_.update(); // Check for SHK changes and process pulses
-  testButton_.update();
+  functionButton_.update();
 }

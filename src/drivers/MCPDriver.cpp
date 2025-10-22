@@ -437,9 +437,9 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   (void)readReg8_OK_(i2cAddr, REG_DEFVALA,  defvala);
   (void)readReg8_OK_(i2cAddr, REG_DEFVALB,  defvalb);
 
-  // ---- TEST_BUTTON: CHANGE-läge med pull-up ----
+  // ---- FUNCTION_BUTTON: CHANGE-läge med pull-up ----
   {
-    uint8_t p = cfg::mcp::TEST_BUTTON;
+    uint8_t p = cfg::mcp::FUNCTION_BUTTON;
     if (p < 8) {
       gpintena |= (1u << p);   // enable INT
       gppua    |= (1u << p);   // pull-up

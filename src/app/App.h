@@ -18,7 +18,7 @@
 
 #include "esp_system.h"
 
-#include "util/TestButton.h"
+#include "util/FunctionButton.h"
 #include "util/I2CScanner.h"
 #include "util/UIConsole.h"
 
@@ -41,7 +41,7 @@ private:
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
     WebServer webServer_;
-    TestButton testButton_;
+    FunctionButton functionButton_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
     
