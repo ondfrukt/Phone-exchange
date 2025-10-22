@@ -19,11 +19,13 @@ public:
   static void log(const String& text, const char* source = nullptr);
 
   // Registrera en sink (t.ex. WebServer) som hanterar JSON-strängar.
-  // När en sink registreras flushas buffern (om någon finns).
   static void setSink(ConsoleSink sink);
 
   // Ta bort sink (dvs. återgå till buffring)
   static void clearSink();
+
+  // Iterera över en kopia av bufferten på ett trådsäkert sätt
+  static void forEachBuffered(const std::function<void(const String&)>& fn);
 };
 
 } // namespace util

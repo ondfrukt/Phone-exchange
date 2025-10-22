@@ -48,10 +48,12 @@ void WebServer::initSse_() {
   events_.onConnect([this](AsyncEventSourceClient* client){
     Serial.println("WebServer: SSE-klient ansluten 📡");
     // Skicka initial data till den nya klienten
-    client->send(buildStatusJson_().c_str(), nullptr, millis()); 
+    client->send(buildStatusJson_().c_str(), nullptr, millis());
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
     client->send(buildDebugJson_().c_str(), "debug", millis());
-    // Note: console-history (buffrade meddelanden) flushas av util::Console när sink registreras.
+    util::UIConsole::forEachBuffered([client](const String& json) {
+      client->send(json.c_str(), "console", millis());
+    });
   });
   server_.addHandler(&events_);
 }
