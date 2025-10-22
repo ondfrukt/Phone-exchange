@@ -67,29 +67,19 @@ void UIConsole::log(const String& text, const char* source) {
 
   // kort och skyddat
   if (g_mutex) xSemaphoreTake(g_mutex, portMAX_DELAY);
-  if (g_sink) {
-    // om sink är satt, leverera direkt (utan buffring)
-    // leverera utanför mutex? Vi kan leverera innanför för enkelhet (sink bör vara snabb)
-    g_sink(json);
-  } else {
-    // buffra
-    push_buffer_locked(json);
-  }
+  push_buffer_locked(json);
+  ConsoleSink sink = g_sink;
   if (g_mutex) xSemaphoreGive(g_mutex);
+
+  if (sink) {
+    sink(json);
+  }
 }
 
-// Sätt sink; flusha buffer när sink sätts
+// Sätt sink
 void UIConsole::setSink(ConsoleSink sink) {
   if (g_mutex) xSemaphoreTake(g_mutex, portMAX_DELAY);
   g_sink = sink;
-  // flusha buffer
-  if (g_sink && !g_buffer.empty()) {
-    // skicka i ordning
-    for (const auto &j : g_buffer) {
-      g_sink(j);
-    }
-    g_buffer.clear();
-  }
   if (g_mutex) xSemaphoreGive(g_mutex);
 }
 
@@ -97,6 +87,19 @@ void UIConsole::clearSink() {
   if (g_mutex) xSemaphoreTake(g_mutex, portMAX_DELAY);
   g_sink = nullptr;
   if (g_mutex) xSemaphoreGive(g_mutex);
+}
+
+void UIConsole::forEachBuffered(const std::function<void(const String&)>& fn) {
+  if (!fn) return;
+
+  std::vector<String> copy;
+  if (g_mutex) xSemaphoreTake(g_mutex, portMAX_DELAY);
+  copy = g_buffer;
+  if (g_mutex) xSemaphoreGive(g_mutex);
+
+  for (const auto& json : copy) {
+    fn(json);
+  }
 }
 
 } // namespace util
