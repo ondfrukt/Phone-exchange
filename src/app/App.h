@@ -2,19 +2,26 @@
 #include "config.h"
 #include <Wire.h>
 #include "drivers/MCPDriver.h"
+#include "drivers/MCPDriver.h"
+#include "drivers/MT8816Driver.h"
+
 #include "services/LineHandler.h"
 #include "services/LineManager.h"
 #include "services/SHKService.h"
 #include "services/LineAction.h"
-#include "drivers/MCPDriver.h"
+
 #include "settings/settings.h"
+
 #include "net/WifiClient.h"
 #include "net/Provisioning.h"
 #include "net/WebServer.h"
 
-// #include "drivers/ToneOut.h"
-// #include "net/WebServer.h"
-// #include "net/WifiClient.h"
+#include "esp_system.h"
+
+#include "util/FunctionButton.h"
+#include "util/I2CScanner.h"
+#include "util/UIConsole.h"
+
 
 class App {
 public:
@@ -22,19 +29,20 @@ public:
     void begin();
     void loop();
 
-private:
     MCPDriver mcpDriver_;
+    MT8816Driver mt8816Driver_;
+
+private:
+    
     LineManager lineManager_;
     SHKService SHKService_;
+    
     LineAction lineAction_;
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
     WebServer webServer_;
-
-// Här skapar jag olika objekt av mina klasser som jag behöver i appen
-// LineManager lineManager_;
-// MT8816Driver mt8816Driver_;
-// WifiClient wifiClient_;
-// WebServer  webServer_;
-// Osv.....
+    FunctionButton functionButton_;
+    I2CScanner i2cScanner{Wire, Serial};
+    util::UIConsole uiConsole_;
+    
 };

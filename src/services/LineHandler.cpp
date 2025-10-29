@@ -16,33 +16,14 @@ LineHandler::LineHandler(int line) {
     previousHookStatus = HookStatus::On;
     SHK = 0;
     dialedDigits = "";
-    
-    lineTimerLimit = 0;
-    lineTimerStart = 0;
-    lineTimerActive = false;
+    lineTimerEnd = -1;
 }
 
-
-// Start line timer
-void LineHandler::startLineTimer(unsigned int limit) {
-  lineTimerStart = millis();
-  lineTimerLimit = limit;
-  lineTimerActive = true;
-}
-
-// Stops and clears line timer
-void LineHandler::stopLineTimer() {
-  lineTimerActive = false;
-  lineTimerStart = 0;
-  lineTimerLimit = 0;
-}
 
 // Reset variables when idel is set as new status
 void LineHandler::lineIdle() {
-  dialedDigits = "";
-  lineTimerLimit = 0;
-  lineTimerStart = 0;
-  lineTimerActive = false;
-  incomingFrom = -1;
-  outgoingTo = -1;
+  dialedDigits    = "";
+  lineTimerEnd  = -1;
+  incomingFrom    = -1;
+  outgoingTo      = -1;
 }

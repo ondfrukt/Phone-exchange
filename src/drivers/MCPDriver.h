@@ -3,6 +3,7 @@
 #include <Wire.h> 
 #include <Adafruit_MCP23X17.h>
 #include "settings/settings.h"
+#include "util/UIConsole.h"
 #include "config.h"
 
 // ======= Returnpaket för interrupt-händelser =======
@@ -30,7 +31,6 @@ public:
   // ===== Basala GPIO-funktioner =====
   bool digitalWriteMCP(uint8_t i2c_addr, uint8_t pin, bool value);
   bool digitalReadMCP (uint8_t i2c_addr, uint8_t pin, bool& out);
-
   bool readGpioAB16(uint8_t i2c_addr, uint16_t& out16);
 
   // Snabbhjälp för kända kretsar
@@ -44,6 +44,11 @@ public:
   IntResult handleSlic1Interrupt();
   IntResult handleSlic2Interrupt();
   IntResult handleMT8816Interrupt();
+
+  bool mt8816Powered_ = false;
+
+  // Kontrollerar PWDN_MT8870
+  void mt8816PowerControl(bool set);
 
 private:
   // ===== ISR-thunks (sätter endast flaggor) =====
@@ -64,6 +69,11 @@ private:
 
   // Aktivera INT på SLIC-SHK-pinnarna, CHANGE-trigger
   void enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp);
+
+  // Aktivera INT på MAIN, ex. knapp på GPB0
+  void enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp);
+
+
 
   // Applicera pinlägen från cfg::mcp::MCP_* arrayer
   bool applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16], const bool (&initial)[16]);

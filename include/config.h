@@ -27,17 +27,16 @@ namespace cfg {
     constexpr int MOSI_PIN = 1;
   }
 
-
   namespace mcp {
 
     inline constexpr int MCP_MAIN_INT_PIN = 18;
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x24; //BEHÖVER ÄNDRAS!
-    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x25; //BEHÖVER ÄNDRAS!
-    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x20; //BEHÖVER ÄNDRAS!
-    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21; //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x27;   //A0=GND, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=GND, A1=VCC, A2=VCC
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21;  //BEHÖVER ÄNDRAS!
 
     struct PinModeEntry {
     uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP
@@ -51,7 +50,7 @@ namespace cfg {
     constexpr uint8_t Q4 = 12;
     constexpr uint8_t STD = 11;
     constexpr uint8_t PWDN_MT8870 = 10;
-    constexpr uint8_t TEST_BUTTON = 9;
+    constexpr uint8_t FUNCTION_BUTTON = 9;
     constexpr uint8_t LED_0 = 7;
     constexpr uint8_t LED_1 = 6;
     constexpr uint8_t LED_2 = 5;
@@ -104,19 +103,22 @@ namespace cfg {
       /*1*/  {OUTPUT, LOW},  // GPA1 -> DATA
       /*2*/  {OUTPUT, LOW},  // GPA2 -> STROBE
       /*3*/  {OUTPUT, LOW},  // GPA3 -> CS
-      /*4*/  {OUTPUT, LOW},  // GPA4 -> AX0
-      /*5*/  {OUTPUT, LOW},  // GPA5 -> AX1
-      /*6*/  {OUTPUT, LOW},  // GPA6 -> AX2
-      /*7*/  {OUTPUT, LOW},  // GPA7 -> AY0
-      /*8*/  {OUTPUT, LOW},  // GPB0 -> AY1
-      /*9*/  {OUTPUT, LOW},  // GPB1 -> AY2
-      /*10*/ {OUTPUT, LOW},  // GPB2 -> X0
-      /*11*/ {OUTPUT, LOW},  // GPB3 -> EX1
-      /*12*/ {OUTPUT, LOW},  // GPB4 -> EX2
-      /*13*/ {OUTPUT, LOW},  // GPB5 -> EX3
-      /*14*/ {OUTPUT, LOW},  // GPB6 -> EX4
-      /*15*/ {OUTPUT, LOW},  // GPB7 Not in use
+      /*4*/  {OUTPUT, LOW},  // GPA4 -> EX1
+      /*5*/  {OUTPUT, LOW},  // GPA5 -> EX2
+      /*6*/  {OUTPUT, LOW},  // GPA6 -> EX3
+      /*7*/  {OUTPUT, LOW},  // GPA7 -> EX4
+      /*8*/  {OUTPUT, LOW},  // GPB0 -> AX0
+      /*9*/  {OUTPUT, LOW},  // GPB1 -> AX1
+      /*10*/ {OUTPUT, LOW},  // GPB2 -> AX2
+      /*11*/ {OUTPUT, LOW},  // GPB3 -> AX3
+      /*12*/ {OUTPUT, LOW},  // GPB4 -> AY0
+      /*13*/ {OUTPUT, LOW},  // GPB5 -> AY1
+      /*14*/ {OUTPUT, LOW},  // GPB6 -> AY2
+      /*15*/ {OUTPUT, LOW},  // GPB7 -> EX5
     };
+
+    
+
 
     // MCP SLIC
 
@@ -158,12 +160,12 @@ namespace cfg {
     };
 
     constexpr uint8_t SHK_PINS[8] = {
-      4,   // Line 0 MCP_SLIC1, GPA4
-      5,   // Line 1 MCP_SLIC1, GPA5
+      5,   // Line 0 MCP_SLIC1, GPA5
+      4,   // Line 1 MCP_SLIC1, GPA4
       8,   // Line 2 MCP_SLIC1, GPB0
       11,  // Line 3 MCP_SLIC1, GPB3
-      4,   // Line 4 MCP_SLIC2, GPA4
-      5,   // Line 5 MCP_SLIC2, GPA5
+      5,   // Line 4 MCP_SLIC2, GPA5
+      4,   // Line 5 MCP_SLIC2, GPA4
       8,   // Line 6 MCP_SLIC2, GPB0
       11   // Line 7 MCP_SLIC2, GPB3
     };
@@ -217,24 +219,14 @@ namespace cfg {
     constexpr int LED_L7 = 0; // GPA0
   }
 
-  namespace MT8870 {
-    constexpr int Q1 = 8; // GPB0
-    constexpr int Q2 = 7; // GPA7
-    constexpr int Q3 = 6; // GPA6
-    constexpr int Q4 = 5; // GPA5
-
-    constexpr int STD = 11; // GPB3
-    constexpr int PWDN = 10; // GPB2
-  }
-
   namespace mt8816 {
-    constexpr uint8_t RESET     = 0; // GPA0
-    constexpr uint8_t DATA      = 1; // GPA1
-    constexpr uint8_t STROBE    = 2; // GPA2
-    constexpr uint8_t CS        = 3; // GPA3
 
-    constexpr uint8_t ax_pins[4] = {8, 9, 10, 11}; // GPB0-GPB3
-    constexpr uint8_t ay_pins[3] = {12, 13, 14}; // GPB4-GPB6
+    constexpr uint8_t ax_pins[4] = {mcp::AX0, mcp::AX1, mcp::AX2, mcp::AX3}; // GPB0-GPB3
+    constexpr uint8_t ay_pins[3] = {mcp::AY0, mcp::AY1, mcp::AY2}; // GPB4-GPB6
+
+    constexpr uint8_t  DAC1 = 12;
+    constexpr uint8_t  DAC2 = 13;
+    constexpr uint8_t  DAC3 = 14;
+    constexpr uint8_t  DTMF = 15;
   }
-
 }

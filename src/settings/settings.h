@@ -2,35 +2,42 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include <stdint.h>
+#include "util/UIConsole.h"
 
 class Settings {
 public:
-  // === Singletonåtkomst ===
+  // === Singleton access ===
   static Settings& instance() {
-    static Settings s;   // "Meyers singleton" – skapas vid första anrop
+    static Settings s;   // "Meyers singleton" - created on first call
     return s;
   }
 
-  // Justera activeLinesMask så den tar hänsyn till fysiska MCP-anslutningar
+  // Adjust activeLinesMask to account for physical MCP connections
   void adjustActiveLines();
 
-  // Golabal members
+  // Global members
   void resetDefaults();   // Sets default values if no values are stored in NVS
   bool load();            // Loads saved settings from NVS if any. Returns true if successful
   void save() const;      // Saves current settings to NVS
 
-  // ---- Publika fält ----
+  // ---- Public fields ----
   uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
   uint16_t debounceMs;            // Debounce time for line state changes
 
   // ---- Debugging ----
-  uint8_t debugSHKLevel;          // 0=ingen, 1=lite, 2=mycket
-  uint8_t debugLmLevel;           // 0=ingen, 1=lite, 2=mycket
-  uint8_t debugWSLevel;           // 0=ingen, 1=lite, 2=mycket
+  uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high
+  uint8_t debugLmLevel;           // 0=none, 1=low, 2=high
+  uint8_t debugWSLevel;           // 0=none, 1=low, 2=high
+  uint8_t debugLALevel;           // 0=none, 1=low, 2=high
+  uint8_t debugMTLevel;           // 0=none, 1=low, 2=high
+  uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high
 
-  uint8_t pulseAdjustment;         // Pulsjustering (1 ger att 1 puls = 0, 2 pulser = 1 osv)
+  uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 
-  // ---- Settings (justera efter din settings-klass/konstanter) ----
+
+  uint8_t pulseAdjustment;         // Pulse adjustment (1 means 1 pulse = 0, 2 pulses = 1, etc.)
+
+  // ---- Settings (adjust according to your settings class/constants) ----
   uint32_t burstTickMs;           // Time for a burst tick
   uint32_t hookStableMs;          // Time for stable hook state
   uint8_t hookStableConsec;       // Number of consecutive stable readings for hook state
@@ -42,16 +49,22 @@ public:
 
   uint8_t allowMask;
 
-  // ---- MCP statuses (Are not saved into NVS, just for runtime use) ----
+  // ---- MCP statuses (not saved to NVS, runtime only) ----
   bool mcpSlic1Present = false;
   bool mcpSlic2Present = false;
   bool mcpMainPresent  = false;
   bool mcpMt8816Present= false;
 
   // Timers
-
-  
-
+  unsigned long timer_Ready = 240000;
+  unsigned long timer_Dialing = 5000;
+  unsigned long timer_Ringing = 10000;
+  unsigned long timer_pulsDialing = 3000;
+  unsigned long timer_toneDialing = 3000;
+  unsigned long timer_fail = 30000;
+  unsigned long timer_disconnected = 60000;
+  unsigned long timer_timeout = 60000;
+  unsigned long timer_busy = 30000;
 
   inline uint8_t activeLinesCount() const {
     uint8_t x = activeLinesMask, c = 0;
@@ -59,14 +72,14 @@ public:
     return c;
   }
 
-    inline bool isLineActive(uint8_t i) const { return (activeLinesMask >> i) & 1u; }
+  inline bool isLineActive(uint8_t i) const { return (activeLinesMask >> i) & 1u; }
 
 private:
-  // === Singleton-skydd ===
-  Settings();                                // gör ctor privat (definiera i .cpp eller inline)
+  // === Singleton protection ===
+  Settings();                                // make ctor private (define in .cpp or inline)
   Settings(const Settings&) = delete;
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 1;    // höj om layout ändras
+  static constexpr uint16_t kVersion = 1;    // increase if layout changes
 };

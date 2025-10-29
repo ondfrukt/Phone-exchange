@@ -10,12 +10,13 @@ LineManager::LineManager(Settings& settings)
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
 
-    // Om du fortfarande använder 'activeLines' (bitmask 0..7), behåll raden nedan.
-    // Byter du till 'activeLinesMask' – ändra namnet här.
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
-  lineChangeFlag = 0; // Initiera flaggan
+  lineChangeFlag = 0;     // Intiate to zero (no changes)
+  activeTimersMask = 0;   // Intiate to zero (no active timers)
+  linesNotIdle = 0;       // Intiate to zero (all lines idle)
+  lastLineReady = -1;     // No line is ready at start
 }
 
 void LineManager::begin() {
@@ -34,6 +35,7 @@ LineHandler& LineManager::getLine(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::getLine - ogiltigt index: ");
     Serial.println(index);
+    util::UIConsole::log("LineManager::getLine - ogiltigt index: " + String(index), "LineManager");
     // Undvik exceptions i Arduino-miljö; returnera första som “safe fallback”
     return lines[0];
   }
@@ -43,30 +45,43 @@ LineHandler& LineManager::getLine(int index) {
 void LineManager::setStatus(int index, LineStatus newStatus) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setStatus - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setStatus - ogiltigt index: " + String(index), "LineManager");
     return;
   }
 
   // Uppdating the status and changing previous status
   lines[index].previousLineStatus = lines[index].currentLineStatus;
   lines[index].currentLineStatus = newStatus;
+
+
   if (newStatus == LineStatus::Idle) {
     lines[index].lineIdle();
+    linesNotIdle &= ~(1 << index);          // Clear the bit for this line
   }
+  else if (newStatus == LineStatus::Ready) {
+    lastLineReady = index;                   // Update the most recent Ready line
+    linesNotIdle |= (1 << index);            // Set the bit for this line
+  }
+  else {
+    linesNotIdle |= (1 << index);           // Set the bit for this line
+  } 
 
-
-  lineChangeFlag |= (1 << index); // Set the change flag for the specified line
+  lineChangeFlag |= (1 << index);           // Set the change flag for the specified line
   
   if (settings_.debugLmLevel >= 1){
     Serial.println("LineManager: Callback function called");
+    util::UIConsole::log("LineManager: Callback function called", "LineManager");
   }
 
-  if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // 🔔 meddela observatörer
+  if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
   if (settings_.debugLmLevel >= 0) {
     Serial.print("LineManager: Line ");
     Serial.print(index);
     Serial.print(" status changed to ");
     Serial.println(model::toString(newStatus));
+    util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
   }
 }
 
@@ -74,6 +89,7 @@ void LineManager::clearChangeFlag(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::clearChangeFlag - ogiltigt index: ");
     Serial.println(index);
+    util::UIConsole::log("LineManager::clearChangeFlag - ogiltigt index: " + String(index), "LineManager");
     return;
   }
   // Clear the change flag for the specified line
@@ -82,4 +98,22 @@ void LineManager::clearChangeFlag(int index) {
 
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
   pushStatusChanged_ = std::move(cb);
+}
+
+void LineManager::setLineTimer(int index, unsigned int limit) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setLineTimer - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setLineTimer - ogiltigt index: " + String(index), "LineManager");
+    return;
+  }
+  if (limit == 0) {
+    // Disable timer
+    lines[index].lineTimerEnd = -1;
+    activeTimersMask &= ~(1 << index); // Clear the timer active flag
+  } else {
+    // Set timer end time
+    lines[index].lineTimerEnd = millis() + limit;
+    activeTimersMask |= (1 << index);  // Set the timer active flag
+  }
 }

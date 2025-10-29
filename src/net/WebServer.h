@@ -31,6 +31,8 @@ private:
 
   bool serverStarted_ = false;
   bool fsMounted_ = false;
+
+  TaskHandle_t pingTask_ = nullptr;
   
   void setupFilesystem_();
   void initSse_();
@@ -38,13 +40,18 @@ private:
   void setupLineManagerCallback_();
   void setupApiRoutes_();
   void setLineActiveBit_(int line, bool makeActive);
-
+  void restartDevice_();
   void toggleLineActiveBit_(int line);
 
   void pushInitialSnapshot_();
+
+  void startPingLoop_();
 
   // Help functions
   String buildStatusJson_() const;
   String buildActiveJson_(uint8_t mask);
   String buildDebugJson_() const;
+
+  // Bind the util::Console sink to forward JSON messages to SSE "console"
+  void bindConsoleSink_();
 };

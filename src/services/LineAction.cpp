@@ -1,24 +1,43 @@
 #include "LineAction.h"
 
 
-LineAction::LineAction(LineManager& lineManager, Settings& settings)
-: lineManager_(lineManager), settings_(settings) {
+LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver)
+: lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver) {
   // ev. startlogik
 };
 
 void LineAction::update() {
 
-  if(lineManager_.lineChangeFlag != 0){
 
-  uint8_t changes = lineManager_.lineChangeFlag & settings_.activeLinesMask;
-  for (int idx = 0; idx < 8; ++idx)
-      if (changes & (1 << idx)) {
-        lineManager_.clearChangeFlag(idx); // Rensa flaggan direkt
-        action(idx);
-    } 
+  // Check if any line has changed status
+  if(lineManager_.lineChangeFlag != 0){
+    uint8_t changes = lineManager_.lineChangeFlag & settings_.activeLinesMask;
+    for (int index = 0; index < 8; ++index)
+        if (changes & (1 << index)) {
+          lineManager_.clearChangeFlag(index); // Clear the change flag
+          action(index);
+      } 
+  }
+  // Check if any line timers have expired
+  if(lineManager_.activeTimersMask != 0){
+    unsigned long currentTime = millis();
+    uint8_t timers = lineManager_.activeTimersMask & settings_.activeLinesMask;
+    
+
+    for (int index = 0; index < 8; ++index)
+        if (timers & (1 << index)) {
+          LineHandler& line = lineManager_.getLine(index);
+          if (line.lineTimerEnd != -1 && currentTime >= line.lineTimerEnd) {
+            // Timer has expired
+            lineManager_.activeTimersMask &= ~(1 << index); // Clear the timer active flag
+            timerExpired(line);
+          }
+      } 
   }
 }
 
+
+// Handles actions based on new line status
 void LineAction::action(int index) {
   using namespace model;
   LineHandler& line = lineManager_.getLine(index);
@@ -28,27 +47,36 @@ void LineAction::action(int index) {
   switch (newStatus) {
     
     case LineStatus::Idle:
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
+      //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC1, false); // Disconnect any audio connections
+      //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC2, false); // Disconnect any audio connections
+      //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC3, false); // Disconnect any audio connections
+      
       // mqttHandler.publishMQTT(line, line_idle);
       // toneGen1.setMode(ToneGenerator::TONE_OFF);
       break;
 
     case LineStatus::Ready:
-    Serial.println("LineAction: Line " + String(index) + " entered Ready state.");
       // mqttHandler.publishMQTT(line, line_ready);
-      // mt8816.connect(DTMF_line, line);
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
+
       // lastLineReady = line;
       // Line[line].startLineTimer(statusTimer_Ready);
       // toneGen1.setMode(ToneGenerator::TONE_READY);
       break;
     
     case LineStatus::PulseDialing:
-    Serial.println("LineAction: Line " + String(index) + " entered PulseDialing state.");
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
+    // Timers for pulse dialing is handled when a digit is received
     //   mqttHandler.publishMQTT(line, line_pulse_dialing);
     //   Line[line].startLineTimer(statusTimer_pulsDialing);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
       break;
     
     case LineStatus::ToneDialing:
+    // Timer for tone dialing is handled when a digit is received
+
+
     //   mqttHandler.publishMQTT(line, line_tone_dialing);
     //   mt8816.connect(DTMF_line, line);
     //   Line[line].startLineTimer(statusTimer_toneDialing);
@@ -56,6 +84,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Busy:
+      lineManager_.setLineTimer(index, settings_.timer_busy); // Set timer for Busy state
     //   mqttHandler.publishMQTT(line, line_busy);
     //   Line[line].startLineTimer(statusTimer_busy);
     //   mt8816.connect(DTMF_line, line);
@@ -63,6 +92,7 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Fail:
+      lineManager_.setLineTimer(index, settings_.timer_fail); // Set timer for Fail state
     //   mqttHandler.publishMQTT(line, line_fail);
     //   Line[line].resetDialedDigits();
     //   Line[line].startLineTimer(statusTimer_fail);
@@ -71,7 +101,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Ringing:
-
+      lineManager_.setLineTimer(index, settings_.timer_Ringing); // Set timer for Ringing state
     // Serial.println("Line " + String(line) + " dialed digits: " + Line[line].dialedDigits);
     // for (int i = 0; i < activeLines; i++) {
 
@@ -125,6 +155,7 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Disconnected:
+      lineManager_.setLineTimer(index, settings_.timer_disconnected); // Set timer for Disconnected state
     //   mqttHandler.publishMQTT(line, line_disconnected);
     //   Line[line].startLineTimer(statusTimer_disconnected);
       
@@ -136,11 +167,14 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Timeout:
+      lineManager_.setLineTimer(index, settings_.timer_timeout); // Set timer for Timeout state
     //   mqttHandler.publishMQTT(line, line_timeout);
     //   Line[line].startLineTimer(statusTimer_timeout);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
     //   break;
     case LineStatus::Abandoned:
+      lineManager_.setLineTimer(index, settings_.timer_timeout); // Set timer for Abandoned state
+    //   Line[line].resetDialedDigits();
     // mqttHandler.publishMQTT(line, line_abandoned);
     // break;
     case LineStatus::Incoming:
@@ -152,6 +186,52 @@ void LineAction::action(int index) {
     //   break;
     default:
     //   // Handle unexpected status
+      break;
+  }
+}
+
+void LineAction::timerExpired(LineHandler& line) {
+  using namespace model;
+  int index = line.lineNumber;
+  LineStatus currentStatus = line.currentLineStatus;
+
+  if (settings_.debugLALevel >= 1) {
+    Serial.println("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus));
+    util::UIConsole::log("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus), "LineAction");
+  }
+
+  switch (currentStatus) {
+    case LineStatus::Ready:
+
+      break;
+
+    case LineStatus::PulseDialing:
+    case LineStatus::ToneDialing:
+
+      break;
+
+    case LineStatus::Ringing:
+
+      break;
+
+    case LineStatus::Busy:
+
+      break;
+
+    case LineStatus::Fail:
+
+      break;
+
+    case LineStatus::Disconnected:
+
+      break;
+
+    case LineStatus::Timeout:
+
+      break;
+
+    default:
+
       break;
   }
 }

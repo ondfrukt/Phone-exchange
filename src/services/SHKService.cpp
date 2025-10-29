@@ -1,23 +1,16 @@
-// src/telephony/SHKService.cpp
 #include "SHKService.h"
 
-// Constructor. Takes references to LineManager, MCPDriver and Settings instances.
+// Constructor: Initializes SHKService with references to LineManager, MCPDriver, and Settings.
 SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings& settings)
 : lineManager_(lineManager), mcpDriver_(mcpDriver), settings_(settings) {
-  
-  // Reads active lines from settings, ensures at least one line is active
+
+  // Set maximum number of physical lines.
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
-  
-  activeLines_ = 0;
-  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-    if ((settings_.activeLinesMask >> i) & 1u) {
-      activeLines_ = i + 1;
-    }
-  }
-  
+
+  // Prepare state storage for each line.
   lineState_.resize(maxPhysicalLines_);
 
-  // Initial read of SHK states. Assumes stable at startup.
+  // Initial read of SHK states; assumes stable at startup.
   uint32_t raw = readShkMask_();
   for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
     auto& line = lineManager_.getLine((int)i);
@@ -35,7 +28,7 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
   }
 }
 
-// Member to notifi when MCP reports changes (bitmask per line)
+// Notifies SHKService when MCP reports changes (bitmask per line).
 void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs) {
   uint32_t allowMask = settings_.activeLinesMask & settings_.allowMask;
   changedMask &= allowMask;
@@ -46,24 +39,16 @@ void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs
   if (nowMs >= burstNextTickAtMs_) burstNextTickAtMs_ = nowMs;
 }
 
-
-// Chek if it's time for a tick (returns true if so)
+// Checks if it's time for a tick (returns true if so).
 bool SHKService::needsTick(uint32_t nowMs) const {
   return burstActive_ && (nowMs >= burstNextTickAtMs_);
 }
 
-// Perform a tick if needed (returns true if tick was done)
-// A tick processes all active lines (hook filtering and pulse detection)
+// Processes a tick if needed (returns true if tick was done).
+// A tick processes all active lines (hook filtering and pulse detection).
 // If no lines remain active after processing, the service goes idle.
-// Otherwise, it schedules the next tick after settings_.burstTickMs
+// Otherwise, schedules the next tick after settings_.burstTickMs.
 bool SHKService::tick(uint32_t nowMs) {
-
-  activeLines_ = 0;
-  for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-    if ((settings_.activeLinesMask >> i) & 1u) {
-      activeLines_ = i + 1;
-    }
-  }
 
   if (!burstActive_ || nowMs < burstNextTickAtMs_) return false;
 
@@ -71,9 +56,9 @@ bool SHKService::tick(uint32_t nowMs) {
   uint32_t nextActiveMask = 0;
 
   for (std::size_t lineIndex = 0; lineIndex < maxPhysicalLines_; ++lineIndex) {
-    // Bearbeta bara linjer som nyss ändrats/är aktiva i burst…
+    // Process only lines that have recently changed or are active in burst.
     if ((activeMask_ & (1u << lineIndex)) == 0) {
-      // …men nollställ gärna ev. pulstillstånd:
+      // Reset pulse state for inactive lines.
       resetPulseState_(static_cast<int>(lineIndex));
       continue;
     }
@@ -94,108 +79,131 @@ bool SHKService::tick(uint32_t nowMs) {
       ((nowMs - s.hookCandSince) < settings_.hookStableMs));
     bool pdActive = (s.pdState != PerLine::PDState::Idle);
 
-    // Fortsätt bara ticka de linjer som ännu inte “lagt sig”
+    // Continue ticking lines that are not yet stable.
     if (hookUnstable || pdActive) nextActiveMask |= (1u << lineIndex);
   }
 
+  activeMask_ = nextActiveMask;
+  if (activeMask_ == 0) {
+    burstActive_ = false;
+  } else {
+    burstNextTickAtMs_ = nowMs + settings_.burstTickMs;
+  }
 
-    activeMask_ = nextActiveMask;
-    if (activeMask_ == 0) {
-      burstActive_ = false;
-    } else {
-      burstNextTickAtMs_ = nowMs + settings_.burstTickMs;
-    }
-
-    return true;
+  return true;
 }
 
-// Read SHK pin states from MCP and return as bitmask
-// Läs SHK‑ingångar och returnera rå bitmask (1 = ingång hög)
+// Handles interrupts and triggers line change notifications.
+void SHKService::update() {
+  for (int i = 0; i < 16; ++i) {
+    IntResult r = mcpDriver_.handleSlic1Interrupt();
+    if (r.hasEvent && r.line < 8) {
+      uint32_t mask = (1u << r.line);
+      notifyLinesPossiblyChanged(mask, millis());
+      yield();
+    }
+  }
+  for (int i = 0; i < 16; ++i) {
+    IntResult r = mcpDriver_.handleSlic2Interrupt();
+    if (r.hasEvent && r.line < 8) {
+      uint32_t mask = (1u << r.line);
+      notifyLinesPossiblyChanged(mask, millis());
+      yield();
+    }
+  }
+
+  uint32_t nowMs = millis();
+  if (needsTick(nowMs)) {
+    tick(nowMs); // Updates hook status and pulses.
+  }
+}
+
+// Reads SHK pin states from MCP and returns as bitmask (1 = input high).
 uint32_t SHKService::readShkMask_() const {
   uint32_t mask = 0;
 
-  // 1) Bygg en lista över SLIC‑adresser som behövs utifrån allowMask
+  // Build a list of required SLIC addresses based on allowMask.
   uint8_t addrs[2] = {0};
   uint16_t gpio[2] = {0};
   bool have[2] = {false, false};
   int addrCount = 0;
 
   auto findOrAdd = [&](uint8_t a) -> int {
-      for (int i = 0; i < addrCount; ++i) {
-          if (addrs[i] == a) return i;
-      }
-      if (addrCount < 2) {
-          addrs[addrCount] = a;
-          return addrCount++;
-      }
-      return -1;
+    for (int i = 0; i < addrCount; ++i) {
+      if (addrs[i] == a) return i;
+    }
+    if (addrCount < 2) {
+      addrs[addrCount] = a;
+      return addrCount++;
+    }
+    return -1;
   };
 
-  // Samla bara adresser för linjer som är tillåtna (allowMask)
+  // Collect addresses for allowed lines only.
   for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-      if ((settings_.allowMask & (1u << i)) != 0) {
-          (void)findOrAdd(cfg::mcp::SHK_LINE_ADDR[i]);
-      }
+    if ((settings_.allowMask & (1u << i)) != 0) {
+      (void)findOrAdd(cfg::mcp::SHK_LINE_ADDR[i]);
+    }
   }
 
-  // 2) Läs varje unik SLIC‑adress om den faktiskt finns
+  // Read each unique SLIC address if present.
   for (int k = 0; k < addrCount; ++k) {
-      uint8_t a = addrs[k];
-      bool present = true;
-      // Koppla adresser till närvaroflaggor
-      if (a == cfg::mcp::MCP_SLIC1_ADDRESS && !settings_.mcpSlic1Present) {
-          present = false;
-      }
-      if (a == cfg::mcp::MCP_SLIC2_ADDRESS && !settings_.mcpSlic2Present) {
-          present = false;
-      }
-      if (!present) {
-          have[k] = false;       // hoppa över läsning om kretsen saknas
-          continue;
-      }
-      uint16_t g = 0;
-      if (mcpDriver_.readGpioAB16(a, g)) {
-          have[k] = true;
-          gpio[k] = g;
-      } else {
-          // om läsningen misslyckas betraktas banken som saknad
-          have[k] = false;
-      }
+    uint8_t a = addrs[k];
+    bool present = true;
+    // Check presence flags for addresses.
+    if (a == cfg::mcp::MCP_SLIC1_ADDRESS && !settings_.mcpSlic1Present) {
+      present = false;
+    }
+    if (a == cfg::mcp::MCP_SLIC2_ADDRESS && !settings_.mcpSlic2Present) {
+      present = false;
+    }
+    if (!present) {
+      have[k] = false; // Skip reading if chip is missing.
+      continue;
+    }
+    uint16_t g = 0;
+    if (mcpDriver_.readGpioAB16(a, g)) {
+      have[k] = true;
+      gpio[k] = g;
+    } else {
+      // If reading fails, treat bank as missing.
+      have[k] = false;
+    }
   }
-  // 3) Bygg rå mask för varje tillåten linje
+
+  // Build raw mask for each allowed line.
   for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-      if ((settings_.allowMask & (1u << i)) == 0) {
-          continue;                       // linjen är inte tillåten
+    if ((settings_.allowMask & (1u << i)) == 0) {
+      continue; // Line not allowed.
+    }
+    uint8_t addr = cfg::mcp::SHK_LINE_ADDR[i];
+    uint8_t pin  = cfg::mcp::SHK_PINS[i];
+    // Find index for current address in addrs[].
+    int bank = -1;
+    for (int k = 0; k < addrCount; ++k) {
+      if (addrs[k] == addr) {
+        bank = k;
+        break;
       }
-      uint8_t addr = cfg::mcp::SHK_LINE_ADDR[i];
-      uint8_t pin  = cfg::mcp::SHK_PINS[i];
-      // hitta index för aktuell adress i addrs[]
-      int bank = -1;
-      for (int k = 0; k < addrCount; ++k) {
-          if (addrs[k] == addr) {
-              bank = k;
-              break;
-          }
-      }
-      // hoppa över linjen om banken saknas/offline
-      if (bank < 0 || !have[bank]) {
-          continue;
-      }
-      bool val = ((gpio[bank] >> pin) & 0x1U) != 0U;   // läs bit från 16‑bitars GPIO
-      if (val) {
-          mask |= (1u << i);  // sätt bit i rå mask om nivån är hög
-      }
+    }
+    // Skip line if bank is missing/offline.
+    if (bank < 0 || !have[bank]) {
+      continue;
+    }
+    bool val = ((gpio[bank] >> pin) & 0x1U) != 0U; // Read bit from 16-bit GPIO.
+    if (val) {
+      mask |= (1u << i); // Set bit in raw mask if level is high.
+    }
   }
   return mask;
 }
 
-
-// ---------------- Hook-filter ----------------
-// Updates hook filter state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'
+// ---------------- Hook Filter ----------------
+// Updates hook filter state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'.
 void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
   auto& s = lineState_[idx];
 
-  // Spåra kandidatnivå och hur länge den stått stabil
+  // Track candidate level and how long it has been stable.
   if (s.hookCand != rawHigh) {
     s.hookCand = rawHigh;
     s.hookCandSince = nowMs;
@@ -209,12 +217,12 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
 
-    // Om vi går till OnHook: committa siffra om vi var mellan pulser
+    // On transition to OnHook: commit digit if between pulses.
     if (!offHook) { // OnHook
       if (s.pdState == PerLine::PDState::BetweenPulses && s.pulseCountWork > 0) {
         emitDigitAndReset_(idx, rawHigh, nowMs);
       } else if (s.pdState == PerLine::PDState::InPulse) {
-        // Avbruten puls på lägg-på → kasta den
+        // Interrupted pulse on OnHook → discard it.
         resetPulseState_(idx);
       }
     }
@@ -222,6 +230,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
   }
 }
 
+// Sets stable hook status for a line and updates related state.
 void SHKService::setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs) {
   auto& line = lineManager_.getLine(index);
 
@@ -231,38 +240,36 @@ void SHKService::setStableHook_(int index, bool offHook, bool rawHigh, uint32_t 
     line.SHK = offHook;
     lineManager_.setStatus(index, offHook ? model::LineStatus::Ready : model::LineStatus::Idle);
 
-    // resync fast först NÄR hook-läget faktiskt har bytts:
+    // Resync fast only when hook state actually changes.
     resyncFast_(index, rawHigh, nowMs);
 
-    if (!offHook) resetPulseState_(index);  // gick till OnHook
+    if (!offHook) resetPulseState_(index);  // Transitioned to OnHook.
   }
 }
 
-// ---------------- Pulsdetektor ----------------
+// ---------------- Pulse Detector ----------------
+// Checks if pulse mode is allowed for the given line.
 bool SHKService::pulseModeAllowed_(const LineHandler& line) const {
   if (line.currentHookStatus != model::HookStatus::Off) return false;
   return (line.currentLineStatus == model::LineStatus::Ready ||
           line.currentLineStatus == model::LineStatus::PulseDialing);
 }
 
+// Updates pulse detector state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'.
 void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
-  
-  if (settings_.debugSHKLevel >= 2){
-    Serial.printf("SHKService: Line %d updatePulseDetector_ rawHigh=%d\n", (int)idx, (int)rawHigh);
-  }
 
   auto& s   = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
 
+  // Skip pulse detection for a short time after last digit.
   if (nowMs < s.blockUntilMs) {
-    // hoppa helt över pulsdelen en liten stund efter förra siffran
     return;
   }
 
-  // 1) Kör bara i rätt läge. Men: avbryt inte en pågående puls.
+  // Only run in correct mode, but do not interrupt an ongoing pulse.
   if (!pulseModeAllowed_(line)) {
     if (s.pdState == PerLine::PDState::BetweenPulses && s.pulseCountWork > 0) {
-      emitDigitAndReset_(idx, rawHigh, nowMs);                  // committa ev. siffra vid t.ex. OnHook
+      emitDigitAndReset_(idx, rawHigh, nowMs); // Commit digit e.g. on OnHook.
       return;
     }
     if (s.pdState != PerLine::PDState::InPulse) {
@@ -270,27 +277,27 @@ void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
       line.gap = line.edge ? (nowMs - line.edge) : 0;
       return;
     }
-    // Är vi mitt i en puls? Låt den få slutföras (ingen reset här).
+    // If in pulse, let it finish (no reset here).
   }
 
-  // 2) Glitchfilter
+  // Glitch filter.
   if (rawHigh != s.lastRaw) { s.lastRaw = rawHigh; s.rawChangeMs = nowMs; }
   bool accept = (nowMs - s.rawChangeMs) >= settings_.pulseGlitchMs;
 
-  // 3) Kantdetektering (OBS: rätt ordning och INTE beroende av debug)
+  // Edge detection (correct order, not debug-dependent).
   if (accept && (rawHigh != s.fastLevel)) {
     s.fastLevel = rawHigh;
 
     if (!s.fastLevel) {
-      // High -> Low = start av puls
+      // High → Low = start of pulse.
       pulseFalling_(idx, nowMs);
     } else {
-      // Low -> High = slut av puls
+      // Low → High = end of pulse.
       pulseRising_(idx, nowMs);
     }
-  }   // <-- VIKTIG: stäng kant-blocket här!
+  } // End edge block.
 
-  // 4) Digit-gap: körs varje tick (inte bara när kant sker)
+  // Digit gap: runs every tick (not just on edge).
   if (s.pdState == PerLine::PDState::BetweenPulses) {
     uint32_t sinceRise = nowMs - s.lastEdgeMs;
     if (settings_.debugSHKLevel >= 2) {
@@ -303,54 +310,59 @@ void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
     }
   }
 
-  // 5) Timeout: state-medveten
+  // Timeout: state-aware.
   if (s.pdState == PerLine::PDState::InPulse) {
-    uint32_t since = nowMs - s.lowStartMs;     // hur länge "lågt" pågår
+    uint32_t since = nowMs - s.lowStartMs; // Duration of "low".
     if (since >= settings_.globalPulseTimeoutMs) {
-      resetPulseState_(idx);                   // avbruten/trasig puls
+      resetPulseState_(idx); // Interrupted/broken pulse.
       return;
     }
   } else if (s.pdState == PerLine::PDState::BetweenPulses) {
-    uint32_t since = nowMs - s.lastEdgeMs;     // hur länge sedan sist stigande kant
+    uint32_t since = nowMs - s.lastEdgeMs; // Time since last rising edge.
     if (since >= settings_.globalPulseTimeoutMs) {
-      emitDigitAndReset_(idx, rawHigh, nowMs);                 // committa siffran ändå
+      emitDigitAndReset_(idx, rawHigh, nowMs); // Commit digit anyway.
       return;
     }
   }
 
-  // 6) Diag
+  // Diagnostics.
   line.gap = line.edge ? (nowMs - line.edge) : 0;
 }
 
+// Handles falling edge (start of pulse) for line 'idx'.
 void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
   auto& line = lineManager_.getLine(idx);
   if (line.currentHookStatus != model::HookStatus::Off) {
-    return; // På OnHook ska inga pulser startas
+    return; // No pulses should start on OnHook.
   }
   auto& s = lineState_[idx];
   if (s.pdState == PerLine::PDState::Idle || s.pdState == PerLine::PDState::BetweenPulses) {
     s.pdState   = PerLine::PDState::InPulse;
     s.lowStartMs = nowMs;
     s.lastEdgeMs = nowMs;
-    if (settings_.debugSHKLevel >= 2)
+    if (settings_.debugSHKLevel >= 2){
       Serial.printf("SHKService: Line %d pulse falling \n", idx);
+      util::UIConsole::log("Line " + String(idx) + " pulse falling", "SHKService");
+    }
   }
 }
 
+// Handles rising edge (end of pulse) for line 'idx'.
 void SHKService::pulseRising_(int idx, uint32_t nowMs) {
   auto& s = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
 
   if (s.pdState == PerLine::PDState::InPulse) {
-    uint32_t lowDur = nowMs - s.lowStartMs; // låg-bredd
-    s.lastEdgeMs = nowMs;                   // stigande kant
+    uint32_t lowDur = nowMs - s.lowStartMs; // Pulse low duration.
+    s.lastEdgeMs = nowMs;                   // Rising edge.
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: Line %d pulse low duration %d ms\n", (int)idx, (int)lowDur);
+      util::UIConsole::log("SHKService: Line " + String(idx) + " pulse low duration " + String(lowDur) + " ms", "SHKService");
     }
 
-    // Validera puls-lågtid: min = settings_.debounceMs, max = settings_.pulseLowMaxMs
+    // Validate pulse low time: min = debounceMs, max = pulseLowMaxMs.
     if (lowDur >= settings_.debounceMs && lowDur <= settings_.pulseLowMaxMs) {
-      
+
       if (s.pulseCountWork == 0 &&
           line.currentHookStatus == model::HookStatus::Off &&
           line.currentLineStatus == model::LineStatus::Ready) {
@@ -358,11 +370,12 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
       }
       s.pulseCountWork += 1;
       s.pdState     = PerLine::PDState::BetweenPulses;
-      s.lastEdgeMs  = nowMs;           // starta digit-gap-mätning
+      s.lastEdgeMs  = nowMs; // Start digit gap measurement.
 
-    if (settings_.debugSHKLevel >= 1) {
-      Serial.printf("SHKService: Line %d pulsCountWork %d \n", (int)idx, (int)s.pulseCountWork);
-    }
+      if (settings_.debugSHKLevel >= 2) {
+        Serial.printf("SHKService: Line %d pulsCountWork %d \n", (int)idx, (int)s.pulseCountWork);
+        util::UIConsole::log("SHKService: Line " + String(idx) + " pulseCountWork " + String(s.pulseCountWork), "SHKService");
+      }
 
     } else {
       resetPulseState_(idx);
@@ -371,21 +384,29 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
   }
 }
 
+// Emits digit and resets pulse state for line 'idx'.
 void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
   auto& s = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
 
   if (s.pulseCountWork > 0) {
-    char d = mapPulseToDigit_(s.pulseCountWork); // 10→'0'
-    line.dialedDigits += d; // lägg direkt i LineHandler
-    Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
-    Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+    char d = mapPulseToDigit_(s.pulseCountWork); // 10 → '0'
+    line.dialedDigits += d; // Add digit directly to LineHandler.
+    line.lineTimerEnd = nowMs + settings_.timer_toneDialing; // Reset timer
+
+    if (settings_.debugSHKLevel >= 1) {
+      Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
+      Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+      util::UIConsole::log("Line " + String(idx) + " digit '" + String(d) + "' (pulses=" + String(s.pulseCountWork) + ")", "SHKService");
+      util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
+    }
   }
   resetPulseState_(idx);
   s.blockUntilMs = nowMs + 80;
   resyncFast_(idx, rawHigh, nowMs);
 }
 
+// Resets pulse state for line 'idx'.
 void SHKService::resetPulseState_(int idx) {
   auto& s = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
@@ -394,9 +415,9 @@ void SHKService::resetPulseState_(int idx) {
   s.pulseCountWork = 0;
   s.lowStartMs = 0;
   s.lastEdgeMs = 0;
-
 }
 
+// Resynchronizes fast-level state for line 'idx'.
 void SHKService::resyncFast_(int idx, bool rawHigh, uint32_t nowMs) {
   auto& s = lineState_[idx];
   s.lastRaw     = rawHigh;
@@ -404,15 +425,16 @@ void SHKService::resyncFast_(int idx, bool rawHigh, uint32_t nowMs) {
   s.rawChangeMs = nowMs;
 }
 
+// Maps pulse count to digit (10 pulses → '0').
 char SHKService::mapPulseToDigit_(uint8_t count) const {
-  uint8_t p = count % 10;               // p ∈ {0..9} där 0 betyder “10 pulser”
+  uint8_t p = count % 10; // p ∈ {0..9}, where 0 means “10 pulses”
   if (settings_.pulseAdjustment == 1) {
-    // Svensk typ: 0 = 1 puls, 1 = 2 pulser, ..., 9 = 10 pulser
+    // Swedish type: 0 = 1 pulse, 1 = 2 pulses, ..., 9 = 10 pulses
     // => digit = (p == 0) ? 9 : (p - 1)
     uint8_t d = (p == 0) ? 9 : (p - 1);
     return static_cast<char>('0' + d);
   } else {
-    // Standard (decadic): 1..9 => 1..9, 10 => 0
+    // Standard (decadic): 1..9 → 1..9, 10 → 0
     return (p == 0) ? '0' : static_cast<char>('0' + p);
   }
 }

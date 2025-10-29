@@ -1,4 +1,3 @@
-// include/telephony/SHKService.h
 #pragma once
 #include <cstdint>
 #include <cstddef>
@@ -19,6 +18,7 @@ public:
   // Anropa från app.loop()
   bool needsTick(uint32_t nowMs) const;
   bool tick(uint32_t nowMs);
+  void update();
 
 private:
   struct PerLine {
@@ -52,15 +52,12 @@ private:
   // Logik
   void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs);
   void setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs);
-
   void updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs);
   bool pulseModeAllowed_(const LineHandler& line) const;
-
   void pulseFalling_(int idx, uint32_t nowMs);
   void pulseRising_(int idx, uint32_t nowMs);
   void emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs);
   void resetPulseState_(int idx);
-
   void resyncFast_(int idx, bool rawHigh, uint32_t nowMs);
 
 private:
@@ -69,7 +66,6 @@ private:
   Settings&    settings_;
 
   std::vector<PerLine> lineState_;
-  std::size_t  activeLines_ = 0;
 
   uint32_t activeMask_ = 0;
   bool     burstActive_     = false;

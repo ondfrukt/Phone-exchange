@@ -8,15 +8,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgShk = document.getElementById('dbg-shk');
   const $dbgLm  = document.getElementById('dbg-lm');
   const $dbgWs  = document.getElementById('dbg-ws');
+  const $dbgLa  = document.getElementById('dbg-la');
+  const $dbgMt  = document.getElementById('dbg-mt');
+
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
+  const $restartBtn = document.getElementById('dbg-restart');
+
+  const dbgToggle = document.getElementById('dbg-toggle');
+  const dbgBody = document.getElementById('dbg-body');
+
+  // --- Console UI (mottagning only) ---
+  const $consoleLog = document.getElementById('console-log');
 
   let activeMask = 0;                 // bitmask 0..255
   let linesCache = [];                // [{id, status}]
 
+  // Console buffer client-side (begränsa DOM-textrader)
+  const consoleMaxLines = 500;
+  const consoleLines = [];
+
+  let autoScrollConsole = true;
+
   const isActive  = (id) => ((activeMask >> id) & 1) === 1;
   const setStatus = (t) => { $status.textContent = t; };
   const setDbgMsg = (t) => { $dbgMsg.textContent = t; };
+  let restartInProgress = false;
+
+
+  // Uppdatera visibilitet/statuscell för en rad beroende på aktiv-status
+  function updateStatusVisibility(lineId){
+    const sCell = document.getElementById(`line-${lineId}-status`);
+    if (!sCell) return;
+    if (isActive(lineId)) {
+      const cached = linesCache.find(x => x.id === lineId);
+      sCell.textContent = cached ? cached.status : '';
+      sCell.removeAttribute('aria-hidden');
+    } else {
+      sCell.textContent = '';
+      sCell.setAttribute('aria-hidden', 'true');
+    }
+  }
 
   // Bygg/uppdatera EN rad, inkl. badge, IDs och handlers
   function upsertLine(lineId, status){
@@ -45,9 +77,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // statuscell
-    const sCell = document.getElementById(`line-${lineId}-status`);
-    if (sCell) sCell.textContent = status;
+    // uppdatera cache
+    const idx = linesCache.findIndex(x => x.id === lineId);
+    if (idx >= 0) linesCache[idx].status = status;
+    else linesCache.push({ id: lineId, status });
+
+    // statuscell — visas endast om linjen är aktiv
+    updateStatusVisibility(lineId);
 
     // badge enligt mask
     updateActiveCell(lineId);
@@ -85,9 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = await r.json(); // {mask, active:[...]}
       if (typeof d.mask === 'number'){
         activeMask = d.mask|0;
-        linesCache.forEach(l => updateActiveCell(l.id));
+        linesCache.forEach(l => { updateActiveCell(l.id); updateStatusVisibility(l.id); });
       }
-      // SSE "activeMask" uppdaterar dessutom andra klienter
     } catch(e){
       console.warn('toggleLineActive error', e);
       setStatus('Kunde inte uppdatera masken (se konsol).');
@@ -96,6 +131,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Console: formatera och append
+  function formatTime(ts) {
+    try {
+      const dt = new Date(ts);
+      return dt.toLocaleTimeString();
+    } catch {
+      return '';
+    }
+  }
+
+  function appendConsoleLine(obj) {
+    const time = obj.ts ? formatTime(obj.ts) : '';
+    const src = obj.source ? `[${obj.source}] ` : '';
+    const text = obj.text || '';
+    const line = `${time} ${src}${text}`;
+
+    consoleLines.push(line);
+    if (consoleLines.length > consoleMaxLines) consoleLines.shift();
+
+    // Render DOM
+    $consoleLog.textContent = consoleLines.join('\n');
+
+    if (autoScrollConsole) {
+      $consoleLog.scrollTop = $consoleLog.scrollHeight;
+    }
+  }
+
+  // Läs in debugnivåer vid start
   async function loadDebug() {
     try{
       const r = await fetch('/api/debug');
@@ -104,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
       if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
       if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
+      if (typeof d.la  === 'number') $dbgLa.value  = String(d.la|0);
+      if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -115,7 +180,11 @@ document.addEventListener('DOMContentLoaded', () => {
       $dbgBtn.classList.add('working');
       setDbgMsg('Sparar…');
       const body = new URLSearchParams({
-        shk: $dbgShk.value, lm: $dbgLm.value, ws: $dbgWs.value
+        shk: $dbgShk.value, 
+        lm: $dbgLm.value, 
+        ws: $dbgWs.value,
+        la: $dbgLa.value,
+        mt: $dbgMt.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -124,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (!r.ok) throw new Error('HTTP '+r.status);
       await r.json();
-      // UI kommer dessutom att uppdateras av SSE "debug"
       setDbgMsg('Sparat.');
     } catch(e){
       setDbgMsg('Misslyckades att spara.');
@@ -135,7 +203,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function restartDevice() {
+    if (!confirm('Are you sure you want to restart the device?')) return;
+    try{
+      const r = await fetch('/api/restart', { method:'POST' });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      restartInProgress = true;
+      setDbgMsg('Restarting…');
+    } catch(e){
+      restartInProgress = false;
+      setStatus('Kunde inte starta om enheten (se konsol).');
+      console.warn(e);
+    }
+  }
+
   $dbgBtn?.addEventListener('click', saveDebug);
+  $restartBtn?.addEventListener('click', restartDevice);
+
+  dbgToggle?.addEventListener('click', () => {
+    if (!dbgBody) return;
+    const opened = dbgBody.style.display !== 'none';
+    if (opened) {
+      dbgBody.style.display = 'none';
+      dbgToggle.textContent = 'Show';
+      dbgToggle.setAttribute('aria-expanded', 'false');
+    } else {
+      dbgBody.style.display = '';
+      dbgToggle.textContent = 'Hide';
+      dbgToggle.setAttribute('aria-expanded', 'true');
+      loadDebug();
+    }
+  });
+
+  // Track manual scroll to disable auto-scroll when user scrolls up
+  $consoleLog?.addEventListener('scroll', () => {
+    if (!$consoleLog) return;
+    const nearBottom = ($consoleLog.scrollTop + $consoleLog.clientHeight) >= ($consoleLog.scrollHeight - 20);
+    autoScrollConsole = nearBottom;
+  });
 
   // ---- Initial inläsning ----
   // 1) Full statuslista
@@ -150,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(d => {
       if (d && typeof d.mask === 'number') {
         activeMask = d.mask|0;
-        linesCache.forEach(l => updateActiveCell(l.id));
+        linesCache.forEach(l => { updateActiveCell(l.id); updateStatusVisibility(l.id); });
       }
     })
     .catch(()=>{});
@@ -190,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = JSON.parse(ev.data);
       if (typeof d.mask === 'number'){
         activeMask = d.mask|0;
-        linesCache.forEach(l => updateActiveCell(l.id));
+        linesCache.forEach(l => { updateActiveCell(l.id); updateStatusVisibility(l.id); });
       }
     } catch {}
   });
@@ -202,7 +307,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.shk === 'number') $dbgShk.value = String(d.shk|0);
       if (typeof d.lm  === 'number') $dbgLm.value  = String(d.lm|0);
       if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
+      if (typeof d.la  === 'number') $dbgLa.value  = String(d.la|0);
+      if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
     } catch {}
+  });
+
+  // Console SSE (mottagning only)
+  es.addEventListener('console', ev => {
+    try {
+      const d = JSON.parse(ev.data);
+      appendConsoleLine(d);
+    } catch (e) {
+      console.warn('Invalid console SSE', e);
+    }
   });
 
   window.addEventListener('beforeunload', () => { try { es.close(); } catch {} });

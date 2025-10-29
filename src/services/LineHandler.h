@@ -30,14 +30,10 @@ public:
     String dialedDigits;                // char to store the dialed digits
 
     // Timer variables
-    unsigned int lineTimerLimit;        // Current limit for the line timer
-    unsigned long lineTimerStart;       // Start time for the line timer
-    bool lineTimerActive;               // Flag to indicate if the line timer is active
+    unsigned long lineTimerEnd;          // End time for the line timer
 
     LineHandler(int line);
     void lineIdle();
-    void startLineTimer(unsigned int limit);
-    void stopLineTimer();
     
 private:
 };
