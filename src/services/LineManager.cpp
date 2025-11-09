@@ -10,6 +10,7 @@ LineManager::LineManager(Settings& settings)
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
 
+    lines.back().phoneNumber = s.linePhoneNumbers[i];
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
@@ -116,4 +117,16 @@ void LineManager::setLineTimer(int index, unsigned int limit) {
     lines[index].lineTimerEnd = millis() + limit;
     activeTimersMask |= (1 << index);  // Set the timer active flag
   }
+}
+
+void LineManager::setPhoneNumber(int index, const String& value) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setPhoneNumber - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setPhoneNumber - ogiltigt index: " + String(index), "LineManager");
+    return;
+  }
+
+  lines[index].phoneNumber = value;
+  settings_.linePhoneNumbers[index] = value;
 }

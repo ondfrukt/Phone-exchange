@@ -147,6 +147,61 @@ void WebServer::setupApiRoutes_() {
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
 
+  server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> AsyncWebParameter* {
+      if (req->hasParam(key, true)) return req->getParam(key, true);
+      if (req->hasParam(key)) return req->getParam(key);
+      return nullptr;
+    };
+
+    AsyncWebParameter* lineParam = getParam("line");
+    AsyncWebParameter* phoneParam = getParam("phone");
+
+    if (!lineParam || !phoneParam) {
+      req->send(400, "application/json", "{\"error\":\"missing line/phone\"}");
+      return;
+    }
+
+    int line = lineParam->value().toInt();
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    String value = phoneParam->value();
+    value.trim();
+    if (value.length() > 32) {
+      req->send(400, "application/json", "{\"error\":\"phone too long\"}");
+      return;
+    }
+
+    bool hasControlChars = false;
+    for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+      char c = value.charAt(static_cast<unsigned int>(i));
+      if (static_cast<unsigned char>(c) < 32u) {
+        hasControlChars = true;
+        break;
+      }
+    }
+
+    if (hasControlChars) {
+      req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
+      return;
+    }
+
+    lm_.setPhoneNumber(line, value);
+    settings_.save();
+
+    sendFullStatusSse();
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Phone number line %d set to %s\n", line, value.c_str());
+      util::UIConsole::log("Phone number for line " + String(line) + " updated", "WebServer");
+    }
+
+    req->send(200, "application/json", "{\"ok\":true}");
+  });
+
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
   });

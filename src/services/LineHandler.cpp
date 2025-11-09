@@ -4,7 +4,7 @@
 LineHandler::LineHandler(int line) {
 
     lineNumber = line;
-    phoneNumber = String(line);
+    phoneNumber = "";
     lineActive = false;   
     currentLineStatus = LineStatus::Idle;
     previousLineStatus = LineStatus::Idle;
