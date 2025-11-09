@@ -189,6 +189,19 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
+    if (value.length() > 0) {
+      for (int i = 0; i < 8; ++i) {
+        if (i == line) continue;
+        String existing = settings_.linePhoneNumbers[i];
+        existing.trim();
+        if (existing.isEmpty()) continue;
+        if (existing == value) {
+          req->send(409, "application/json", "{\"error\":\"phone already in use\"}");
+          return;
+        }
+      }
+    }
+
     lm_.setPhoneNumber(line, value);
     settings_.save();
 

@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (typeof line.status === 'string') entry.status = line.status;
-    if (typeof line.phone === 'string') entry.phone = line.phone;
+    if (typeof line.phone === 'string') entry.phone = line.phone.trim();
 
     let row = document.getElementById('line-' + lineId);
     if (!row) {
@@ -175,6 +175,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalText = btn ? btn.textContent : '';
 
     const value = input.value.trim();
+
+    if (value.length > 0) {
+      const duplicate = linesCache.some(entry => {
+        if (!entry || entry.id === lineId) return false;
+        if (typeof entry.phone !== 'string') return false;
+        const current = entry.phone.trim();
+        return current.length > 0 && current === value;
+      });
+      if (duplicate) {
+        setStatus('Telefonnumret används redan av en annan linje.');
+        if (btn) {
+          btn.textContent = 'Dublett';
+          setTimeout(() => { if (btn) btn.textContent = originalText; }, 2000);
+        }
+        return;
+      }
+    }
     if (value.length > 32) {
       if (btn) {
         btn.textContent = 'För långt';
@@ -222,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e && typeof e.message === 'string') {
         if (e.message.includes('phone too long')) friendly = 'Telefonnumret är för långt (max 32 tecken).';
         else if (e.message.includes('invalid characters')) friendly = 'Telefonnumret innehåller ogiltiga tecken.';
+        else if (e.message.includes('phone already in use')) friendly = 'Telefonnumret används redan av en annan linje.';
         else if (!e.message.startsWith('HTTP')) friendly += ` (${e.message})`;
       }
       setStatus(friendly);

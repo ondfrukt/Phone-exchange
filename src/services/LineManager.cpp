@@ -127,6 +127,9 @@ void LineManager::setPhoneNumber(int index, const String& value) {
     return;
   }
 
-  lines[index].phoneNumber = value;
-  settings_.linePhoneNumbers[index] = value;
+  String sanitized = value;
+  sanitized.trim();
+
+  lines[index].phoneNumber = sanitized;
+  settings_.linePhoneNumbers[index] = sanitized;
 }
