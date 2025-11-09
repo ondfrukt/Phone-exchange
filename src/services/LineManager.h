@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include "settings/settings.h"
 #include "model/Types.h"
 #include "util/UIConsole.h"
@@ -12,6 +13,7 @@ public:
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
   void setLineTimer(int index, unsigned int limit);
+  void setPhoneNumber(int index, const String& value);
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
   using ActiveLinesChangedCallback = std::function<void(uint8_t)>;
