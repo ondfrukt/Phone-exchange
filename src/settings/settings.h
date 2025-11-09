@@ -23,6 +23,7 @@ public:
   // ---- Public fields ----
   uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
   uint16_t debounceMs;            // Debounce time for line state changes
+  String linePhoneNumbers[8];     // Stored phone number per line
 
   // ---- Debugging ----
   uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high
@@ -81,5 +82,5 @@ private:
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 1;    // increase if layout changes
+  static constexpr uint16_t kVersion = 2;    // increase if layout changes
 };
