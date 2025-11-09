@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Bitmask representing active/inactive lines (0..255)
   let activeMask = 0;
-  // Cache of line objects for quick lookup and rendering: [{id, status}, ...]
+  // Cache of line objects for quick lookup and rendering: [{id, status, phone}, ...]
   let linesCache = [];
 
   // Client-side console buffer to limit DOM updates and keep scroll performant
@@ -56,45 +56,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Build or update a single line in the DOM, including the badge element,
-  // ids and keyboard/click handlers. This is idempotent: calling with an
-  // existing id will update the row instead of duplicating it.
-  function upsertLine(lineId, status){
-    let row = document.getElementById('line-'+lineId);
-    if (!row){
+  function updatePhoneInput(entry){
+    if (!entry) return;
+    const input = document.getElementById(`line-${entry.id}-phone`);
+    if (!input) return;
+    if (document.activeElement === input) return;
+    input.value = entry.phone || '';
+  }
+
+  // Build or update a single line entry in cache and DOM.
+  function upsertLine(line){
+    if (!line) return;
+    const lineId = typeof line.id === 'number' ? (line.id | 0) : 0;
+
+    let entry = linesCache.find(x => x.id === lineId);
+    if (!entry) {
+      entry = { id: lineId, status: '', phone: '' };
+      linesCache.push(entry);
+    }
+
+    if (typeof line.status === 'string') entry.status = line.status;
+    if (typeof line.phone === 'string') entry.phone = line.phone.trim();
+
+    let row = document.getElementById('line-' + lineId);
+    if (!row) {
       row = document.createElement('div');
       row.className = 'row';
       row.id = 'line-' + lineId;
       row.innerHTML = `
         <span class="k">Linje ${lineId}</span>
         <span class="v" id="line-${lineId}-status"></span>
-        <span class="badge" id="line-${lineId}-active"
-              role="button" tabindex="0"
-              title="Activate / Inactivate"></span>
+        <div class="phone-editor">
+          <input type="text" id="line-${lineId}-phone" inputmode="tel" autocomplete="tel"
+                 placeholder="Phone number" maxlength="32" />
+          <button class="badge clickable" id="line-${lineId}-save" type="button">Spara</button>
+        </div>
+        <button class="badge" id="line-${lineId}-active" type="button" title="Activate / Inactivate"></button>
       `;
       $lines.appendChild(row);
 
-      // Attach clicks and keyboard handling only to the badge element so the
-      // rest of the row remains static and non-interactive.
       const aCell = row.querySelector(`#line-${lineId}-active`);
-      aCell.classList.add('clickable');
-      aCell.addEventListener('click', () => toggleLineActive(lineId, aCell));
-      aCell.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault(); toggleLineActive(lineId, aCell);
-        }
-      });
+      if (aCell) {
+        aCell.classList.add('clickable');
+        aCell.addEventListener('click', () => toggleLineActive(lineId, aCell));
+      }
+
+      const saveBtn = row.querySelector(`#line-${lineId}-save`);
+      const phoneInput = row.querySelector(`#line-${lineId}-phone`);
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => persistPhoneNumber(lineId, saveBtn));
+      }
+      if (phoneInput) {
+        phoneInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            persistPhoneNumber(lineId, saveBtn);
+          }
+        });
+      }
     }
 
-    // Update or insert to the in-memory cache for fast future updates
-    const idx = linesCache.findIndex(x => x.id === lineId);
-    if (idx >= 0) linesCache[idx].status = status;
-    else linesCache.push({ id: lineId, status });
-
-    // Status cell is shown only if the line is active
     updateStatusVisibility(lineId);
-
-    // Update badge appearance based on current activeMask
+    updatePhoneInput(entry);
     updateActiveCell(lineId);
   }
 
@@ -113,9 +136,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render all lines (clears the container and rebuilds using upsertLine).
   // This is used for full snapshots from the server.
   function renderAll(lines){
-    linesCache = lines.map(l => ({ id:l.id, status:l.status }));
+    linesCache = [];
     $lines.innerHTML = '';
-    for (const l of linesCache) upsertLine(l.id, l.status);
+    if (!Array.isArray(lines)) return;
+    for (const l of lines) upsertLine(l);
   }
 
   // Toggle a line's active state via the API. The badge element receives a
@@ -141,6 +165,95 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Kunde inte uppdatera masken (se konsol).'); // UI message left as-is
     } finally {
       badgeEl.classList.remove('working');
+    }
+  }
+
+  async function persistPhoneNumber(lineId, buttonEl){
+    const input = document.getElementById(`line-${lineId}-phone`);
+    if (!input) return;
+    const btn = buttonEl || document.getElementById(`line-${lineId}-save`);
+    const originalText = btn ? btn.textContent : '';
+
+    const value = input.value.trim();
+
+    if (value.length > 0) {
+      const duplicate = linesCache.some(entry => {
+        if (!entry || entry.id === lineId) return false;
+        if (typeof entry.phone !== 'string') return false;
+        const current = entry.phone.trim();
+        return current.length > 0 && current === value;
+      });
+      if (duplicate) {
+        setStatus('Telefonnumret används redan av en annan linje.');
+        if (btn) {
+          btn.textContent = 'Dublett';
+          setTimeout(() => { if (btn) btn.textContent = originalText; }, 2000);
+        }
+        return;
+      }
+    }
+    if (value.length > 32) {
+      if (btn) {
+        btn.textContent = 'För långt';
+        setTimeout(() => { if (btn) btn.textContent = originalText; }, 2000);
+      }
+      setStatus('Telefonnumret är för långt (max 32 tecken).');
+      return;
+    }
+
+    try{
+      if (btn) {
+        btn.classList.add('working');
+        btn.disabled = true;
+      }
+
+      const body = new URLSearchParams({
+        line: String(lineId),
+        phone: value
+      }).toString();
+
+      const r = await fetch('/api/line/phone', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body
+      });
+
+      if (!r.ok) {
+        let msg = 'HTTP ' + r.status;
+        try {
+          const data = await r.json();
+          if (data && typeof data.error === 'string') msg = data.error;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const entry = linesCache.find(x => x.id === lineId);
+      if (entry) entry.phone = value;
+      if (btn) {
+        btn.textContent = 'Sparat';
+        setTimeout(() => { if (btn) btn.textContent = originalText; }, 1500);
+      }
+    } catch(e){
+      console.warn('persistPhoneNumber error', e);
+      let friendly = 'Kunde inte spara telefonnumret.';
+      if (e && typeof e.message === 'string') {
+        if (e.message.includes('phone too long')) friendly = 'Telefonnumret är för långt (max 32 tecken).';
+        else if (e.message.includes('invalid characters')) friendly = 'Telefonnumret innehåller ogiltiga tecken.';
+        else if (e.message.includes('phone already in use')) friendly = 'Telefonnumret används redan av en annan linje.';
+        else if (!e.message.startsWith('HTTP')) friendly += ` (${e.message})`;
+      }
+      setStatus(friendly);
+      if (btn) {
+        btn.textContent = 'Fel';
+        setTimeout(() => { if (btn) btn.textContent = originalText; }, 2000);
+      }
+    } finally {
+      if (btn) {
+        btn.classList.remove('working');
+        btn.disabled = false;
+      }
+      const entry = linesCache.find(x => x.id === lineId);
+      updatePhoneInput(entry);
     }
   }
 
@@ -292,10 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
   es.onmessage = ev => {
     try {
       const d = JSON.parse(ev.data);
-      if (d && Array.isArray(d.lines)) {
-        linesCache = d.lines.map(l => ({ id:l.id, status:l.status }));
-        for (const l of linesCache) upsertLine(l.id, l.status);
-      }
+      if (d && Array.isArray(d.lines)) renderAll(d.lines);
     } catch {}
   };
 
@@ -305,10 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = JSON.parse(ev.data);
       if (!('line' in d) || !('status' in d)) return;
       if (typeof d.line !== 'number' || typeof d.status !== 'string') return;
-      const i = linesCache.findIndex(x => x.id === d.line);
-      if (i >= 0) linesCache[i].status = d.status;
-      else linesCache.push({ id:d.line, status:d.status });
-      upsertLine(d.line, d.status);
+      upsertLine({ id: d.line, status: d.status });
     } catch {}
   });
 
