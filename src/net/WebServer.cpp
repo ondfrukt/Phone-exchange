@@ -2,6 +2,7 @@
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
 #include "util/UIConsole.h"
+#include <cstdio>
 
 WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi ,uint16_t port)
 : settings_ (settings), lm_(lineManager), wifi_(wifi), server_(port) {}
@@ -78,8 +79,10 @@ void WebServer::setupCallbacks_() {
 
 void WebServer::setupLineManagerCallback_() {
   lm_.setStatusChangedCallback([this](int index, LineStatus status){
+    const auto& line = lm_.getLine(index);
     String json = "{\"line\":" + String(index) +
-                  ",\"status\":\"" + model::toString(status) + "\"}";
+                  ",\"status\":\"" + model::toString(status) + "\"" +
+                  ",\"phone\":\"" + escapeJson_(line.phoneNumber) + "\"}";
     events_.send(json.c_str(), "lineStatus", millis());
   });
 }
@@ -98,6 +101,56 @@ void WebServer::setupApiRoutes_() {
   // Aktiva linjer som JSON
   server_.on("/api/active", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
+  });
+
+  server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
+    int line = -1;
+    bool hasLine = false;
+    if (req->hasParam("line")) {
+      line = req->getParam("line")->value().toInt();
+      hasLine = true;
+    } else if (req->hasParam("line", true)) {
+      line = req->getParam("line", true)->value().toInt();
+      hasLine = true;
+    }
+
+    String phone;
+    bool hasPhone = false;
+    if (req->hasParam("phone")) {
+      phone = req->getParam("phone")->value();
+      hasPhone = true;
+    } else if (req->hasParam("phone", true)) {
+      phone = req->getParam("phone", true)->value();
+      hasPhone = true;
+    }
+
+    if (!hasLine || line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"missing/invalid line\"}");
+      return;
+    }
+
+    if (!hasPhone) {
+      req->send(400, "application/json", "{\"error\":\"missing phone\"}");
+      return;
+    }
+
+    phone.trim();
+    if (phone.length() > 32) {
+      req->send(400, "application/json", "{\"error\":\"phone too long\"}");
+      return;
+    }
+
+    lm_.setPhoneNumber(line, phone);
+    settings_.save();
+
+    if (settings_.debugWSLevel >= 1) {
+      util::UIConsole::log("WebServer: Phone for line " + String(line) + " set to " + phone, "WebServer");
+    }
+
+    sendFullStatusSse();
+
+    String response = "{\"line\":" + String(line) + ",\"phone\":\"" + escapeJson_(phone) + "\"}";
+    req->send(200, "application/json", response);
   });
 
   // Toggle: POST /api/active/toggle  (body: line=3)
@@ -353,4 +406,30 @@ void WebServer::sendActiveMaskSse() {
     Serial.println("WebServer: Active mask skickad via SSE");
     util::UIConsole::log("Active mask sent via SSE", "WebServer");
   }
+}
+
+String WebServer::escapeJson_(const String& in) {
+  String out;
+  out.reserve(in.length());
+  for (size_t i = 0; i < in.length(); ++i) {
+    char c = in[i];
+    switch (c) {
+      case '\\': out += "\\\\"; break;
+      case '\"': out += "\\\""; break;
+      case '\b': out += "\\b";  break;
+      case '\f': out += "\\f";  break;
+      case '\n': out += "\\n";  break;
+      case '\r': out += "\\r";  break;
+      case '\t': out += "\\t";  break;
+      default:
+        if ((uint8_t)c < 0x20) {
+          char buf[8];
+          snprintf(buf, sizeof(buf), "\\u%04x", (uint8_t)c);
+          out += buf;
+        } else {
+          out += c;
+        }
+    }
+  }
+  return out;
 }

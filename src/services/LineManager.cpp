@@ -6,12 +6,12 @@ LineManager::LineManager(Settings& settings)
 :settings_(settings){
   lines.reserve(8);
 
-  auto& s = Settings::instance();   // singleton
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
 
-    bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
+    bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
+    lines.back().phoneNumber = settings_.linePhoneNumbers[i];
   }
   lineChangeFlag = 0;     // Intiate to zero (no changes)
   activeTimersMask = 0;   // Intiate to zero (no active timers)
@@ -21,12 +21,12 @@ LineManager::LineManager(Settings& settings)
 
 void LineManager::begin() {
   for (auto& line : lines) {
+    line.phoneNumber = settings_.linePhoneNumbers[line.lineNumber];
     line.lineIdle();
   }
 }
 
 void LineManager::syncLineActive(size_t i) {
-  auto& settings_ = Settings::instance();
   bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;
   lines[i].lineActive = isActive;
 }
@@ -115,5 +115,21 @@ void LineManager::setLineTimer(int index, unsigned int limit) {
     // Set timer end time
     lines[index].lineTimerEnd = millis() + limit;
     activeTimersMask |= (1 << index);  // Set the timer active flag
+  }
+}
+
+void LineManager::setPhoneNumber(int index, const String& number) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setPhoneNumber - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setPhoneNumber - ogiltigt index: " + String(index), "LineManager");
+    return;
+  }
+
+  lines[index].phoneNumber = number;
+  settings_.linePhoneNumbers[index] = number;
+
+  if (settings_.debugLmLevel >= 1) {
+    util::UIConsole::log("LineManager: Phone for line " + String(index) + " set to " + number, "LineManager");
   }
 }

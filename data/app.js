@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $consoleLog = document.getElementById('console-log');
 
   let activeMask = 0;                 // bitmask 0..255
-  let linesCache = [];                // [{id, status}]
+  let linesCache = [];                // [{id, status, phone}]
 
   // Console buffer client-side (begränsa DOM-textrader)
   const consoleMaxLines = 500;
@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const isActive  = (id) => ((activeMask >> id) & 1) === 1;
   const setStatus = (t) => { $status.textContent = t; };
   const setDbgMsg = (t) => { $dbgMsg.textContent = t; };
+  let lastConnectionStatus = $status ? $status.textContent : '';
+  const setConnectionStatus = (t) => { lastConnectionStatus = t; setStatus(t); };
   let restartInProgress = false;
 
 
@@ -51,7 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Bygg/uppdatera EN rad, inkl. badge, IDs och handlers
-  function upsertLine(lineId, status){
+  function upsertLine(line){
+    const lineId = line.id;
     let row = document.getElementById('line-'+lineId);
     if (!row){
       row = document.createElement('div');
@@ -59,6 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
       row.id = 'line-' + lineId;
       row.innerHTML = `
         <span class="k">Linje ${lineId}</span>
+        <span class="phone-cell">
+          <input class="phone-input" id="line-${lineId}-phone" type="text" maxlength="32" placeholder="Telefonnummer" />
+          <button class="btn phone-save" id="line-${lineId}-phone-save" type="button">Save</button>
+        </span>
         <span class="v" id="line-${lineId}-status"></span>
         <span class="badge" id="line-${lineId}-active"
               role="button" tabindex="0"
@@ -66,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       $lines.appendChild(row);
 
-      // koppla klick endast på badgen
       const aCell = row.querySelector(`#line-${lineId}-active`);
       aCell.classList.add('clickable');
       aCell.addEventListener('click', () => toggleLineActive(lineId, aCell));
@@ -75,17 +81,29 @@ document.addEventListener('DOMContentLoaded', () => {
           e.preventDefault(); toggleLineActive(lineId, aCell);
         }
       });
+
+      const phoneInput = row.querySelector(`#line-${lineId}-phone`);
+      const phoneBtn = row.querySelector(`#line-${lineId}-phone-save`);
+      const handleSave = () => savePhoneNumber(lineId, phoneInput, phoneBtn);
+      phoneBtn.addEventListener('click', handleSave);
+      phoneInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault(); handleSave();
+        }
+      });
     }
 
-    // uppdatera cache
-    const idx = linesCache.findIndex(x => x.id === lineId);
-    if (idx >= 0) linesCache[idx].status = status;
-    else linesCache.push({ id: lineId, status });
+    const statusCell = document.getElementById(`line-${lineId}-status`);
+    if (statusCell) {
+      statusCell.textContent = line.status || '';
+    }
 
-    // statuscell — visas endast om linjen är aktiv
+    const phoneInput = document.getElementById(`line-${lineId}-phone`);
+    if (phoneInput && typeof line.phone === 'string') {
+      phoneInput.value = line.phone;
+    }
+
     updateStatusVisibility(lineId);
-
-    // badge enligt mask
     updateActiveCell(lineId);
   }
 
@@ -102,9 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Rendera alla (rensar och bygger via upsertLine)
   function renderAll(lines){
-    linesCache = lines.map(l => ({ id:l.id, status:l.status }));
+    linesCache = lines.map(l => ({
+      id: l.id,
+      status: l.status,
+      phone: typeof l.phone === 'string' ? l.phone : ''
+    }));
     $lines.innerHTML = '';
-    for (const l of linesCache) upsertLine(l.id, l.status);
+    for (const l of linesCache) upsertLine(l);
   }
 
   // Toggle via API
@@ -128,6 +150,40 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Kunde inte uppdatera masken (se konsol).');
     } finally {
       badgeEl.classList.remove('working');
+    }
+  }
+
+  async function savePhoneNumber(lineId, inputEl, buttonEl){
+    if (!inputEl) return;
+    const phone = inputEl.value.trim();
+    try {
+      if (buttonEl) buttonEl.classList.add('working');
+      setStatus('Sparar telefonnummer…');
+      const body = new URLSearchParams({ line: String(lineId), phone }).toString();
+      const r = await fetch('/api/line/phone', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (d && typeof d.phone === 'string') {
+        let existing = linesCache.find(x => x.id === lineId);
+        if (!existing) {
+          existing = { id: lineId, status: '', phone: d.phone };
+          linesCache.push(existing);
+        } else {
+          existing.phone = d.phone;
+        }
+        inputEl.value = existing.phone;
+        setStatus('Telefonnummer sparat.');
+      }
+    } catch(e) {
+      console.warn('savePhoneNumber error', e);
+      setStatus('Kunde inte spara telefonnumret (se konsol).');
+    } finally {
+      if (buttonEl) buttonEl.classList.remove('working');
+      setTimeout(() => setStatus(lastConnectionStatus), 2000);
     }
   }
 
@@ -262,16 +318,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- SSE (Server-Sent Events) ----
   const es = new EventSource('/events');
-  es.onopen  = () => setStatus('Live: Connected');
-  es.onerror = () => setStatus('Live: Problem with the connection!');
+  es.onopen  = () => setConnectionStatus('Live: Connected');
+  es.onerror = () => setConnectionStatus('Live: Problem with the connection!');
 
   // Full snapshot: { lines:[...] }
   es.onmessage = ev => {
     try {
       const d = JSON.parse(ev.data);
       if (d && Array.isArray(d.lines)) {
-        linesCache = d.lines.map(l => ({ id:l.id, status:l.status }));
-        for (const l of linesCache) upsertLine(l.id, l.status);
+        linesCache = d.lines.map(l => ({
+          id: l.id,
+          status: l.status,
+          phone: typeof l.phone === 'string' ? l.phone : ''
+        }));
+        for (const l of linesCache) upsertLine(l);
       }
     } catch {}
   };
@@ -280,12 +340,26 @@ document.addEventListener('DOMContentLoaded', () => {
   es.addEventListener('lineStatus', ev => {
     try {
       const d = JSON.parse(ev.data);
-      if (!('line' in d) || !('status' in d)) return;
-      if (typeof d.line !== 'number' || typeof d.status !== 'string') return;
-      const i = linesCache.findIndex(x => x.id === d.line);
-      if (i >= 0) linesCache[i].status = d.status;
-      else linesCache.push({ id:d.line, status:d.status });
-      upsertLine(d.line, d.status);
+      if (typeof d.line !== 'number') return;
+      const lineId = d.line|0;
+      const hasStatus = typeof d.status === 'string';
+      const hasPhone = typeof d.phone === 'string';
+      if (!hasStatus && !hasPhone) return;
+
+      let cached = linesCache.find(x => x.id === lineId);
+      if (!cached) {
+        cached = {
+          id: lineId,
+          status: hasStatus ? d.status : '',
+          phone: hasPhone ? d.phone : ''
+        };
+        linesCache.push(cached);
+      } else {
+        if (hasStatus) cached.status = d.status;
+        if (hasPhone) cached.phone = d.phone;
+      }
+
+      upsertLine({ id: cached.id, status: cached.status, phone: cached.phone });
     } catch {}
   });
 

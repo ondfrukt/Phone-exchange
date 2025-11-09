@@ -1,4 +1,5 @@
 #include "settings.h"
+#include <cstdio>
 
 Settings::Settings() {
   resetDefaults();        // ensure fields have initial values
@@ -48,6 +49,10 @@ void Settings::resetDefaults() {
 
   // Runtime flags kept false here; set by MCPDriver::begin()
   mcpSlic1Present = mcpSlic2Present = mcpMainPresent = mcpMt8816Present = false;
+
+  for (int i = 0; i < 8; ++i) {
+    linePhoneNumbers[i] = String(i);
+  }
   Serial.println("Settings reset to defaults");
   util::UIConsole::log("Settings reset to defaults", "Settings");
 }
@@ -83,6 +88,16 @@ bool Settings::load() {
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
+
+    for (int i = 0; i < 8; ++i) {
+      char key[16];
+      snprintf(key, sizeof(key), "linePhone%d", i);
+      char value[33];
+      size_t len = prefs.getString(key, value, sizeof(value));
+      if (len > 0) {
+        linePhoneNumbers[i] = String(value);
+      }
+    }
   }
   prefs.end();
   if (!ok) save();
@@ -115,6 +130,12 @@ void Settings::save() const {
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",            highMeansOffHook);
+
+  for (int i = 0; i < 8; ++i) {
+    char key[16];
+    snprintf(key, sizeof(key), "linePhone%d", i);
+    prefs.putString(key, linePhoneNumbers[i]);
+  }
 
   prefs.end();
 }

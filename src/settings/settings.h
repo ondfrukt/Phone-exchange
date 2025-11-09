@@ -49,6 +49,9 @@ public:
 
   uint8_t allowMask;
 
+  // ---- Line metadata ----
+  String linePhoneNumbers[8];     // Configured phone number for each line
+
   // ---- MCP statuses (not saved to NVS, runtime only) ----
   bool mcpSlic1Present = false;
   bool mcpSlic2Present = false;

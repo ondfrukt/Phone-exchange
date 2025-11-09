@@ -12,6 +12,7 @@ public:
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
   void setLineTimer(int index, unsigned int limit);
+  void setPhoneNumber(int index, const String& number);
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
   using ActiveLinesChangedCallback = std::function<void(uint8_t)>;
