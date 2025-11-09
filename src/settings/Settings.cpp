@@ -46,6 +46,10 @@ void Settings::resetDefaults() {
   globalPulseTimeoutMs  = 500;
   highMeansOffHook      = true;
 
+  for (auto &num : linePhoneNumbers) {
+    num = "";
+  }
+
   // Runtime flags kept false here; set by MCPDriver::begin()
   mcpSlic1Present = mcpSlic2Present = mcpMainPresent = mcpMt8816Present = false;
   Serial.println("Settings reset to defaults");
@@ -83,6 +87,11 @@ bool Settings::load() {
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
+
+    for (int i = 0; i < 8; ++i) {
+      String key = String("linePhone") + i;
+      linePhoneNumbers[i] = prefs.getString(key.c_str(), linePhoneNumbers[i]);
+    }
   }
   prefs.end();
   if (!ok) save();
@@ -115,6 +124,11 @@ void Settings::save() const {
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",            highMeansOffHook);
+
+  for (int i = 0; i < 8; ++i) {
+    String key = String("linePhone") + i;
+    prefs.putString(key.c_str(), linePhoneNumbers[i]);
+  }
 
   prefs.end();
 }

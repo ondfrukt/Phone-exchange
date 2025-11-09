@@ -22,16 +22,45 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   box-shadow:0 6px 30px rgba(0,0,0,.25);
 }
 
-/* tre kolumner: Namn | Status | Aktiv-knapp */
+/* Namn | Status | Telefon | Aktiv-knapp */
 .row{
-  display:grid; grid-template-columns:1fr auto auto; gap:10px;
-  align-items:baseline; padding:8px 0;
+  display:grid;
+  grid-template-columns:1fr auto minmax(180px, 1.6fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:8px 0;
   border-bottom:1px dashed rgba(255,255,255,.06)
 }
 .row:last-child{ border-bottom:none }
 
 .k{ color:var(--muted) }
 .v{ font-weight:700; letter-spacing:.3px }
+
+.phone-editor{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.phone-editor input{
+  flex:1;
+  min-width:0;
+  padding:4px 8px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.04);
+  color:var(--fg);
+}
+
+.phone-editor input:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--accent);
+}
+
+.phone-editor .badge{
+  min-width:68px;
+}
 
 .status{ margin-top:10px; color:var(--muted); font-size:.9rem }
 
