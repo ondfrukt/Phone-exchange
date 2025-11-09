@@ -43,16 +43,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // unneeded info hidden when the line is inactive.
   function updateStatusVisibility(lineId){
     const sCell = document.getElementById(`line-${lineId}-status`);
-    if (!sCell) return;
-    if (isActive(lineId)) {
-      // Show cached status if available
-      const cached = linesCache.find(x => x.id === lineId);
-      sCell.textContent = cached ? cached.status : '';
-      sCell.removeAttribute('aria-hidden');
-    } else {
-      // Hide content when inactive for accessibility and clarity
-      sCell.textContent = '';
-      sCell.setAttribute('aria-hidden', 'true');
+    const row = document.getElementById(`line-${lineId}`);
+    const phoneEditor = row ? row.querySelector('.phone-editor') : null;
+    const phoneInput = phoneEditor ? phoneEditor.querySelector(`#line-${lineId}-phone`) : null;
+    const saveBtn = phoneEditor ? phoneEditor.querySelector(`#line-${lineId}-save`) : null;
+
+    // Status cell show/hide (som tidigare)
+    if (sCell) {
+      if (isActive(lineId)) {
+        const cached = linesCache.find(x => x.id === lineId);
+        sCell.textContent = cached ? cached.status : '';
+        sCell.removeAttribute('aria-hidden');
+      } else {
+        sCell.textContent = '';
+        sCell.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    // Dölj eller visa phone-editor när linjen är inaktiv/aktiv
+    // (använd .hidden-klass i stället för display:none så att layouten behåller sin höjd)
+    if (phoneEditor) {
+      if (isActive(lineId)) {
+        phoneEditor.classList.remove('hidden');
+        phoneEditor.removeAttribute('aria-hidden');
+        if (saveBtn) saveBtn.disabled = false;
+        if (phoneInput) phoneInput.removeAttribute('aria-hidden');
+      } else {
+        phoneEditor.classList.add('hidden');
+        phoneEditor.setAttribute('aria-hidden', 'true');
+        if (saveBtn) saveBtn.disabled = true;
+        if (phoneInput) phoneInput.setAttribute('aria-hidden', 'true');
+      }
     }
   }
 
@@ -89,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="phone-editor">
           <input type="text" id="line-${lineId}-phone" inputmode="tel" autocomplete="tel"
                  placeholder="Phone number" maxlength="32" />
-          <button class="badge clickable" id="line-${lineId}-save" type="button">Spara</button>
+          <button class="badge clickable" id="line-${lineId}-save" type="button">Save</button>
         </div>
         <button class="badge" id="line-${lineId}-active" type="button" title="Activate / Inactivate"></button>
       `;
@@ -259,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Console: format timestamp and append a new console line to the client buffer.
   // We keep the DOM updates limited by maintaining consoleLines and writing the
-  // combined textNode. This reduces reflow when many messages arrive.
+  // combined textNode. This reduces reflow when många messages arrive.
   function formatTime(ts) {
     try {
       const dt = new Date(ts);
@@ -335,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Restart the device via API with a confirmation prompt. We set a local
-  // flag while a restart is in progress so the UI can reflect that if needed.
+  // flag while a restart is in progress så UI kan reflektera det if needed.
   async function restartDevice() {
     if (!confirm('Are you sure you want to restart the device?')) return;
     try{

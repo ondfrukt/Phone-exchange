@@ -20,8 +20,8 @@ void App::begin() {
 
 		// ----  Settings ----
     auto& settings = Settings::instance();
-    settings.resetDefaults(); // sätt standardvärden. Används nu under utveckling
-    //settings.load();  // ladda sparade inställningar (om några) (ska användas i färdig produkt)
+    //settings.resetDefaults(); 
+    settings.load();
 
 		// ---- I2C och I2C-scanner ----
 		Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
