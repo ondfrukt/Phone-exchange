@@ -148,14 +148,20 @@ void WebServer::setupApiRoutes_() {
   });
 
   server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
-    auto getParam = [req](const char* key) -> AsyncWebParameter* {
-      if (req->hasParam(key, true)) return req->getParam(key, true);
-      if (req->hasParam(key)) return req->getParam(key);
-      return nullptr;
-    };
+    AsyncWebParameter* lineParam = nullptr;
+    AsyncWebParameter* phoneParam = nullptr;
 
-    AsyncWebParameter* lineParam = getParam("line");
-    AsyncWebParameter* phoneParam = getParam("phone");
+    if (req->hasParam("line", true)) {
+      lineParam = req->getParam("line", true);
+    } else if (req->hasParam("line")) {
+      lineParam = req->getParam("line");
+    }
+
+    if (req->hasParam("phone", true)) {
+      phoneParam = req->getParam("phone", true);
+    } else if (req->hasParam("phone")) {
+      phoneParam = req->getParam("phone");
+    }
 
     if (!lineParam || !phoneParam) {
       req->send(400, "application/json", "{\"error\":\"missing line/phone\"}");
