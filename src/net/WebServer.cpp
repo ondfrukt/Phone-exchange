@@ -148,8 +148,8 @@ void WebServer::setupApiRoutes_() {
   });
 
   server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
-    AsyncWebParameter* lineParam = nullptr;
-    AsyncWebParameter* phoneParam = nullptr;
+    const AsyncWebParameter* lineParam = nullptr;
+    const AsyncWebParameter* phoneParam = nullptr;
 
     if (req->hasParam("line", true)) {
       lineParam = req->getParam("line", true);
