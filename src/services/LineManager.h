@@ -27,6 +27,8 @@ public:
   uint8_t lineChangeFlag;
   uint8_t activeTimersMask; // Bitmask for active line timers
   uint8_t linesNotIdle;     // Bitmask for lines that are not Idle
+
+  
   int lastLineReady;   // Most recent line that became Ready (for toneReader)
 
 private:

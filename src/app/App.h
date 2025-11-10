@@ -9,6 +9,7 @@
 #include "services/LineManager.h"
 #include "services/SHKService.h"
 #include "services/LineAction.h"
+#include "services/ToneGenerator.h"
 
 #include "settings/settings.h"
 
@@ -36,11 +37,15 @@ private:
     
     LineManager lineManager_;
     SHKService SHKService_;
-    
     LineAction lineAction_;
+    ToneGenerator toneGenerator1_;
+    ToneGenerator toneGenerator2_;
+    ToneGenerator toneGenerator3_;
+
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
     WebServer webServer_;
+
     FunctionButton functionButton_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;

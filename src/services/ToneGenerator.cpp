@@ -22,13 +22,12 @@ void ToneGenerator::begin() {
 
   ad9833_.begin();
   ad9833_.setMode(MD_AD9833::MODE_OFF);
-
   started_ = true;
   playing_ = false;
   currentSequence_ = StepSequence{nullptr, 0};
 }
 
-void ToneGenerator::startSequence(model::ToneId sequence) {
+void ToneGenerator::startToneSequence(model::ToneId sequence) {
   ensureStarted_();
 
   currentSequence_ = getSequence_(sequence);
@@ -55,22 +54,23 @@ void ToneGenerator::stop() {
   ad9833_.setMode(MD_AD9833::MODE_OFF);
 }
 
+bool ToneGenerator::isPlaying() {
+  return playing_;
+}
+
 void ToneGenerator::update() {
   if (!playing_ || currentSequence_.steps == nullptr || currentSequence_.length == 0) {
     return;
   }
-
   const Step& step = currentSequence_.steps[currentStepIndex_];
   if (step.durationMs == 0) {
     return;
   }
-
   uint32_t now = millis();
   uint32_t elapsed = now - stepStartTimeMs_;
   if (elapsed < step.durationMs) {
     return;
   }
-
   currentStepIndex_ = (currentStepIndex_ + 1) % currentSequence_.length;
   applyStep_(currentSequence_.steps[currentStepIndex_]);
   stepStartTimeMs_ = millis();
@@ -128,6 +128,5 @@ ToneGenerator::StepSequence ToneGenerator::getSequence_(model::ToneId sequence) 
     default:
       break;
   }
-
   return {nullptr, 0};
 }

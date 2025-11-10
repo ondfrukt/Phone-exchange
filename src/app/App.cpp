@@ -5,8 +5,14 @@ App::App()
   : mcpDriver_(),
     mt8816Driver_(mcpDriver_, Settings::instance()),
     lineManager_(Settings::instance()),
+
+    toneGenerator1_(cfg::ad9833::CS1_PIN),
+    toneGenerator2_(cfg::ad9833::CS2_PIN),  
+    toneGenerator3_(cfg::ad9833::CS3_PIN),
+
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
-    lineAction_(lineManager_, Settings::instance(), mt8816Driver_),
+    lineAction_(lineManager_, Settings::instance(), mt8816Driver_,
+                toneGenerator1_, toneGenerator2_, toneGenerator3_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
     functionButton_(mcpDriver_) {}
 
@@ -33,7 +39,7 @@ void App::begin() {
 		// ---- Drivrutiner och tjänster ----
     mcpDriver_.begin();
 		mt8816Driver_.begin();
-
+    lineAction_.begin();
     lineManager_.begin();
     settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
 
@@ -50,5 +56,10 @@ void App::loop() {
 	wifiClient_.loop();
 	lineAction_.update(); // Check for line status changes and timers
 	SHKService_.update(); // Check for SHK changes and process pulses
+
+  if (toneGenerator1_.isPlaying()) toneGenerator1_.update();
+  if (toneGenerator2_.isPlaying()) toneGenerator2_.update();
+  if (toneGenerator3_.isPlaying()) toneGenerator3_.update();
+
   functionButton_.update();
 }

@@ -12,12 +12,11 @@
 class ToneGenerator {
 public:
   explicit ToneGenerator(uint8_t csPin, SPIClass& spi = SPI);
-
   void begin();
-
-  void startSequence(model::ToneId sequence);
+  void startToneSequence(model::ToneId sequence);
   void stop();
   void update();
+  bool isPlaying();
 
 private:
   struct Step {
