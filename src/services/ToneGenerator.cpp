@@ -42,6 +42,12 @@ void ToneGenerator::startToneSequence(model::ToneId sequence) {
   playing_ = true;
   applyStep_(currentSequence_.steps[currentStepIndex_]);
   stepStartTimeMs_ = millis();
+
+  if (Settings::instance().debugTonGenLevel >= 1) {
+    Serial.println("ToneGenerator: Started tone sequence " + String(static_cast<uint8_t>(sequence)) + " on CS pin " + String(csPin_));
+    util::UIConsole::log("Started tone sequence " + String(static_cast<uint8_t>(sequence)) + " on CS pin " + String(csPin_), "ToneGenerator");
+  }
+
 }
 
 void ToneGenerator::stop() {
@@ -52,6 +58,11 @@ void ToneGenerator::stop() {
   currentStepIndex_ = 0;
   stepStartTimeMs_ = 0;
   ad9833_.setMode(MD_AD9833::MODE_OFF);
+
+  if (Settings::instance().debugTonGenLevel >= 1) {
+    Serial.println("ToneGenerator: Stopped tone sequence on CS pin " + String(csPin_));
+    util::UIConsole::log("Stopped tone sequence on CS pin " + String(csPin_), "ToneGenerator");
+  }
 }
 
 bool ToneGenerator::isPlaying() {

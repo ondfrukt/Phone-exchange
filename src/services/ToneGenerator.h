@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "model/Types.h"
+#include "settings/Settings.h" 
 
 class ToneGenerator {
 public:

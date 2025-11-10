@@ -32,6 +32,7 @@ public:
   uint8_t debugLALevel;           // 0=none, 1=low, 2=high
   uint8_t debugMTLevel;           // 0=none, 1=low, 2=high
   uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high
+  uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 

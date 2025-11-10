@@ -2,16 +2,16 @@
 
 
 LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver,
-            ToneGenerator& toneGen0, ToneGenerator& toneGen1, ToneGenerator& toneGen2)
+            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3)
           : lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver),
-            toneGen0_(toneGen0), toneGen1_(toneGen1), toneGen2_(toneGen2) {
+            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3) {
 };
 
 
 void LineAction::begin() {
-  toneGenerators[0] = &toneGen0_;
-  toneGenerators[1] = &toneGen1_;
-  toneGenerators[2] = &toneGen2_;
+  toneGenerators[0] = &toneGen1_;
+  toneGenerators[1] = &toneGen2_;
+  toneGenerators[2] = &toneGen3_;
 }
 
 void LineAction::update() {
@@ -45,23 +45,23 @@ void LineAction::update() {
 
 void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
   if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed]->stop();
+    toneGenerators[line.toneGenUsed -1]->stop();
     line.toneGenUsed = 0;
   }
 }
 
 void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
-  if (!toneGen0_.isPlaying()){
-    toneGen0_.startToneSequence(status);
-    line.toneGenUsed = 0;
-  }
-  else if (!toneGen1_.isPlaying()){
+  if (!toneGen1_.isPlaying()){
     toneGen1_.startToneSequence(status);
     line.toneGenUsed = 1;
   }
   else if (!toneGen2_.isPlaying()){
     toneGen2_.startToneSequence(status);
     line.toneGenUsed = 2;
+  }
+  else if (!toneGen3_.isPlaying()){
+    toneGen3_.startToneSequence(status);
+    line.toneGenUsed = 3;
   }
 }
 
@@ -81,8 +81,6 @@ void LineAction::action(int index) {
       //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC2, false); // Disconnect any audio connections
       //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC3, false); // Disconnect any audio connections
       // mqttHandler.publishMQTT(line, line_idle);
-      
-
       break;
 
     case LineStatus::Ready:
@@ -105,7 +103,6 @@ void LineAction::action(int index) {
     case LineStatus::ToneDialing:
       turnOffToneGenIfUsed(line);
     // Timer for tone dialing is handled when a digit is received
-
 
     //   mqttHandler.publishMQTT(line, line_tone_dialing);
     //   mt8816.connect(DTMF_line, line);

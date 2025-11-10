@@ -33,6 +33,8 @@ void Settings::resetDefaults() {
   debugLALevel          = 0;
   debugMTLevel          = 0;
   debugMCPLevel         = 0;
+  debugI2CLevel         = 0;
+  debugTonGenLevel      = 0;
 
   pulseAdjustment       = 1;
 
@@ -77,6 +79,7 @@ bool Settings::load() {
     debugMTLevel          = prefs.getUChar ("debugMt",    debugMTLevel);
     debugMCPLevel         = prefs.getUChar ("debugMCP",   debugMCPLevel);
     debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
+    debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
 
     // --- Other settings ---    
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
@@ -114,6 +117,7 @@ void Settings::save() const {
   prefs.putUChar ("debugMt",    debugMTLevel);
   prefs.putUChar ("debugMCP",   debugMCPLevel);
   prefs.putUChar ("debugI2C",   debugI2CLevel);
+  prefs.putUChar ("debugTonGen", debugTonGenLevel);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
