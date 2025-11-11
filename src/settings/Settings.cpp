@@ -31,7 +31,8 @@ void Settings::resetDefaults() {
   debugLmLevel          = 0;
   debugWSLevel          = 0;
   debugLALevel          = 0;
-  debugMTLevel          = 0;
+  debugMTLevel          = 2;
+  debugTRLevel          = 2;
   debugMCPLevel         = 0;
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
@@ -77,6 +78,7 @@ bool Settings::load() {
     debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);
     debugLALevel          = prefs.getUChar ("debugLa",    debugLALevel);
     debugMTLevel          = prefs.getUChar ("debugMt",    debugMTLevel);
+    debugTRLevel          = prefs.getUChar ("debugTr",    debugTRLevel);
     debugMCPLevel         = prefs.getUChar ("debugMCP",   debugMCPLevel);
     debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
@@ -115,6 +117,7 @@ void Settings::save() const {
   prefs.putUChar ("debugWs",    debugWSLevel);
   prefs.putUChar ("debugLa",    debugLALevel);
   prefs.putUChar ("debugMt",    debugMTLevel);
+  prefs.putUChar ("debugTr",    debugTRLevel);
   prefs.putUChar ("debugMCP",   debugMCPLevel);
   prefs.putUChar ("debugI2C",   debugI2CLevel);
   prefs.putUChar ("debugTonGen", debugTonGenLevel);

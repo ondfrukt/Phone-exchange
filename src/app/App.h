@@ -10,6 +10,7 @@
 #include "services/SHKService.h"
 #include "services/LineAction.h"
 #include "services/ToneGenerator.h"
+#include "services/ToneReader.h"
 
 #include "settings/settings.h"
 
@@ -41,6 +42,7 @@ private:
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;
     ToneGenerator toneGenerator3_;
+    ToneReader toneReader_;
 
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;

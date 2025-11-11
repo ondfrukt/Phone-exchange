@@ -16,8 +16,10 @@ void ToneReader::update() {
         uint8_t nibble = 0;
         if (readDtmfNibble(nibble)) {
           char ch = decodeDtmf(nibble);
-          if (settings_.debugMTLevel >= 2) {
+          if (settings_.debugTRLevel >= 2) {
             Serial.print(F("DTMF: nibble=0x"));
+            util::UIConsole::log("DTMF: nibble=0x", "ToneReader");
+
             if (nibble < 16) Serial.print(nibble, HEX); else Serial.print('?');
             Serial.print(F(" => '"));
             Serial.print(ch);
@@ -30,18 +32,21 @@ void ToneReader::update() {
               auto& line = lineManager_.getLine(idx);
               line.dialedDigits += ch;
 
-              if (settings_.debugMTLevel >= 1) {
+              if (settings_.debugTRLevel >= 1) {
                 Serial.print(F("DTMF: line "));
                 Serial.print(idx);
                 Serial.print(F(" +="));
                 Serial.println(ch);
+                util::UIConsole::log("DTMF: line " + String(idx) + " +=" + String(ch), "ToneReader");
               }
-            } else if (settings_.debugMTLevel >= 1) {
+            } else if (settings_.debugTRLevel >= 1) {
               Serial.println(F("DTMF: ingen lastLineReady att lagra på"));
+              util::UIConsole::log("DTMF: ingen lastLineReady att lagra på", "ToneReader");
             }
           }
-        } else if (settings_.debugMTLevel >= 1) {
+        } else if (settings_.debugTRLevel >= 1) {
           Serial.println(F("DTMF: kunde inte läsa nibble"));
+          util::UIConsole::log("DTMF: kunde inte läsa nibble", "ToneReader");
         }
       } else {
         // Falling edge på STD – ignoreras (giltig data läses vid high)
