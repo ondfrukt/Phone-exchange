@@ -279,72 +279,60 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   r.i2c_addr = addr;
   if (!fired) return r;
 
-  int8_t pin = mcp.getLastInterruptPin();
-  if (pin >= 0 && pin <= 15) {
-    r.pin = static_cast<uint8_t>(pin);
-
-    uint16_t intcap = 0;
-    if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r;
-
-    r.level    = (intcap & (1u << r.pin)) != 0;
-    r.hasEvent = true;
-
-    // SLIC: map to line (do not return here)
-    if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
-      int8_t line = mapSlicPinToLine_(addr, r.pin);
-      r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
-    }
-
-    // Extra clear after INTCAP (harmless but makes acknowledgment more robust)
+  uint16_t intf = 0;
+  if (!readRegPair16_OK_(addr, REG_INTFA, intf)) return r;
+  if (intf == 0) {
+    // No pin reported despite the interrupt flag being set; make sure the
+    // event is acknowledged to avoid getting stuck in a busy loop.
     uint16_t dummy = 0;
     (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
-
-    // Sync DEFVAL to the captured level (MAIN only; requires INTCON=1 for the pin)
-    if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
-      if (r.pin < 8) {
-        uint8_t defvala = 0;
-        if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {
-          if (r.level) defvala |=  (1u << r.pin);
-          else         defvala &= ~(1u << r.pin);
-          (void)writeReg8_(addr, REG_DEFVALA, defvala);
-        }
-      } else {
-        uint8_t bit = r.pin - 8; // 0..7
-        uint8_t defvalb = 0;
-        if (readReg8_OK_(addr, REG_DEFVALB, defvalb)) {
-          if (r.level) defvalb |=  (1u << bit);
-          else         defvalb &= ~(1u << bit);
-          (void)writeReg8_(addr, REG_DEFVALB, defvalb);
-        }
-      }
-    }
     return r;
   }
 
-  // Fallback if the driver does not provide the "last pin"
-  r = readIntfIntcapFallback_(addr);
-  return r;
-}
-
-// Fallback interrupt handler: scan INTf and INTCAP to find the pin and level
-IntResult MCPDriver::readIntfIntcapFallback_(uint8_t addr) {
-  IntResult r; r.i2c_addr = addr;
-  uint16_t intf=0, intcap=0;
-
-  if (!readRegPair16_OK_(addr, REG_INTFA,   intf))   return r;
+  uint16_t intcap = 0;
   if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r;
-  if (intf==0) return r;
 
-  for (uint8_t p=0; p<16; ++p) {
-    if (intf & (1u<<p)) {
-      r.pin      = p;
-      r.level    = (intcap & (1u<<p)) != 0;
+  for (uint8_t p = 0; p < 16; ++p) {
+    if (intf & (1u << p)) {
+      r.pin   = p;
+      r.level = (intcap & (1u << p)) != 0;
       r.hasEvent = true;
       break;
     }
   }
 
-  (void)readRegPair16_OK_(addr, REG_GPIOA, intcap);
+  // Extra clear after INTCAP (harmless but makes acknowledgment more robust)
+  uint16_t dummy = 0;
+  (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
+
+  if (!r.hasEvent) return r;
+
+  // SLIC: map to line (do not return here)
+  if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
+    int8_t line = mapSlicPinToLine_(addr, r.pin);
+    r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
+  }
+
+  // Sync DEFVAL to the captured level (MAIN only; requires INTCON=1 for the pin)
+  if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
+    if (r.pin < 8) {
+      uint8_t defvala = 0;
+      if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {
+        if (r.level) defvala |=  (1u << r.pin);
+        else         defvala &= ~(1u << r.pin);
+        (void)writeReg8_(addr, REG_DEFVALA, defvala);
+      }
+    } else {
+      uint8_t bit = r.pin - 8; // 0..7
+      uint8_t defvalb = 0;
+      if (readReg8_OK_(addr, REG_DEFVALB, defvalb)) {
+        if (r.level) defvalb |=  (1u << bit);
+        else         defvalb &= ~(1u << bit);
+        (void)writeReg8_(addr, REG_DEFVALB, defvalb);
+      }
+    }
+  }
+
   return r;
 }
 
