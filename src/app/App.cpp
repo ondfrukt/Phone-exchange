@@ -59,18 +59,9 @@ void App::loop() {
 	SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones
 
-  if (toneGenerator1_.isPlaying()) toneGenerator1_.update();
-  if (toneGenerator2_.isPlaying()) toneGenerator2_.update();
-  if (toneGenerator3_.isPlaying()) toneGenerator3_.update();
-
-  // Läs endast STD och skriv ut "1" vid hög nivå
-  {
-    bool level = false;
-    mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, level);
-    if (level) {
-      Serial.println("1");
-    }
-  }
+  if (toneGenerator1_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator1_.update();
+  if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
+  if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
   functionButton_.update();
 }
