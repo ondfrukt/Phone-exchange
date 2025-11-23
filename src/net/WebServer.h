@@ -21,6 +21,7 @@ public:
   void sendFullStatusSse();
   void sendActiveMaskSse();
   void sendDebugSse();
+  void sendToneGeneratorSse();
 
 private:
   Settings& settings_;
@@ -51,6 +52,7 @@ private:
   String buildStatusJson_() const;
   String buildActiveJson_(uint8_t mask);
   String buildDebugJson_() const;
+  String buildToneGeneratorJson_() const;
 
   // Bind the util::Console sink to forward JSON messages to SSE "console"
   void bindConsoleSink_();

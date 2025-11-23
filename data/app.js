@@ -10,10 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgWs  = document.getElementById('dbg-ws');
   const $dbgLa  = document.getElementById('dbg-la');
   const $dbgMt  = document.getElementById('dbg-mt');
+  const $dbgTr  = document.getElementById('dbg-tr');
+  const $dbgTg  = document.getElementById('dbg-tg');
 
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
   const $restartBtn = document.getElementById('dbg-restart');
+
+  const $toneEnabled = document.getElementById('tone-enabled');
+  const $toneEnabledLabel = document.getElementById('tone-enabled-label');
 
   const dbgToggle = document.getElementById('dbg-toggle');
   const dbgBody = document.getElementById('dbg-body');
@@ -37,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const setStatus = (t) => { $status.textContent = t; };
   const setDbgMsg = (t) => { $dbgMsg.textContent = t; };
   let restartInProgress = false;
+
+  const setToneEnabledUi = (enabled) => {
+    if ($toneEnabled) $toneEnabled.checked = !!enabled;
+    if ($toneEnabledLabel) $toneEnabledLabel.textContent = enabled ? 'Enabled' : 'Disabled';
+  };
 
   // Update the visibility and content of the status cell for a given line
   // depending on whether the line is active. This keeps sensitive or
@@ -320,6 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
       if (typeof d.la  === 'number') $dbgLa.value  = String(d.la|0);
       if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
+      if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
+      if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -336,7 +348,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lm: $dbgLm.value,
         ws: $dbgWs.value,
         la: $dbgLa.value,
-        mt: $dbgMt.value
+        mt: $dbgMt.value,
+        tr: $dbgTr.value,
+        tg: $dbgTg.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -352,6 +366,44 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       $dbgBtn.classList.remove('working');
       setTimeout(()=> setDbgMsg(''), 1500);
+    }
+  }
+
+  // Load and persist tone generator enable flag
+  async function loadToneGenerator() {
+    try {
+      const r = await fetch('/api/tone-generator');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (typeof d.enabled === 'boolean') setToneEnabledUi(d.enabled);
+      else if (typeof d.enabled === 'number') setToneEnabledUi(Boolean(d.enabled));
+    } catch (e) {
+      console.warn('Could not read tone generator state', e);
+      setStatus('Kunde inte läsa ton generatorns läge.');
+    }
+  }
+
+  async function saveToneGenerator() {
+    if (!$toneEnabled) return;
+    try {
+      $toneEnabled.disabled = true;
+      const body = new URLSearchParams({ enabled: $toneEnabled.checked ? '1' : '0' }).toString();
+      const r = await fetch('/api/tone-generator/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if ('enabled' in d) setToneEnabledUi(!!d.enabled);
+      setStatus('Tone generator uppdaterad.');
+      setTimeout(() => setStatus(''), 1500);
+    } catch (e) {
+      console.warn('Could not update tone generator', e);
+      setStatus('Kunde inte uppdatera ton generatorn.');
+      $toneEnabled.checked = !$toneEnabled.checked;
+    } finally {
+      $toneEnabled.disabled = false;
     }
   }
 
@@ -373,6 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $dbgBtn?.addEventListener('click', saveDebug);
   $restartBtn?.addEventListener('click', restartDevice);
+  $toneEnabled?.addEventListener('change', saveToneGenerator);
 
   // Toggle debug UI visibility and load current debug values when opened.
   dbgToggle?.addEventListener('click', () => {
@@ -451,6 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {}
   });
 
+  // Tone generator updates via SSE
+  es.addEventListener('toneGen', ev => {
+    try {
+      const d = JSON.parse(ev.data);
+      if ('enabled' in d) setToneEnabledUi(!!d.enabled);
+    } catch {}
+  });
+
   // Debug levels updated via SSE — keeps UI in sync with device
   es.addEventListener('debug', ev => {
     try{
@@ -460,6 +521,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.ws  === 'number') $dbgWs.value  = String(d.ws|0);
       if (typeof d.la  === 'number') $dbgLa.value  = String(d.la|0);
       if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
+      if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
+      if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
     } catch {}
   });
 
@@ -477,4 +540,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load debug levels at startup
   loadDebug();
+  loadToneGenerator();
 });
