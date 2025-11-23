@@ -28,6 +28,9 @@ void ToneGenerator::begin() {
 }
 
 void ToneGenerator::startToneSequence(model::ToneId sequence) {
+
+  if (!Settings::instance().toneGeneratorEnabled) return;
+
   ensureStarted_();
 
   currentSequence_ = getSequence_(sequence);

@@ -37,7 +37,7 @@ public:
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 
-
+  bool    toneGeneratorEnabled = true; // Enable tone generators
   uint8_t pulseAdjustment;         // Pulse adjustment (1 means 1 pulse = 0, 2 pulses = 1, etc.)
 
   // ---- Settings (adjust according to your settings class/constants) ----

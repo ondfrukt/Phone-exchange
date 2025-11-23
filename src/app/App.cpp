@@ -63,5 +63,14 @@ void App::loop() {
   if (toneGenerator2_.isPlaying()) toneGenerator2_.update();
   if (toneGenerator3_.isPlaying()) toneGenerator3_.update();
 
+  // Läs endast STD och skriv ut "1" vid hög nivå
+  {
+    bool level = false;
+    mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, level);
+    if (level) {
+      Serial.println("1");
+    }
+  }
+
   functionButton_.update();
 }

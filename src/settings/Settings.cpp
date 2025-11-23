@@ -4,7 +4,6 @@ Settings::Settings() {
   resetDefaults();        // ensure fields have initial values
 }
 
-
 void Settings::adjustActiveLines() {
   // Adjust activeLinesMask to take physical MCP connections into account
   uint8_t userMask = activeLinesMask;
@@ -37,6 +36,7 @@ void Settings::resetDefaults() {
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
 
+  toneGeneratorEnabled = true;
   pulseAdjustment       = 1;
 
   burstTickMs           = 2;
@@ -92,6 +92,7 @@ bool Settings::load() {
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
+    toneGeneratorEnabled  = prefs.getBool ("toneGenEn",            toneGeneratorEnabled);
 
     for (int i = 0; i < 8; ++i) {
       String key = String("linePhone") + i;
@@ -131,6 +132,7 @@ void Settings::save() const {
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",            highMeansOffHook);
+  prefs.putBool ("toneGenEn",            toneGeneratorEnabled);
 
   for (int i = 0; i < 8; ++i) {
     String key = String("linePhone") + i;
