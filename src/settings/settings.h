@@ -26,14 +26,14 @@ public:
   String linePhoneNumbers[8];     // Stored phone number per line
 
   // ---- Debugging ----
-  uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high
-  uint8_t debugLmLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugWSLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugLALevel;           // 0=none, 1=low, 2=high
-  uint8_t debugMTLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugTRLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high
-  uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high
+  uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high Debug level for SHK service
+  uint8_t debugLmLevel;           // 0=none, 1=low, 2=high Debug level for Line Manager
+  uint8_t debugWSLevel;           // 0=none, 1=low, 2=high Debug level for Web Server
+  uint8_t debugLALevel;           // 0=none, 1=low, 2=high Debug level for Line Adapter
+  uint8_t debugMTLevel;           // 0=none, 1=low, 2=high Debug level for MT8816 service
+  uint8_t debugTRLevel;           // 0=none, 1=low, 2=high Debug level for TonReader service
+  uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high Debug level for MCP service
+  uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high Debug level for ToneGenerator
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 

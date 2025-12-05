@@ -64,4 +64,11 @@ void App::loop() {
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
   functionButton_.update();
+
+
+  bool level = false;
+  mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, level);
+  if (level) {
+    Serial.println("1");
+  }
 }
