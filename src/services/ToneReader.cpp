@@ -9,6 +9,19 @@ void ToneReader::update() {
     IntResult ir = mcpDriver_.handleMainInterrupt();
     if (!ir.hasEvent) break;
 
+    if (settings_.debugTRLevel >= 1) {
+      Serial.print(F("DTMF: interrupt addr=0x"));
+      Serial.print(ir.i2c_addr, HEX);
+      Serial.print(F(" pin="));
+      Serial.print(ir.pin);
+      Serial.print(F(" level="));
+      Serial.println(ir.level ? F("HIGH") : F("LOW"));
+      util::UIConsole::log("DTMF INT 0x" + String(ir.i2c_addr, HEX) +
+                               " pin=" + String(ir.pin) +
+                               " level=" + String(ir.level ? "HIGH" : "LOW"),
+                           "ToneReader");
+    }
+
     // Vi bryr oss bara om STD-pinnen från MT8870
     if (ir.i2c_addr == cfg::mcp::MCP_MAIN_ADDRESS && ir.pin == cfg::mcp::STD) {
       // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
@@ -18,12 +31,13 @@ void ToneReader::update() {
           char ch = decodeDtmf(nibble);
           if (settings_.debugTRLevel >= 2) {
             Serial.print(F("DTMF: nibble=0x"));
-            util::UIConsole::log("DTMF: nibble=0x", "ToneReader");
-
             if (nibble < 16) Serial.print(nibble, HEX); else Serial.print('?');
             Serial.print(F(" => '"));
             Serial.print(ch);
             Serial.println('\'');
+            util::UIConsole::log("DTMF: nibble=0x" + String(nibble, HEX) +
+                                     " => '" + String(ch) + "'",
+                                 "ToneReader");
           }
 
           if (ch != '\0') {
@@ -70,6 +84,20 @@ bool ToneReader::readDtmfNibble(uint8_t& nibble) {
            (static_cast<uint8_t>(q3) << 2) |
            (static_cast<uint8_t>(q2) << 1) |
            (static_cast<uint8_t>(q1) << 0);
+
+  if (settings_.debugTRLevel >= 2) {
+    Serial.print(F("DTMF: GPIOAB="));
+    Serial.print(gpioAB, BIN);
+    Serial.print(F(" q4..1="));
+    Serial.print(q4);
+    Serial.print(q3);
+    Serial.print(q2);
+    Serial.println(q1);
+    util::UIConsole::log("DTMF: gpioAB=" + String(gpioAB, BIN) +
+                             " q4=" + String(q4) + " q3=" + String(q3) +
+                             " q2=" + String(q2) + " q1=" + String(q1),
+                         "ToneReader");
+  }
   return true;
 }
 

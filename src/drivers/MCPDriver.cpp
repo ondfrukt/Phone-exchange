@@ -279,6 +279,9 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   r.i2c_addr = addr;
   if (!fired) return r;
 
+  auto& settings = Settings::instance();
+  const bool verbose = settings.debugMCPLevel >= 2;
+
   uint16_t intf = 0;
   if (!readRegPair16_OK_(addr, REG_INTFA, intf)) return r;
   if (intf == 0) {
@@ -286,6 +289,12 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
     // event is acknowledged to avoid getting stuck in a busy loop.
     uint16_t dummy = 0;
     (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
+    if (verbose) {
+      Serial.print(F("MCP INT: flag set men INTF=0 på 0x"));
+      Serial.println(addr, HEX);
+      util::UIConsole::log("MCP INT: flag set men INTF=0 på 0x" + String(addr, HEX),
+                           "MCPDriver");
+    }
     return r;
   }
 
@@ -306,6 +315,18 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
 
   if (!r.hasEvent) return r;
+
+  if (verbose) {
+    Serial.print(F("MCP INT: addr=0x"));
+    Serial.print(addr, HEX);
+    Serial.print(F(" pin="));
+    Serial.print(r.pin);
+    Serial.print(F(" level="));
+    Serial.println(r.level ? F("HIGH") : F("LOW"));
+    util::UIConsole::log("MCP INT 0x" + String(addr, HEX) + " pin=" + String(r.pin) +
+                             " level=" + String(r.level ? "HIGH" : "LOW"),
+                         "MCPDriver");
+  }
 
   // SLIC: map to line (do not return here)
   if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
@@ -445,13 +466,13 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
     uint8_t p = cfg::mcp::STD; // GPB3 according to config
     if (p < 8) {
       gpintena |= (1u << p);
-      // STD is driven by MT8870 => pull-up usually unnecessary; leave gppua unchanged
+      gppua    |= (1u << p);  // håll linjen stabilt hög när MT8870 släpper STD
       intcona  |= (1u << p);  // enable compare-to-DEFVAL
       // DEFVALA updated dynamically by handleInterrupt_
     } else {
       uint8_t bit = p - 8;
       gpintenb |= (1u << bit);
-      // STD is driven by MT8870 => leave gppub as is
+      gppub    |= (1u << bit); // håll linjen stabilt hög när MT8870 släpper STD
       intconb  |= (1u << bit); // enable compare-to-DEFVAL
       // DEFVALB updated dynamically by handleInterrupt_
     }
