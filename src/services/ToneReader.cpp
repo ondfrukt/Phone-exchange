@@ -35,8 +35,10 @@ void ToneReader::update() {
         
         if (readDtmfNibble(nibble)) {
           // Check debouncing: ignore if same digit detected within debounce period
+          // Use unsigned subtraction which handles millis() rollover correctly
+          unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
           bool isDuplicate = (nibble == lastDtmfNibble_) && 
-                            ((now - lastDtmfTime_) < DTMF_DEBOUNCE_MS);
+                            (timeSinceLastDtmf < DTMF_DEBOUNCE_MS);
           
           if (!isDuplicate) {
             lastDtmfTime_ = now;
