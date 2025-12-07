@@ -78,3 +78,46 @@ Monitors the physical hook (on-hook / off-hook) for each line, debounces raw sig
 4. Handset returned → `SHKService` reports on-hook → LineManager change the state and LineAction logic ends or resets call state.  
 
 Keeps the hook layer clean so higher-level logic only reacts to stable, meaningful changes.
+
+---
+
+## 🟪 RingGenerator
+**Responsibility:**  
+Generates ring signals for phone lines by controlling the RM (Ring Mode) and FR (Frequency Ring) pins on the SLIC modules.
+
+**What it does:**
+- Generates non-blocking ring signals for specified lines
+- Controls RM pin (HIGH to activate ring mode, LOW to deactivate)
+- Toggles FR pin at 20 Hz frequency during ring phase to generate proper ring signal
+- Manages ring timing: signal duration, pause duration, and number of iterations
+- Supports independent ringing on multiple lines simultaneously
+
+**Ring signal pattern:**
+Each ring cycle consists of:
+1. **Ring phase**: RM pin HIGH, FR pin toggles at 20 Hz (25ms high, 25ms low) for `ringLengthMs` duration
+2. **Pause phase**: RM pin HIGH, FR pin LOW for `ringPauseMs` duration
+3. Repeats for `ringIterations` times, then stops automatically
+
+**Configuration:**
+Settings are read from `Settings` class:
+- `ringLengthMs` – Duration of the ring signal (default: 500ms)
+- `ringPauseMs` – Duration of the pause between rings (default: 2000ms)
+- `ringIterations` – Number of ring cycles (default: 2)
+
+**Key API:**
+```cpp
+void generateRingSignal(uint8_t lineIndex);  // Start ringing on specified line (0-7)
+void stopRinging(uint8_t lineIndex);         // Stop ringing on specified line
+void update();                               // Non-blocking update - call regularly from main loop
+```
+
+**Debug behavior:**  
+Conditional `Serial` logging based on `settings_.debugRGLevel`:
+- Level 1: Start/stop events and errors
+- Level 2: Phase transitions and pin state changes
+
+**Implementation details:**
+- Uses non-blocking timing with `millis()` to avoid delays
+- Maintains independent state for each of the 8 lines
+- 20 Hz frequency = 50ms period (25ms HIGH + 25ms LOW)
+- Automatically stops after completing all iterations
