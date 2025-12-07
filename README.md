@@ -81,6 +81,47 @@ The flowchart below shows how the statuses change based on the behavior of the p
     <img src="docs/StatusflowChart.drawio.svg" width="800" alt="Diagram (SVG)">
   </a>
 
+## Debugging ##
+
+The project now includes comprehensive debugging capabilities for troubleshooting DTMF signal detection and other subsystems.
+
+### Quick Start: DTMF Debugging
+
+If you're experiencing issues with DTMF tone detection, enable debug output by setting these values in your code:
+
+```cpp
+// In App::begin() after settings.resetDefaults():
+settings.debugTRLevel = 1;   // ToneReader debug level 1-3
+settings.debugMCPLevel = 1;  // MCP interrupt debug level 1-2
+```
+
+**Debug Levels:**
+- **Level 1**: Basic - Shows interrupts, decoded digits, and errors
+- **Level 2**: Detailed - Includes GPIO states, edge detection, and register values  
+- **Level 3**: Full - Adds periodic status checks and heartbeats
+
+**Documentation:**
+- 📖 [Complete DTMF Debugging Guide](docs/DTMF_DEBUGGING.md) - Full documentation in English
+- 🇸🇪 [DTMF Felsökning Snabbguide](docs/DTMF_FELSÖKNING_SNABBGUIDE.md) - Quick reference in Swedish
+
+The debug output helps you trace the signal flow step-by-step:
+1. Check if ESP32 receives interrupts from MCP
+2. Verify MT8870 signals reach the MCP  
+3. Monitor GPIO pin states (Q1-Q4)
+4. See decoded DTMF values
+5. Track line assignment
+
+### Example Debug Output
+
+When a DTMF key is pressed successfully (Level 1):
+```
+DTMF: STD interrupt detected - addr=0x27 pin=11 level=HIGH
+DTMF: Rising edge detected - attempting to read DTMF nibble
+DTMF: MT8870 pins - Q4=0 Q3=1 Q2=0 Q1=1 => nibble=0b0101 (0x5)
+DTMF: DECODED - nibble=0x5 => char='5'
+DTMF: Added to line 0 digit='5' dialedDigits="5"
+```
+
 ## Challenges ##
 
 - **Identify DTMF-toned to a line**
