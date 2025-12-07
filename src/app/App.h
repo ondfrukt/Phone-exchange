@@ -11,6 +11,7 @@
 #include "services/LineAction.h"
 #include "services/ToneGenerator.h"
 #include "services/ToneReader.h"
+#include "services/RingGenerator.h"
 
 #include "settings/settings.h"
 
@@ -43,6 +44,7 @@ private:
     ToneGenerator toneGenerator2_;
     ToneGenerator toneGenerator3_;
     ToneReader toneReader_;
+    RingGenerator ringGenerator_;
 
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
