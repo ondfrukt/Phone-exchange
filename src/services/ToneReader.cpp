@@ -76,8 +76,14 @@ void ToneReader::update() {
               }
             }
           } else if (settings_.debugTRLevel >= 2) {
-            Serial.println(F("DTMF: duplicate ignored (debouncing)"));
-            util::UIConsole::log("DTMF: duplicate ignored (debouncing)", "ToneReader");
+            Serial.print(F("DTMF: duplicate ignored (debouncing) nibble=0x"));
+            Serial.print(nibble, HEX);
+            Serial.print(F(" time="));
+            Serial.print(timeSinceLastDtmf);
+            Serial.println(F("ms"));
+            util::UIConsole::log("DTMF: duplicate ignored (debouncing) nibble=0x" + 
+                                String(nibble, HEX) + " time=" + String(timeSinceLastDtmf) + "ms", 
+                                "ToneReader");
           }
         } else if (settings_.debugTRLevel >= 1) {
           Serial.println(F("DTMF: kunde inte läsa nibble"));
