@@ -4,16 +4,19 @@ ToneReader::ToneReader(MCPDriver& mcpDriver, Settings& settings, LineManager& li
   : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
 void ToneReader::update() {
-  // Debug: Periodically check STD pin state
-  static unsigned long lastStdCheck = 0;
-  unsigned long now = millis();
-  if (settings_.debugTRLevel >= 3 && (now - lastStdCheck >= 1000)) {
+  // Debug: Check STD pin state and print only on change
+  static bool lastDebugStdLevel = false;
+  static bool firstCheck = true;
+  if (settings_.debugTRLevel >= 2) {
     bool stdLevel = false;
     if (mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, stdLevel)) {
-      Serial.print(F("DTMF DEBUG: STD pin current state: "));
-      Serial.println(stdLevel ? F("HIGH") : F("LOW"));
+      if (firstCheck || stdLevel != lastDebugStdLevel) {
+        Serial.print(F("DTMF: STD pin changed to: "));
+        Serial.println(stdLevel ? F("HIGH") : F("LOW"));
+        lastDebugStdLevel = stdLevel;
+        firstCheck = false;
+      }
     }
-    lastStdCheck = now;
   }
   
   // Hantera MAIN-interrupts (bl.a. MT8870 STD). Töm alla väntande events.
@@ -39,7 +42,7 @@ void ToneReader::update() {
         Serial.print(ir.pin);
         Serial.print(F(" level="));
         Serial.println(ir.level ? F("HIGH") : F("LOW"));
-        util::UIConsole::log("DTMF STD INT 0x" + String(ir.i2c_addr, HEX) +
+        util::UIConsole::log("DTMF: STD INT 0x" + String(ir.i2c_addr, HEX) +
                                  " pin=" + String(ir.pin) +
                                  " level=" + String(ir.level ? "HIGH" : "LOW"),
                              "ToneReader");
