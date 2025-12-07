@@ -22,6 +22,7 @@ class ToneReader {
     unsigned long lastDtmfTime_ = 0;
     uint8_t lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
     bool lastStdLevel_ = false;
+    bool processedRisingEdge_ = false;  // Track if we successfully processed the current HIGH period
 
     // MT8870 utgångar: Q1 är LSB, Q4 är MSB
     bool readDtmfNibble(uint8_t& nibble);

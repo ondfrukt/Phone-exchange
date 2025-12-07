@@ -47,20 +47,51 @@ void ToneReader::update() {
       // Detect rising edge (LOW -> HIGH transition)
       bool risingEdge = ir.level && !lastStdLevel_;
       
+      // Detect if we missed a rising edge or failed to process one:
+      // Case 1: We get LOW but lastStdLevel_ is LOW (missed the HIGH completely - fast pulse)
+      // Case 2: We get LOW but lastStdLevel_ is HIGH and we never successfully processed the rising edge
+      bool missedRisingEdge = !ir.level && !lastStdLevel_;  // Fast pulse case
+      bool failedRisingEdge = !ir.level && lastStdLevel_ && !processedRisingEdge_;  // Failed read case
+      
       if (settings_.debugTRLevel >= 2) {
         Serial.print(F("DTMF: Edge detection - lastStdLevel_="));
         Serial.print(lastStdLevel_ ? F("HIGH") : F("LOW"));
         Serial.print(F(" currentLevel="));
         Serial.print(ir.level ? F("HIGH") : F("LOW"));
         Serial.print(F(" risingEdge="));
-        Serial.println(risingEdge ? F("YES") : F("NO"));
+        Serial.print(risingEdge ? F("YES") : F("NO"));
+        Serial.print(F(" missedRisingEdge="));
+        Serial.print(missedRisingEdge ? F("YES") : F("NO"));
+        Serial.print(F(" failedRisingEdge="));
+        Serial.println(failedRisingEdge ? F("YES") : F("NO"));
+      }
+      
+      // Clear the processed flag when we transition back to LOW
+      if (!ir.level) {
+        processedRisingEdge_ = false;
       }
       
       lastStdLevel_ = ir.level;
       
       // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
-      if (risingEdge) {
-        if (settings_.debugTRLevel >= 1) {
+      // RECOVERY: If we get a falling edge but missed/failed the rising edge, try to read the nibble anyway
+      // This handles two cases:
+      // 1. STD goes LOW->HIGH->LOW very quickly and we only capture the final LOW state (missedRisingEdge)
+      // 2. We detected HIGH but readDtmfNibble() failed, now trying again on falling edge (failedRisingEdge)
+      bool shouldReadNibble = risingEdge || missedRisingEdge || failedRisingEdge;
+      
+      if (missedRisingEdge && settings_.debugTRLevel >= 1) {
+        Serial.println(F("DTMF: RECOVERY - Detected LOW but never saw HIGH transition, attempting to read nibble"));
+        util::UIConsole::log("DTMF: RECOVERY - LOW detected without prior HIGH, attempting read", "ToneReader");
+      }
+      
+      if (failedRisingEdge && settings_.debugTRLevel >= 1) {
+        Serial.println(F("DTMF: RECOVERY - Rising edge was detected but not processed, attempting read on falling edge"));
+        util::UIConsole::log("DTMF: RECOVERY - Failed to process rising edge, retrying on falling edge", "ToneReader");
+      }
+      
+      if (shouldReadNibble) {
+        if (settings_.debugTRLevel >= 1 && risingEdge) {
           Serial.println(F("DTMF: Rising edge detected - attempting to read DTMF nibble"));
           util::UIConsole::log("DTMF: Rising edge detected - attempting to read DTMF nibble", "ToneReader");
         }
@@ -69,6 +100,9 @@ void ToneReader::update() {
         uint8_t nibble = 0;
         
         if (readDtmfNibble(nibble)) {
+          // Mark that we successfully processed this rising edge cycle
+          processedRisingEdge_ = true;
+          
           if (settings_.debugTRLevel >= 1) {
             Serial.print(F("DTMF: Successfully read nibble=0x"));
             Serial.println(nibble, HEX);
