@@ -37,7 +37,7 @@ void RingGenerator::generateRingSignal(uint8_t lineIndex) {
   state.frPinState = false;
   
   // Start the first ring phase
-  startRingingPhase_(lineIndex);
+  startRingingPhase_(lineIndex, millis());
 }
 
 // Stop ringing for a specific line
@@ -74,8 +74,7 @@ void RingGenerator::update() {
     if (!state.isRinging) continue;
     
     if (state.inRingPhase) {
-      // During ring phase: toggle FR pin at 20 Hz (50ms period = toggle every 25ms)
-      // 20 Hz = 1000ms / 20 = 50ms period
+      // During ring phase: toggle FR pin at 20 Hz (toggle every 25ms for 50ms period)
       const unsigned long FR_TOGGLE_INTERVAL = 25; // Toggle every 25ms for 20 Hz
       
       if (now - state.lastFRToggleTime >= FR_TOGGLE_INTERVAL) {
@@ -87,7 +86,7 @@ void RingGenerator::update() {
       // Check if ring phase is complete
       if (now - state.phaseStartTime >= settings_.ringLengthMs) {
         // Move to pause phase
-        startPausePhase_(i);
+        startPausePhase_(i, now);
       }
     } else {
       // During pause phase: FR pin should be LOW, just wait for pause duration
@@ -100,7 +99,7 @@ void RingGenerator::update() {
           stopRinging(i);
         } else {
           // Start next ring phase
-          startRingingPhase_(i);
+          startRingingPhase_(i, now);
         }
       }
     }
@@ -108,9 +107,8 @@ void RingGenerator::update() {
 }
 
 // Start the ringing phase
-void RingGenerator::startRingingPhase_(uint8_t lineIndex) {
+void RingGenerator::startRingingPhase_(uint8_t lineIndex, unsigned long now) {
   RingState& state = ringStates_[lineIndex];
-  unsigned long now = millis();
   
   if (settings_.debugRGLevel >= 2) {
     Serial.print(F("RingGenerator: Line "));
@@ -130,9 +128,8 @@ void RingGenerator::startRingingPhase_(uint8_t lineIndex) {
 }
 
 // Start the pause phase
-void RingGenerator::startPausePhase_(uint8_t lineIndex) {
+void RingGenerator::startPausePhase_(uint8_t lineIndex, unsigned long now) {
   RingState& state = ringStates_[lineIndex];
-  unsigned long now = millis();
   
   if (settings_.debugRGLevel >= 2) {
     Serial.print(F("RingGenerator: Line "));

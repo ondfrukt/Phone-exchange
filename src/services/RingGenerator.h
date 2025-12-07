@@ -31,8 +31,8 @@ class RingGenerator {
     RingState ringStates_[8];              // One state per line (0-7)
     
     // Helper methods
-    void startRingingPhase_(uint8_t lineIndex);
-    void startPausePhase_(uint8_t lineIndex);
+    void startRingingPhase_(uint8_t lineIndex, unsigned long now);
+    void startPausePhase_(uint8_t lineIndex, unsigned long now);
     void setRMPin_(uint8_t lineIndex, bool state);
     void setFRPin_(uint8_t lineIndex, bool state);
     uint8_t getSlicAddress_(uint8_t lineIndex);
