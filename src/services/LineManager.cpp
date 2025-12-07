@@ -101,22 +101,48 @@ void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
   pushStatusChanged_ = std::move(cb);
 }
 
+
+// Set a timer for the specified line
 void LineManager::setLineTimer(int index, unsigned int limit) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setLineTimer - ogiltigt index: ");
     Serial.println(index);
     util::UIConsole::log("LineManager::setLineTimer - ogiltigt index: " + String(index), "LineManager");
     return;
-  }
-  if (limit == 0) {
-    // Disable timer
-    lines[index].lineTimerEnd = -1;
-    activeTimersMask &= ~(1 << index); // Clear the timer active flag
+
   } else {
     // Set timer end time
+    if (settings_.debugLmLevel >= 1){
+      Serial.print("LineManager: Setting timer for line ");
+      Serial.print(index);
+      Serial.print(" with limit ");
+      Serial.print(limit);
+      Serial.println(" ms");
+      util::UIConsole::log("LineManager: Setting timer for line " + String(index) + 
+                          " with limit " + String(limit) + " ms", "LineManager");
+    }
     lines[index].lineTimerEnd = millis() + limit;
     activeTimersMask |= (1 << index);  // Set the timer active flag
   }
+}
+
+// Reset (disable) the timer for the specified line
+void LineManager::resetLineTimer(int index) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    if (settings_.debugLmLevel >= 1){
+      Serial.println("LineManager: resetLineTimer - invalid index");
+      util::UIConsole::log("LineManager: resetLineTimer - invalid index", "LineManager");
+    }
+    return;
+  }
+
+  if (settings_.debugLmLevel >= 1){
+    Serial.print("LineManager: Resetting timer for line ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager: Resetting timer for line " + String(index), "LineManager");
+  }
+  lines[index].lineTimerEnd = -1;
+  activeTimersMask &= ~(1 << index); // Clear the timer active flag
 }
 
 void LineManager::setPhoneNumber(int index, const String& value) {

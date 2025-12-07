@@ -59,12 +59,8 @@ void App::loop() {
   // Debug: Show that main loop is running (very low frequency)
   static unsigned long lastLoopDebug = 0;
   unsigned long now = millis();
-  if (settings.debugTRLevel >= 3 && (now - lastLoopDebug >= 10000)) {
-    Serial.println(F("APP: Main loop running, checking for interrupts..."));
-    lastLoopDebug = now;
-  }
   
-	wifiClient_.loop();
+	wifiClient_.loop();   // Handle WiFi events and connection
 	lineAction_.update(); // Check for line status changes and timers
 	SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones

@@ -13,6 +13,7 @@ public:
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
   void setLineTimer(int index, unsigned int limit);
+  void resetLineTimer(int index);
   void setPhoneNumber(int index, const String& value);
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;

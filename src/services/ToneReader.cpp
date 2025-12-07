@@ -4,28 +4,20 @@ ToneReader::ToneReader(MCPDriver& mcpDriver, Settings& settings, LineManager& li
   : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
 void ToneReader::update() {
-  // Reset state when debug level changes so lower levels don't inherit stale
-  // edge/debounce tracking from earlier verbose sessions.
-  static uint8_t lastDebugLevel = settings_.debugTRLevel;
-  if (settings_.debugTRLevel != lastDebugLevel) {
-    lastDebugLevel   = settings_.debugTRLevel;
-    lastStdLevel_    = false;
-    lastDtmfNibble_  = INVALID_DTMF_NIBBLE;
-    lastDtmfTime_    = 0;
-  }
 
   // Debug: Check STD pin state and print only on change
   static bool lastDebugStdLevel = false;
   static bool firstCheck = true;
-  if (settings_.debugTRLevel >= 2) {
-    bool stdLevel = false;
-    if (mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, stdLevel)) {
-      if (firstCheck || stdLevel != lastDebugStdLevel) {
-        Serial.print(F("DTMF: STD pin changed to: "));
-        Serial.println(stdLevel ? F("HIGH") : F("LOW"));
-        lastDebugStdLevel = stdLevel;
-        firstCheck = false;
+  bool stdLevel = false;
+  if (mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, stdLevel)) {
+    if (firstCheck || stdLevel != lastDebugStdLevel) {
+      if(settings_.debugTRLevel >= 2) {
+      Serial.print(F("DTMF: STD pin changed to: "));
+      Serial.println(stdLevel ? F("HIGH") : F("LOW"));
+      util::UIConsole::log("DTMF: STD pin changed to " + String(stdLevel ? "HIGH" : "LOW"), "ToneReader");
       }
+      lastDebugStdLevel = stdLevel;
+      firstCheck = false;
     }
   }
   
@@ -34,18 +26,9 @@ void ToneReader::update() {
     IntResult ir = mcpDriver_.handleMainInterrupt();
     if (!ir.hasEvent) break;
 
-    if (settings_.debugTRLevel >= 2) {
-      Serial.print(F("DTMF: Received interrupt event - addr=0x"));
-      Serial.print(ir.i2c_addr, HEX);
-      Serial.print(F(" pin="));
-      Serial.print(ir.pin);
-      Serial.print(F(" level="));
-      Serial.println(ir.level ? F("HIGH") : F("LOW"));
-    }
-
     // Vi bryr oss bara om STD-pinnen från MT8870
     if (ir.i2c_addr == cfg::mcp::MCP_MAIN_ADDRESS && ir.pin == cfg::mcp::STD) {
-      if (settings_.debugTRLevel >= 1) {
+      if (settings_.debugTRLevel >= 2) {
         Serial.print(F("DTMF: STD interrupt detected - addr=0x"));
         Serial.print(ir.i2c_addr, HEX);
         Serial.print(F(" pin="));
@@ -78,14 +61,12 @@ void ToneReader::update() {
           util::UIConsole::log("DTMF: Rising edge detected - attempting to read DTMF nibble", "ToneReader");
         }
         
+        lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
         unsigned long now = millis();
         uint8_t nibble = 0;
         
+        
         if (readDtmfNibble(nibble)) {
-          if (settings_.debugTRLevel >= 1) {
-            Serial.print(F("DTMF: Successfully read nibble=0x"));
-            Serial.println(nibble, HEX);
-          }
           
           // Check debouncing: ignore if same digit detected within debounce period
           // Use unsigned subtraction which handles millis() rollover correctly
@@ -110,7 +91,7 @@ void ToneReader::update() {
             lastDtmfNibble_ = nibble;
             
             char ch = decodeDtmf(nibble);
-            if (settings_.debugTRLevel >= 1) {
+            if (settings_.debugTRLevel >= 2) {
               Serial.print(F("DTMF: DECODED - nibble=0x"));
               Serial.print(nibble, HEX);
               Serial.print(F(" => char='"));
@@ -126,18 +107,17 @@ void ToneReader::update() {
               if (idx >= 0) {
                 auto& line = lineManager_.getLine(idx);
                 line.dialedDigits += ch;
-
-                if (settings_.debugTRLevel >= 1) {
-                  Serial.print(F("DTMF: Added to line "));
-                  Serial.print(idx);
-                  Serial.print(F(" digit='"));
-                  Serial.print(ch);
-                  Serial.print(F("' dialedDigits=\""));
-                  Serial.print(line.dialedDigits);
-                  Serial.println('"');
-                  util::UIConsole::log("DTMF: line " + String(idx) + " +=" + String(ch) + 
-                                      " dialedDigits=\"" + line.dialedDigits + "\"", "ToneReader");
-                }
+              
+                Serial.print(F("DTMF: Added to line "));
+                Serial.print(idx);
+                Serial.print(F(" digit='"));
+                Serial.print(ch);
+                Serial.print(F("' dialedDigits=\""));
+                Serial.print(line.dialedDigits);
+                Serial.println('"');
+                util::UIConsole::log("DTMF: line " + String(idx) + " +=" + String(ch) + 
+                                    " dialedDigits=\"" + line.dialedDigits + "\"", "ToneReader");
+              
               } else {
                 if (settings_.debugTRLevel >= 1) {
                   Serial.println(F("DTMF: WARNING - No lastLineReady available to store digit"));
@@ -169,9 +149,10 @@ void ToneReader::update() {
             util::UIConsole::log("DTMF: ERROR - Failed to read nibble", "ToneReader");
           }
         }
-      } else if (settings_.debugTRLevel >= 2) {
-        // Falling edge - just for debugging
-        if (!ir.level) {
+      } else { // Falling edge
+        lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
+        
+        if (settings_.debugTRLevel >= 1) {
           Serial.println(F("DTMF: Falling edge detected (STD went LOW)"));
         }
       }

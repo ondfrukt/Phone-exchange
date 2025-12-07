@@ -340,6 +340,8 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
     s.pdState   = PerLine::PDState::InPulse;
     s.lowStartMs = nowMs;
     s.lastEdgeMs = nowMs;
+    lineManager_.resetLineTimer(idx); // Reset line timer on pulse start.
+
     if (settings_.debugSHKLevel >= 2){
       Serial.printf("SHKService: Line %d pulse falling \n", idx);
       util::UIConsole::log("Line " + String(idx) + " pulse falling", "SHKService");
@@ -401,6 +403,8 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
       util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
     }
   }
+  lineManager_.setLineTimer(idx, settings_.timer_pulsDialing); // Reset inter-digit timer.
+
   resetPulseState_(idx);
   s.blockUntilMs = nowMs + 80;
   resyncFast_(idx, rawHigh, nowMs);
