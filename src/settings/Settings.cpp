@@ -26,17 +26,17 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 1;
+  debugSHKLevel         = 0;
   debugLmLevel          = 0;
   debugWSLevel          = 0;
   debugLALevel          = 0;
   debugMTLevel          = 0;
-  debugTRLevel          = 1;
+  debugTRLevel          = 0;
   debugMCPLevel         = 0;
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
 
-  toneGeneratorEnabled = true;
+  toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
 
   // --- Other settings ---

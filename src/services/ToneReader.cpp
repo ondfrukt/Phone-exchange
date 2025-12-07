@@ -61,12 +61,15 @@ void ToneReader::update() {
           util::UIConsole::log("DTMF: Rising edge detected - attempting to read DTMF nibble", "ToneReader");
         }
         
-        lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
+        
         unsigned long now = millis();
         uint8_t nibble = 0;
         
         
         if (readDtmfNibble(nibble)) {
+
+          lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
+          lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
           
           // Check debouncing: ignore if same digit detected within debounce period
           // Use unsigned subtraction which handles millis() rollover correctly

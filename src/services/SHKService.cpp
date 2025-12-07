@@ -335,6 +335,9 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
   if (line.currentHookStatus != model::HookStatus::Off) {
     return; // No pulses should start on OnHook.
   }
+
+  lineManager_.setStatus(idx, model::LineStatus::PulseDialing);
+
   auto& s = lineState_[idx];
   if (s.pdState == PerLine::PDState::Idle || s.pdState == PerLine::PDState::BetweenPulses) {
     s.pdState   = PerLine::PDState::InPulse;
