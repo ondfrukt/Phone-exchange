@@ -74,9 +74,9 @@ void RingGenerator::update() {
     if (!state.isRinging) continue;
     
     if (state.inRingPhase) {
-      // During ring phase: toggle FR pin at 20 Hz (50ms period, 25ms high, 25ms low)
+      // During ring phase: toggle FR pin at 20 Hz (50ms period = toggle every 25ms)
       // 20 Hz = 1000ms / 20 = 50ms period
-      const unsigned long FR_TOGGLE_INTERVAL = 25; // 25ms for half period (20 Hz)
+      const unsigned long FR_TOGGLE_INTERVAL = 25; // Toggle every 25ms for 20 Hz
       
       if (now - state.lastFRToggleTime >= FR_TOGGLE_INTERVAL) {
         state.frPinState = !state.frPinState;
@@ -110,6 +110,7 @@ void RingGenerator::update() {
 // Start the ringing phase
 void RingGenerator::startRingingPhase_(uint8_t lineIndex) {
   RingState& state = ringStates_[lineIndex];
+  unsigned long now = millis();
   
   if (settings_.debugRGLevel >= 2) {
     Serial.print(F("RingGenerator: Line "));
@@ -119,8 +120,8 @@ void RingGenerator::startRingingPhase_(uint8_t lineIndex) {
   }
   
   state.inRingPhase = true;
-  state.phaseStartTime = millis();
-  state.lastFRToggleTime = state.phaseStartTime;
+  state.phaseStartTime = now;
+  state.lastFRToggleTime = now;
   state.frPinState = false;
   
   // Activate ring mode
@@ -131,6 +132,7 @@ void RingGenerator::startRingingPhase_(uint8_t lineIndex) {
 // Start the pause phase
 void RingGenerator::startPausePhase_(uint8_t lineIndex) {
   RingState& state = ringStates_[lineIndex];
+  unsigned long now = millis();
   
   if (settings_.debugRGLevel >= 2) {
     Serial.print(F("RingGenerator: Line "));
@@ -139,7 +141,7 @@ void RingGenerator::startPausePhase_(uint8_t lineIndex) {
   }
   
   state.inRingPhase = false;
-  state.phaseStartTime = millis();
+  state.phaseStartTime = now;
   
   // During pause, keep RM high but FR low
   setRMPin_(lineIndex, true);
@@ -149,6 +151,8 @@ void RingGenerator::startPausePhase_(uint8_t lineIndex) {
 
 // Set RM pin state for a line
 void RingGenerator::setRMPin_(uint8_t lineIndex, bool state) {
+  if (lineIndex >= 8) return; // Safety check
+  
   uint8_t slicAddr = getSlicAddress_(lineIndex);
   uint8_t rmPin = cfg::mcp::RM_PINS[lineIndex];
   
@@ -166,6 +170,8 @@ void RingGenerator::setRMPin_(uint8_t lineIndex, bool state) {
 
 // Set FR pin state for a line
 void RingGenerator::setFRPin_(uint8_t lineIndex, bool state) {
+  if (lineIndex >= 8) return; // Safety check
+  
   uint8_t slicAddr = getSlicAddress_(lineIndex);
   uint8_t frPin = cfg::mcp::FR_PINS[lineIndex];
   
@@ -174,5 +180,6 @@ void RingGenerator::setFRPin_(uint8_t lineIndex, bool state) {
 
 // Get SLIC I2C address for a line
 uint8_t RingGenerator::getSlicAddress_(uint8_t lineIndex) {
+  if (lineIndex >= 8) return cfg::mcp::MCP_SLIC1_ADDRESS; // Safety fallback
   return cfg::mcp::SHK_LINE_ADDR[lineIndex];
 }
