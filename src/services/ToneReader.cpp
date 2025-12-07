@@ -99,7 +99,7 @@ void ToneReader::update() {
             char ch = decodeDtmf(nibble);
             if (settings_.debugTRLevel >= 1) {
               Serial.print(F("DTMF: DECODED - nibble=0x"));
-              if (nibble < 16) Serial.print(nibble, HEX); else Serial.print('?');
+              Serial.print(nibble, HEX);
               Serial.print(F(" => char='"));
               Serial.print(ch);
               Serial.println('\'');

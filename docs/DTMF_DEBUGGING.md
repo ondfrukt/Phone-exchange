@@ -1,14 +1,20 @@
-# DTMF Debugging Guide
+# DTMF Debugging Guide / DTMF Felsökningsguide
 
-## Overview
+## Overview / Översikt
 
 This document describes how to use the new debug levels for troubleshooting DTMF signal detection in the Phone Exchange system.
 
-## Debug-nivåer
+Detta dokument beskriver hur man använder de nya debug-nivåerna för att felsöka DTMF-signaldetektering i Phone Exchange-systemet.
+
+## Debug Levels / Debug-nivåer
+
+The system uses three debug levels that can be set via `debugTRLevel` (ToneReader) and `debugMCPLevel` (MCPDriver) in Settings:
 
 Systemet använder tre debug-nivåer som kan ställas in via `debugTRLevel` (ToneReader) och `debugMCPLevel` (MCPDriver) i Settings:
 
-### Level 0 (Standard - Ingen debug)
+### Level 0 (Standard - No debug / Ingen debug)
+No debug output. Used for normal operation.
+
 Ingen debug-utskrift. Används för normal drift.
 
 ### Level 1 (Grundläggande debugging)
