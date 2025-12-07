@@ -4,6 +4,16 @@ ToneReader::ToneReader(MCPDriver& mcpDriver, Settings& settings, LineManager& li
   : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
 void ToneReader::update() {
+  // Reset state when debug level changes so lower levels don't inherit stale
+  // edge/debounce tracking from earlier verbose sessions.
+  static uint8_t lastDebugLevel = settings_.debugTRLevel;
+  if (settings_.debugTRLevel != lastDebugLevel) {
+    lastDebugLevel   = settings_.debugTRLevel;
+    lastStdLevel_    = false;
+    lastDtmfNibble_  = INVALID_DTMF_NIBBLE;
+    lastDtmfTime_    = 0;
+  }
+
   // Debug: Check STD pin state and print only on change
   static bool lastDebugStdLevel = false;
   static bool firstCheck = true;
