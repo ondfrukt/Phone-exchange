@@ -54,6 +54,16 @@ void App::begin() {
 }
 
 void App::loop() {
+  auto& settings = Settings::instance();
+  
+  // Debug: Show that main loop is running (very low frequency)
+  static unsigned long lastLoopDebug = 0;
+  unsigned long now = millis();
+  if (settings.debugTRLevel >= 3 && (now - lastLoopDebug >= 10000)) {
+    Serial.println(F("APP: Main loop running, checking for interrupts..."));
+    lastLoopDebug = now;
+  }
+  
 	wifiClient_.loop();
 	lineAction_.update(); // Check for line status changes and timers
 	SHKService_.update(); // Check for SHK changes and process pulses
@@ -64,11 +74,4 @@ void App::loop() {
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
   functionButton_.update();
-
-
-  bool level = false;
-  mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, level);
-  if (level) {
-    Serial.println("1");
-  }
 }

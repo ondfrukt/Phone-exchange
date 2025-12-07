@@ -85,6 +85,12 @@ private:
   volatile bool slic2IntFlag_  = false;
   volatile bool mt8816IntFlag_ = false;
 
+  // Interrupt counters for debugging
+  volatile uint32_t mainIntCounter_   = 0;
+  volatile uint32_t slic1IntCounter_  = 0;
+  volatile uint32_t slic2IntCounter_  = 0;
+  volatile uint32_t mt8816IntCounter_ = 0;
+
   int8_t mapSlicPinToLine_(uint8_t addr, uint8_t pin) const;
 
   // === [NYTT] Säkra I2C-hjälpare (deklarationer) ===
