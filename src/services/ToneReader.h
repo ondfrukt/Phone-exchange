@@ -15,6 +15,13 @@ class ToneReader {
     Settings& settings_;
     LineManager& lineManager_;
 
+    // Debouncing state
+    unsigned long lastDtmfTime_ = 0;
+    uint8_t lastDtmfNibble_ = 0xFF;
+    bool lastStdLevel_ = false;
+    
+    static constexpr unsigned long DTMF_DEBOUNCE_MS = 150; // Minimum time between DTMF detections
+
     // MT8870 utgångar: Q1 är LSB, Q4 är MSB
     bool readDtmfNibble(uint8_t& nibble);
     char decodeDtmf(uint8_t nibble);

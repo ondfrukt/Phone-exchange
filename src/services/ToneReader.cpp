@@ -24,46 +24,64 @@ void ToneReader::update() {
 
     // Vi bryr oss bara om STD-pinnen från MT8870
     if (ir.i2c_addr == cfg::mcp::MCP_MAIN_ADDRESS && ir.pin == cfg::mcp::STD) {
+      // Detect rising edge (LOW -> HIGH transition)
+      bool risingEdge = ir.level && !lastStdLevel_;
+      lastStdLevel_ = ir.level;
+      
       // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
-      if (ir.level) {
+      if (risingEdge) {
+        unsigned long now = millis();
         uint8_t nibble = 0;
+        
         if (readDtmfNibble(nibble)) {
-          char ch = decodeDtmf(nibble);
-          if (settings_.debugTRLevel >= 2) {
-            Serial.print(F("DTMF: nibble=0x"));
-            if (nibble < 16) Serial.print(nibble, HEX); else Serial.print('?');
-            Serial.print(F(" => '"));
-            Serial.print(ch);
-            Serial.println('\'');
-            util::UIConsole::log("DTMF: nibble=0x" + String(nibble, HEX) +
-                                     " => '" + String(ch) + "'",
-                                 "ToneReader");
-          }
-
-          if (ch != '\0') {
-            int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
-            if (idx >= 0) {
-              auto& line = lineManager_.getLine(idx);
-              line.dialedDigits += ch;
-
-              if (settings_.debugTRLevel >= 1) {
-                Serial.print(F("DTMF: line "));
-                Serial.print(idx);
-                Serial.print(F(" +="));
-                Serial.println(ch);
-                util::UIConsole::log("DTMF: line " + String(idx) + " +=" + String(ch), "ToneReader");
-              }
-            } else if (settings_.debugTRLevel >= 1) {
-              Serial.println(F("DTMF: ingen lastLineReady att lagra på"));
-              util::UIConsole::log("DTMF: ingen lastLineReady att lagra på", "ToneReader");
+          // Check debouncing: ignore if same digit detected within debounce period
+          bool isDuplicate = (nibble == lastDtmfNibble_) && 
+                            ((now - lastDtmfTime_) < DTMF_DEBOUNCE_MS);
+          
+          if (!isDuplicate) {
+            lastDtmfTime_ = now;
+            lastDtmfNibble_ = nibble;
+            
+            char ch = decodeDtmf(nibble);
+            if (settings_.debugTRLevel >= 2) {
+              Serial.print(F("DTMF: nibble=0x"));
+              if (nibble < 16) Serial.print(nibble, HEX); else Serial.print('?');
+              Serial.print(F(" => '"));
+              Serial.print(ch);
+              Serial.println('\'');
+              util::UIConsole::log("DTMF: nibble=0x" + String(nibble, HEX) +
+                                       " => '" + String(ch) + "'",
+                                   "ToneReader");
             }
+
+            if (ch != '\0') {
+              int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
+              if (idx >= 0) {
+                auto& line = lineManager_.getLine(idx);
+                line.dialedDigits += ch;
+
+                if (settings_.debugTRLevel >= 1) {
+                  Serial.print(F("DTMF: line "));
+                  Serial.print(idx);
+                  Serial.print(F(" +="));
+                  Serial.println(ch);
+                  util::UIConsole::log("DTMF: line " + String(idx) + " +=" + String(ch), "ToneReader");
+                }
+              } else if (settings_.debugTRLevel >= 1) {
+                Serial.println(F("DTMF: ingen lastLineReady att lagra på"));
+                util::UIConsole::log("DTMF: ingen lastLineReady att lagra på", "ToneReader");
+              }
+            }
+          } else if (settings_.debugTRLevel >= 2) {
+            Serial.println(F("DTMF: duplicate ignored (debouncing)"));
+            util::UIConsole::log("DTMF: duplicate ignored (debouncing)", "ToneReader");
           }
         } else if (settings_.debugTRLevel >= 1) {
           Serial.println(F("DTMF: kunde inte läsa nibble"));
           util::UIConsole::log("DTMF: kunde inte läsa nibble", "ToneReader");
         }
-      } else {
-        // Falling edge på STD – ignoreras (giltig data läses vid high)
+      } else if (!ir.level) {
+        // Falling edge på STD – reset edge detection (giltig data läses vid high)
       }
     }
   }
