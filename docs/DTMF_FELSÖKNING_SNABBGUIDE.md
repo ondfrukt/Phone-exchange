@@ -129,6 +129,27 @@ MCP_MAIN → ESP32:
 - Leta efter "Duplicate ignored" meddelanden
 - Justera värdet tills dubbletter försvinner
 
+### Problem: Vissa knapptryckningar misslyckas (intermittent)
+**Symptom**: Ibland detekteras ingen siffra när man trycker på en knapp, speciellt vid snabba tryckningar.
+
+**Förklaring**: Systemet har automatisk recovery-mekanism för att hantera snabba knapptryckningar där STD-signalen går LOW→HIGH→LOW så snabbt att rising edge interrupt förloras.
+
+**Debug-output vid recovery (Level 1+)**:
+```
+DTMF: RECOVERY - Detected LOW but never saw HIGH transition, attempting to read nibble
+```
+eller
+```
+DTMF: RECOVERY - Rising edge was detected but not processed, attempting read on falling edge
+```
+
+**Åtgärd**:
+- Om recovery-meddelanden visas och siffror detekteras korrekt → Allt fungerar som det ska
+- Om siffror fortfarande missas:
+  1. Kontrollera MT8870 hold-time
+  2. Verifiera I2C-bussens hastighet
+  3. Kontrollera för EMI/störningar
+
 ## Mer information
 
 Se [DTMF_DEBUGGING.md](DTMF_DEBUGGING.md) för fullständig dokumentation.

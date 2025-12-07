@@ -36,13 +36,14 @@ settings.debugMCPLevel = 1; // MCP interrupt debug
 ### Level 2 (Detaljerad debugging)
 Inkluderar allt från Level 1 plus:
 - **Alla interrupt-händelser**: Även de som inte är STD-relaterade
-- **Edge detection**: Rising/falling edge detaljer
+- **Edge detection**: Rising/falling edge detaljer, inklusive missedRisingEdge och failedRisingEdge status
 - **Råa GPIO-läsningar**: Binärt format av GPIOAB-register
 - **Debounce-kontroller**: Information om dubblettfiltrering
 - **INTF/INTCAP register**: Värden från MCP23017
 - **Falling edge**: När STD går från HIGH till LOW
+- **Recovery attempts**: När systemet försöker återhämta sig från missade rising edges
 
-**Användning**: När signaler detekteras men inte tolkas korrekt.
+**Användning**: När signaler detekteras men inte tolkas korrekt, eller när vissa knapptryckningar misslyckas.
 
 ```cpp
 settings.debugTRLevel = 2;
@@ -130,6 +131,35 @@ settings.debugTRLevel = 2;
   - För många? → Öka `DTMF_DEBOUNCE_MS` (standard 150ms)
   - För få? → Minska `DTMF_DEBOUNCE_MS`
 - Edge detection problem → Kontrollera lastStdLevel_ uppdatering
+
+### Scenario 5: Vissa knapptryckningar misslyckas (snabba tryckningar)
+
+**Problem**: Ibland när man trycker snabbt på en knapp, eller när knappen släpps fort, detekteras ingen siffra.
+
+**Orsak**: När STD-pinnen går LOW→HIGH→LOW mycket snabbt kan rising edge interrupt-händelsen gå förlorad eller skrivas över innan den hinner processas.
+
+**Lösning**: Systemet har automatisk recovery-mekanism som försöker läsa DTMF-nibbeln även på falling edges när:
+1. **Snabb puls**: Rising edge aldrig sågs (missedRisingEdge)
+2. **Misslyckad läsning**: Rising edge detekterades men nibble-läsningen misslyckades (failedRisingEdge)
+
+**Debug-utskrift vid recovery**:
+```
+DTMF: RECOVERY - Detected LOW but never saw HIGH transition, attempting to read nibble
+```
+eller
+```
+DTMF: RECOVERY - Rising edge was detected but not processed, attempting read on falling edge
+```
+
+**Om recovery-meddelanden visas ofta**:
+- Detta är normalt för snabba knapptryckningar
+- Recovery-mekanismen fungerar som avsett
+- Om alla siffror detekteras korrekt, ingen åtgärd behövs
+
+**Om siffror fortfarande missas trots recovery**:
+1. Kontrollera att MT8870 håller Q1-Q4 stabila tillräckligt länge
+2. Öka eventuellt hold-tiden på MT8870 (se datablad)
+3. Kontrollera I2C-bussens hastighet och tillförlitlighet
 
 ## Startup-meddelanden
 
