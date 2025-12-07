@@ -344,13 +344,11 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
     return r;
   }
   
-  // Debug: Show INTCAP register value
+  // Debug: Show INTF register value
   if (verbose) {
     Serial.print(F("MCP INT: INTF=0b"));
-    Serial.print(intf, BIN);
-    Serial.print(F(" INTCAP=0b"));
-    Serial.println(intcap, BIN);
-    util::UIConsole::log("MCP INT: INTF=0b" + String(intf, BIN) + " INTCAP=0b" + String(intcap, BIN), "MCPDriver");
+    Serial.println(intf, BIN);
+    util::UIConsole::log("MCP INT: INTF=0b" + String(intf, BIN), "MCPDriver");
   }
   
   if (intf == 0) {
@@ -374,6 +372,13 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
       util::UIConsole::log("MCP INT: Failed to read INTCAP register", "MCPDriver");
     }
     return r;
+  }
+
+  // Debug: Show INTCAP register value (after reading it)
+  if (verbose) {
+    Serial.print(F("MCP INT: INTCAP=0b"));
+    Serial.println(intcap, BIN);
+    util::UIConsole::log("MCP INT: INTCAP=0b" + String(intcap, BIN), "MCPDriver");
   }
 
   for (uint8_t p = 0; p < 16; ++p) {

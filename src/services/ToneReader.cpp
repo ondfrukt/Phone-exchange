@@ -133,7 +133,11 @@ void ToneReader::update() {
               }
             } else {
               if (settings_.debugTRLevel >= 1) {
-                Serial.println(F("DTMF: WARNING - Decoded character is NULL"));
+                Serial.print(F("DTMF: WARNING - Decoded character is NULL (invalid nibble=0x"));
+                Serial.print(nibble, HEX);
+                Serial.println(F(")"));
+                util::UIConsole::log("DTMF: WARNING - Decoded character is NULL (invalid nibble=0x" + 
+                                    String(nibble, HEX) + ")", "ToneReader");
               }
             }
           } else if (settings_.debugTRLevel >= 1) {

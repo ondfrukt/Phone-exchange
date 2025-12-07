@@ -1,8 +1,8 @@
 # DTMF Debugging Guide
 
-## Översikt
+## Overview
 
-Detta dokument beskriver hur man använder de nya debug-nivåerna för att felsöka DTMF-signaldetektering i Phone Exchange-systemet.
+This document describes how to use the new debug levels for troubleshooting DTMF signal detection in the Phone Exchange system.
 
 ## Debug-nivåer
 
