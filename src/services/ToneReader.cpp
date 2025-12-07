@@ -37,8 +37,9 @@ void ToneReader::update() {
           // Check debouncing: ignore if same digit detected within debounce period
           // Use unsigned subtraction which handles millis() rollover correctly
           unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
-          bool isDuplicate = (nibble == lastDtmfNibble_) && 
-                            (timeSinceLastDtmf < DTMF_DEBOUNCE_MS);
+          bool isSameDigit = (nibble == lastDtmfNibble_);
+          bool withinDebounceWindow = (timeSinceLastDtmf < DTMF_DEBOUNCE_MS);
+          bool isDuplicate = isSameDigit && withinDebounceWindow;
           
           if (!isDuplicate) {
             lastDtmfTime_ = now;
@@ -82,9 +83,8 @@ void ToneReader::update() {
           Serial.println(F("DTMF: kunde inte läsa nibble"));
           util::UIConsole::log("DTMF: kunde inte läsa nibble", "ToneReader");
         }
-      } else if (!ir.level) {
-        // Falling edge på STD – reset edge detection (giltig data läses vid high)
       }
+      // Falling edge på STD – no action needed (giltig data läses vid rising edge)
     }
   }
 }

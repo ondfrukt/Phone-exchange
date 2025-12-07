@@ -17,7 +17,7 @@ class ToneReader {
 
     // Debouncing state
     static constexpr uint8_t INVALID_DTMF_NIBBLE = 0xFF;
-    static constexpr unsigned long DTMF_DEBOUNCE_MS = 150; // Minimum time between DTMF detections
+    static constexpr unsigned long DTMF_DEBOUNCE_MS = 150; // Minimum time between detections of the same digit
     
     unsigned long lastDtmfTime_ = 0;
     uint8_t lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
