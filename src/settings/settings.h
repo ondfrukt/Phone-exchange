@@ -53,6 +53,7 @@ public:
 
   uint32_t ringLengthMs;          // Length of ringing signal in ms
   uint32_t ringPauseMs;           // Pause between rings in ms
+  uint32_t ringIterations;        // Iterations of ringing signal
 
   uint8_t allowMask;
 

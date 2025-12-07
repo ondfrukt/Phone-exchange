@@ -53,6 +53,7 @@ void Settings::resetDefaults() {
 
   ringLengthMs          = 500;
   ringPauseMs           = 2000;
+  ringIterations        = 2;
 
   // --- Timers ---
   timer_Ready           = 240000;
@@ -114,6 +115,7 @@ bool Settings::load() {
 
     ringLengthMs          = prefs.getUInt ("ringLengthMs",         ringLengthMs);
     ringPauseMs           = prefs.getUInt ("ringPauseMs",          ringPauseMs);
+    ringIterations        = prefs.getUInt ("ringIterations",       ringIterations);
 
     // --- Timers ---
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
@@ -171,6 +173,7 @@ void Settings::save() const {
 
   prefs.putUInt ("ringLengthMs",         ringLengthMs);
   prefs.putUInt ("ringPauseMs",          ringPauseMs);
+  prefs.putUInt ("ringIterations",       ringIterations);
 
 
   // --- Timers ---
