@@ -67,7 +67,7 @@ void ToneReader::update() {
         
         
         if (readDtmfNibble(nibble)) {
-
+          
           lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
           lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
           
