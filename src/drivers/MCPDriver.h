@@ -60,9 +60,6 @@ private:
   // Gemensam interrupt-hantering
   IntResult handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mcp, uint8_t i2c_addr);
 
-  // Fallback om biblioteket saknar/inte rapporterar pin/value korrekt
-  IntResult readIntfIntcapFallback_(uint8_t i2c_addr);
-
   // Låg-nivå I2C registerläsning
   uint8_t  readReg8_(uint8_t i2c_addr, uint8_t reg);
   void     readRegPair16_(uint8_t i2c_addr, uint8_t regA, uint16_t& out16);
@@ -87,6 +84,12 @@ private:
   volatile bool slic1IntFlag_  = false;
   volatile bool slic2IntFlag_  = false;
   volatile bool mt8816IntFlag_ = false;
+
+  // Interrupt counters for debugging
+  volatile uint32_t mainIntCounter_   = 0;
+  volatile uint32_t slic1IntCounter_  = 0;
+  volatile uint32_t slic2IntCounter_  = 0;
+  volatile uint32_t mt8816IntCounter_ = 0;
 
   int8_t mapSlicPinToLine_(uint8_t addr, uint8_t pin) const;
 

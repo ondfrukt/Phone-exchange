@@ -1,13 +1,20 @@
 #include "LineAction.h"
 
 
-LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver)
-: lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver) {
-  // ev. startlogik
+LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver,
+            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3)
+          : lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver),
+            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3) {
 };
 
-void LineAction::update() {
 
+void LineAction::begin() {
+  toneGenerators[0] = &toneGen1_;
+  toneGenerators[1] = &toneGen2_;
+  toneGenerators[2] = &toneGen3_;
+}
+
+void LineAction::update() {
 
   // Check if any line has changed status
   if(lineManager_.lineChangeFlag != 0){
@@ -36,6 +43,27 @@ void LineAction::update() {
   }
 }
 
+void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
+  if (line.toneGenUsed != 0){
+    toneGenerators[line.toneGenUsed -1]->stop();
+    line.toneGenUsed = 0;
+  }
+}
+
+void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
+  if (!toneGen1_.isPlaying()){
+    toneGen1_.startToneSequence(status);
+    line.toneGenUsed = 1;
+  }
+  else if (!toneGen2_.isPlaying()){
+    toneGen2_.startToneSequence(status);
+    line.toneGenUsed = 2;
+  }
+  else if (!toneGen3_.isPlaying()){
+    toneGen3_.startToneSequence(status);
+    line.toneGenUsed = 3;
+  }
+}
 
 // Handles actions based on new line status
 void LineAction::action(int index) {
@@ -47,35 +75,34 @@ void LineAction::action(int index) {
   switch (newStatus) {
     
     case LineStatus::Idle:
+      turnOffToneGenIfUsed(line);
       mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
       //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC1, false); // Disconnect any audio connections
       //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC2, false); // Disconnect any audio connections
       //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DAC3, false); // Disconnect any audio connections
-      
       // mqttHandler.publishMQTT(line, line_idle);
-      // toneGen1.setMode(ToneGenerator::TONE_OFF);
       break;
 
     case LineStatus::Ready:
       // mqttHandler.publishMQTT(line, line_ready);
+      startToneGenForStatus(line, model::ToneId::Ready);
       mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
-
       // lastLineReady = line;
       // Line[line].startLineTimer(statusTimer_Ready);
-      // toneGen1.setMode(ToneGenerator::TONE_READY);
       break;
     
     case LineStatus::PulseDialing:
+      turnOffToneGenIfUsed(line);
       mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
     // Timers for pulse dialing is handled when a digit is received
-    //   mqttHandler.publishMQTT(line, line_pulse_dialing);
+    //   mqttHandler.publishMQTT(line, line_pulse_dialing);8
     //   Line[line].startLineTimer(statusTimer_pulsDialing);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
       break;
     
     case LineStatus::ToneDialing:
+      turnOffToneGenIfUsed(line);
     // Timer for tone dialing is handled when a digit is received
-
 
     //   mqttHandler.publishMQTT(line, line_tone_dialing);
     //   mt8816.connect(DTMF_line, line);
@@ -84,6 +111,9 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Busy:
+      turnOffToneGenIfUsed(line);
+      startToneGenForStatus(line, model::ToneId::Busy);
+
       lineManager_.setLineTimer(index, settings_.timer_busy); // Set timer for Busy state
     //   mqttHandler.publishMQTT(line, line_busy);
     //   Line[line].startLineTimer(statusTimer_busy);
@@ -92,6 +122,9 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Fail:
+      turnOffToneGenIfUsed(line);
+      startToneGenForStatus(line, model::ToneId::Fail);
+
       lineManager_.setLineTimer(index, settings_.timer_fail); // Set timer for Fail state
     //   mqttHandler.publishMQTT(line, line_fail);
     //   Line[line].resetDialedDigits();
@@ -101,6 +134,9 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Ringing:
+      turnOffToneGenIfUsed(line);
+      startToneGenForStatus(line, model::ToneId::Ring);
+
       lineManager_.setLineTimer(index, settings_.timer_Ringing); // Set timer for Ringing state
     // Serial.println("Line " + String(line) + " dialed digits: " + Line[line].dialedDigits);
     // for (int i = 0; i < activeLines; i++) {
@@ -136,9 +172,9 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Connected:
+      turnOffToneGenIfUsed(line);
+
     //   mqttHandler.publishMQTT(line, line_connected);
-
-
     //   // Setting for the calling line
     //   Line[Line[line].incomingFrom].setLineStatus(line_connected);
     //   Line[Line[line].incomingFrom].outgoingTo = line;

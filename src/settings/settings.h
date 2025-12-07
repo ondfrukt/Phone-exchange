@@ -23,18 +23,21 @@ public:
   // ---- Public fields ----
   uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
   uint16_t debounceMs;            // Debounce time for line state changes
+  String linePhoneNumbers[8];     // Stored phone number per line
 
   // ---- Debugging ----
-  uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high
-  uint8_t debugLmLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugWSLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugLALevel;           // 0=none, 1=low, 2=high
-  uint8_t debugMTLevel;           // 0=none, 1=low, 2=high
-  uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high
+  uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high Debug level for SHK service
+  uint8_t debugLmLevel;           // 0=none, 1=low, 2=high Debug level for Line Manager
+  uint8_t debugWSLevel;           // 0=none, 1=low, 2=high Debug level for Web Server
+  uint8_t debugLALevel;           // 0=none, 1=low, 2=high Debug level for Line Adapter
+  uint8_t debugMTLevel;           // 0=none, 1=low, 2=high Debug level for MT8816 service
+  uint8_t debugTRLevel;           // 0=none, 1=low, 2=high Debug level for TonReader service
+  uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high Debug level for MCP service
+  uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high Debug level for ToneGenerator
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 
-
+  bool    toneGeneratorEnabled = true; // Enable tone generators
   uint8_t pulseAdjustment;         // Pulse adjustment (1 means 1 pulse = 0, 2 pulses = 1, etc.)
 
   // ---- Settings (adjust according to your settings class/constants) ----
@@ -81,5 +84,5 @@ private:
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 1;    // increase if layout changes
+  static constexpr uint16_t kVersion = 2;    // increase if layout changes
 };

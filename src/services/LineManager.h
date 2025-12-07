@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include "settings/settings.h"
 #include "model/Types.h"
 #include "util/UIConsole.h"
@@ -12,6 +13,8 @@ public:
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
   void setLineTimer(int index, unsigned int limit);
+  void resetLineTimer(int index);
+  void setPhoneNumber(int index, const String& value);
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
   using ActiveLinesChangedCallback = std::function<void(uint8_t)>;
@@ -25,6 +28,8 @@ public:
   uint8_t lineChangeFlag;
   uint8_t activeTimersMask; // Bitmask for active line timers
   uint8_t linesNotIdle;     // Bitmask for lines that are not Idle
+
+  
   int lastLineReady;   // Most recent line that became Ready (for toneReader)
 
 private:

@@ -2,6 +2,15 @@
   --bg:#0b0c10; --fg:#e5e7eb; --muted:#9ca3af;
   --card:#111827; --border:#1f2937; --accent:#60a5fa;
   --ok:#16a34a; --no:#ef4444;
+
+  /* Badge width används för att räkna ut telefonfältets maxbredd */
+  --badge-w: 72px;
+
+  /* --- PHONE INPUT WIDTH --- 
+     Justera värdet nedan om du vill ändra den fasta bredden på telefon-inputen.
+     EXEMPEL: ändra till 120px för större fält.
+  */
+  --phone-input-w: 200px; /* <-- Ändra bredden för telefonfältet här */
 }
 
 *{ box-sizing:border-box }
@@ -22,31 +31,106 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   box-shadow:0 6px 30px rgba(0,0,0,.25);
 }
 
-/* tre kolumner: Namn | Status | Aktiv-knapp */
+/* Namn | Status | Telefon | Aktiv-knapp */
 .row{
-  display:grid; grid-template-columns:1fr auto auto; gap:10px;
-  align-items:baseline; padding:8px 0;
+  display:grid;
+  grid-template-columns: 1fr auto minmax(calc(var(--badge-w) * 2 + 8px), 320px) auto;
+  gap:10px;
+  align-items:center;
+  padding:8px 0;
   border-bottom:1px dashed rgba(255,255,255,.06)
 }
 .row:last-child{ border-bottom:none }
 
-.k{ color:var(--muted) }
-.v{ font-weight:700; letter-spacing:.3px }
+.row > .k,
+.row > .v {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row > .k { max-width:160px; }       /* namn-kolumn */
+.row > .v { max-width:140px; }       /* status-kolumn */
+
+/* Telefon-editor (tredje kolumn) */
+.phone-editor{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  /* Säkerställ att phone-editor inte växer för stort:
+     max-width = två badges + gap */
+  max-width: calc(var(--badge-w) * 2 + 8px);
+  /* Ge ett litet minne så den inte kollapsar helt */
+  min-width: calc(var(--badge-w) + 8px);
+}
+
+/* När vi "döljer" phone-editor vill vi reservera utrymmet så att layout inte hoppar.
+   Används istället för display:none i JS. */
+.phone-editor.hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* FAST BREDD PÅ TELEFONFÄLTET
+   Vi använder CSS-variabeln --phone-input-w (se :root högst upp). Ändra där.
+   Inputen är nu en fast bredd (ingen flexibel växling) så den blir alltid exakt
+   den angivna bredden (100px som standard).
+*/
+.phone-editor input{
+  /* Fixed width: change --phone-input-w in :root to alter this */
+  flex: 0 0 var(--phone-input-w);
+  width: var(--phone-input-w);
+  max-width: var(--phone-input-w);
+
+  min-width: 0;
+  padding:4px 8px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.04);
+  color:var(--fg);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.phone-editor input:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--accent);
+}
+
+.phone-editor .badge{
+  min-width:var(--badge-w);
+  max-width:var(--badge-w);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 
 .status{ margin-top:10px; color:var(--muted); font-size:.9rem }
 
-/* Badges */
 .badge{
   background: transparent;
   appearance: none;
   -webkit-appearance: none;
-  display:inline-block; min-width:72px; text-align:center;
-  color:var(--fg); 
-  font-size:.8rem; 
+  display:inline-block; min-width:var(--badge-w); text-align:center;
+  color:var(--fg);
+  font-size:.8rem;
   padding:2px 10px;
-  border-radius:999px; 
+  border-radius:999px;
   border:1px solid var(--border);
+  max-width:var(--badge-w);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
+
+/* Placera sista badge (Active/Inactivate) längst till höger i raden */
+.row > .badge:last-child {
+  justify-self: end;
+}
+
 .badge.ok{ border-color:rgba(22,163,74,.4); background:rgba(22,163,74,.15) }
 .badge.no{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.12) }
 .badge.clickable{ cursor:pointer }

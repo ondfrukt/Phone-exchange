@@ -4,7 +4,6 @@ Settings::Settings() {
   resetDefaults();        // ensure fields have initial values
 }
 
-
 void Settings::adjustActiveLines() {
   // Adjust activeLinesMask to take physical MCP connections into account
   uint8_t userMask = activeLinesMask;
@@ -27,15 +26,20 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 1;
+  debugSHKLevel         = 0;
   debugLmLevel          = 0;
   debugWSLevel          = 0;
   debugLALevel          = 0;
   debugMTLevel          = 0;
+  debugTRLevel          = 0;
   debugMCPLevel         = 0;
+  debugI2CLevel         = 0;
+  debugTonGenLevel      = 0;
 
+  toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
 
+  // --- Other settings ---
   burstTickMs           = 2;
   hookStableMs          = 50;
   hookStableConsec      = 2;
@@ -45,6 +49,22 @@ void Settings::resetDefaults() {
   digitGapMinMs         = 600;
   globalPulseTimeoutMs  = 500;
   highMeansOffHook      = true;
+
+  // --- Timers ---
+  timer_Ready           = 240000;
+  timer_Dialing         = 5000;
+  timer_Ringing         = 10000;
+  timer_pulsDialing     = 3000;
+  timer_toneDialing     = 3000;
+  timer_fail            = 30000;
+  timer_disconnected    = 60000;
+  timer_timeout         = 60000;
+  timer_busy            = 30000;
+
+  // --- Phone numbers ---
+  for (auto &num : linePhoneNumbers) {
+    num = "";
+  }
 
   // Runtime flags kept false here; set by MCPDriver::begin()
   mcpSlic1Present = mcpSlic2Present = mcpMainPresent = mcpMt8816Present = false;
@@ -71,8 +91,10 @@ bool Settings::load() {
     debugWSLevel          = prefs.getUChar ("debugWs",    debugWSLevel);
     debugLALevel          = prefs.getUChar ("debugLa",    debugLALevel);
     debugMTLevel          = prefs.getUChar ("debugMt",    debugMTLevel);
+    debugTRLevel          = prefs.getUChar ("debugTr",    debugTRLevel);
     debugMCPLevel         = prefs.getUChar ("debugMCP",   debugMCPLevel);
     debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
+    debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
 
     // --- Other settings ---    
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
@@ -83,6 +105,24 @@ bool Settings::load() {
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
+    toneGeneratorEnabled  = prefs.getBool ("toneGenEn",            toneGeneratorEnabled);
+
+    // --- Timers ---
+    timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
+    timer_Dialing         = prefs.getUInt ("timerDialing",      timer_Dialing);
+    timer_Ringing         = prefs.getUInt ("timerRinging",      timer_Ringing);
+    timer_pulsDialing     = prefs.getUInt ("timerPulsDialing",  timer_pulsDialing);
+    timer_toneDialing     = prefs.getUInt ("timerToneDialing",  timer_toneDialing);
+    timer_fail            = prefs.getUInt ("timerFail",         timer_fail);
+    timer_disconnected    = prefs.getUInt ("timerDisconnected", timer_disconnected);
+    timer_timeout         = prefs.getUInt ("timerTimeout",      timer_timeout);
+    timer_busy            = prefs.getUInt ("timerBusy",         timer_busy);
+
+    // --- Phone numbers ---
+    for (int i = 0; i < 8; ++i) {
+      String key = String("linePhone") + i;
+      linePhoneNumbers[i] = prefs.getString(key.c_str(), linePhoneNumbers[i]);
+    }
   }
   prefs.end();
   if (!ok) save();
@@ -94,6 +134,7 @@ void Settings::save() const {
   if (!prefs.begin(kNamespace, false)) return;
   prefs.putUShort("ver", kVersion);
 
+  // --- General settings ---
   prefs.putUChar ("activeMask", activeLinesMask);
   prefs.putUShort("debounceMs", debounceMs);
 
@@ -103,8 +144,10 @@ void Settings::save() const {
   prefs.putUChar ("debugWs",    debugWSLevel);
   prefs.putUChar ("debugLa",    debugLALevel);
   prefs.putUChar ("debugMt",    debugMTLevel);
+  prefs.putUChar ("debugTr",    debugTRLevel);
   prefs.putUChar ("debugMCP",   debugMCPLevel);
   prefs.putUChar ("debugI2C",   debugI2CLevel);
+  prefs.putUChar ("debugTonGen", debugTonGenLevel);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
@@ -115,6 +158,24 @@ void Settings::save() const {
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",            highMeansOffHook);
+  prefs.putBool ("toneGenEn",            toneGeneratorEnabled);
+
+  // --- Timers ---
+  prefs.putUInt ("timerReady",        timer_Ready);
+  prefs.putUInt ("timerDialing",      timer_Dialing);
+  prefs.putUInt ("timerRinging",      timer_Ringing);
+  prefs.putUInt ("timerPulsDialing",  timer_pulsDialing);
+  prefs.putUInt ("timerToneDialing",  timer_toneDialing);
+  prefs.putUInt ("timerFail",         timer_fail);
+  prefs.putUInt ("timerDisconnected", timer_disconnected);
+  prefs.putUInt ("timerTimeout",      timer_timeout);
+  prefs.putUInt ("timerBusy",         timer_busy);
+
+  // --- Phone numbers ---
+  for (int i = 0; i < 8; ++i) {
+    String key = String("linePhone") + i;
+    prefs.putString(key.c_str(), linePhoneNumbers[i]);
+  }
 
   prefs.end();
 }

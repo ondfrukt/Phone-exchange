@@ -4,10 +4,14 @@
 #include "settings/Settings.h"   // dubbelkolla filnamn/versaler
 #include "LineManager.h"
 #include "drivers/MT8816Driver.h"
+#include "services/ToneGenerator.h"
 
 class LineAction {
 public:
-  LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver);
+  LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver,
+             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3);
+  
+  void begin();
   void update();
   void action(int index);
 
@@ -15,5 +19,13 @@ private:
   LineManager& lineManager_;
   Settings&    settings_;
   MT8816Driver& mt8816Driver_;
+  ToneGenerator& toneGen1_;
+  ToneGenerator& toneGen2_;
+  ToneGenerator& toneGen3_;
+  ToneGenerator* toneGenerators[3];
+
+  void turnOffToneGenIfUsed(LineHandler& line);
+  void startToneGenForStatus(LineHandler& line, model::ToneId status);
+
   void timerExpired(LineHandler& line);
 };

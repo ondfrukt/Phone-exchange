@@ -19,6 +19,8 @@ public:
     int incomingFrom;                   // Incoming call from
     int outgoingTo;                     // Outgoing call to
 
+    uint8_t toneGenUsed;                // Current tone generator used for the line
+
     // SHK variables
     HookStatus currentHookStatus;       // Status of the hook (hook on/off)
     HookStatus previousHookStatus;      // Previous status of the hook

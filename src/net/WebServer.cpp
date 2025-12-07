@@ -52,6 +52,7 @@ void WebServer::initSse_() {
     client->send(buildStatusJson_().c_str(), nullptr, millis());
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
     client->send(buildDebugJson_().c_str(), "debug", millis());
+    client->send(buildToneGeneratorJson_().c_str(), "toneGen", millis());
     util::UIConsole::forEachBuffered([client](const String& json) {
       client->send(json.c_str(), "console", millis());
     });
@@ -147,6 +148,80 @@ void WebServer::setupApiRoutes_() {
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
 
+  server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
+    const AsyncWebParameter* lineParam = nullptr;
+    const AsyncWebParameter* phoneParam = nullptr;
+
+    if (req->hasParam("line", true)) {
+      lineParam = req->getParam("line", true);
+    } else if (req->hasParam("line")) {
+      lineParam = req->getParam("line");
+    }
+
+    if (req->hasParam("phone", true)) {
+      phoneParam = req->getParam("phone", true);
+    } else if (req->hasParam("phone")) {
+      phoneParam = req->getParam("phone");
+    }
+
+    if (!lineParam || !phoneParam) {
+      req->send(400, "application/json", "{\"error\":\"missing line/phone\"}");
+      return;
+    }
+
+    int line = lineParam->value().toInt();
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    String value = phoneParam->value();
+    value.trim();
+    if (value.length() > 32) {
+      req->send(400, "application/json", "{\"error\":\"phone too long\"}");
+      return;
+    }
+
+    bool hasControlChars = false;
+    for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+      char c = value.charAt(static_cast<unsigned int>(i));
+      if (static_cast<unsigned char>(c) < 32u) {
+        hasControlChars = true;
+        break;
+      }
+    }
+
+    if (hasControlChars) {
+      req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
+      return;
+    }
+
+    if (value.length() > 0) {
+      for (int i = 0; i < 8; ++i) {
+        if (i == line) continue;
+        String existing = settings_.linePhoneNumbers[i];
+        existing.trim();
+        if (existing.isEmpty()) continue;
+        if (existing == value) {
+          req->send(409, "application/json", "{\"error\":\"phone already in use\"}");
+          return;
+        }
+      }
+    }
+
+    lm_.setPhoneNumber(line, value);
+    settings_.save();
+
+    sendFullStatusSse();
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Phone number line %d set to %s\n", line, value.c_str());
+      util::UIConsole::log("Phone number for line " + String(line) + " updated", "WebServer");
+    }
+
+    req->send(200, "application/json", "{\"ok\":true}");
+  });
+
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
   });
@@ -159,20 +234,22 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
     bool hasLa  = getOptUChar("la",  la);
     bool hasMt  = getOptUChar("mt",  mt);
+    bool hasTr  = getOptUChar("tr",  tr);
+    bool hasTg  = getOptUChar("tg",  tg);
 
-    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -183,6 +260,8 @@ void WebServer::setupApiRoutes_() {
     if (hasWs)  settings_.debugWSLevel  = (uint8_t)ws;
     if (hasLa)  settings_.debugLALevel  = (uint8_t)la;
     if (hasMt)  settings_.debugMTLevel  = (uint8_t)mt;
+    if (hasTr)  settings_.debugTRLevel  = (uint8_t)tr;
+    if (hasTg)  settings_.debugTonGenLevel  = (uint8_t)tg;
 
     // Spara till NVS
     //settings_.save();
@@ -192,6 +271,28 @@ void WebServer::setupApiRoutes_() {
 
     // Svara med aktuella nivåer
     req->send(200, "application/json", buildDebugJson_());
+  });
+
+  server_.on("/api/tone-generator", HTTP_GET, [this](AsyncWebServerRequest *req){
+    req->send(200, "application/json", buildToneGeneratorJson_());
+  });
+
+  server_.on("/api/tone-generator/set", HTTP_POST, [this](AsyncWebServerRequest* req){
+    int enabled = -1;
+
+    if (req->hasParam("enabled")) enabled = req->getParam("enabled")->value().toInt();
+    else if (req->hasParam("enabled", true)) enabled = req->getParam("enabled", true)->value().toInt();
+
+    if (enabled != 0 && enabled != 1) {
+      req->send(400, "application/json", "{\"error\":\"enabled must be 0 or 1\"}");
+      return;
+    }
+
+    settings_.toneGeneratorEnabled = (enabled == 1);
+    settings_.save();
+
+    sendToneGeneratorSse();
+    req->send(200, "application/json", buildToneGeneratorJson_());
   });
 
   server_.on("/api/info", HTTP_GET, [this](AsyncWebServerRequest* req){
@@ -322,6 +423,8 @@ String WebServer::buildDebugJson_() const {
   json += ",\"ws\":" + String(settings_.debugWSLevel);
   json += ",\"la\":" + String(settings_.debugLALevel);
   json += ",\"mt\":" + String(settings_.debugMTLevel);
+  json += ",\"tr\":" + String(settings_.debugTRLevel);
+  json += ",\"tg\":" + String(settings_.debugTonGenLevel);
   json += "}";
   return json;
 }
@@ -332,6 +435,23 @@ void WebServer::sendDebugSse() {
   if (settings_.debugWSLevel >= 1) {
     Serial.println("WebServer: Debug levels skickade via SSE");
     util::UIConsole::log("Debug levels sent via SSE", "WebServer");
+  }
+}
+
+String WebServer::buildToneGeneratorJson_() const {
+  String json = "{";
+  json += "\"enabled\":";
+  json += settings_.toneGeneratorEnabled ? "true" : "false";
+  json += "}";
+  return json;
+}
+
+void WebServer::sendToneGeneratorSse() {
+  const String json = buildToneGeneratorJson_();
+  events_.send(json.c_str(), "toneGen", millis());
+  if (settings_.debugWSLevel >= 1) {
+    Serial.println("WebServer: Tone generator state skickad via SSE");
+    util::UIConsole::log("Tone generator state sent via SSE", "WebServer");
   }
 }
 

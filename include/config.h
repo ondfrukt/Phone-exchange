@@ -73,10 +73,10 @@ namespace cfg {
       /*9*/  {INPUT_PULLUP,0},// GPB1  Test_button (aktiv låg mot GND)
       /*10*/ {OUTPUT, LOW},   // GPB2  PWDN_MT8870 (justera nivå vid behov)
       /*11*/ {INPUT, 0},      // GPB3  STD (status från MT8870)
-      /*12*/ {INPUT, 0},      // GPB4  Q4 (MT8870)
-      /*13*/ {INPUT, 0},      // GPB5  Q3 (MT8870)
-      /*14*/ {INPUT, 0},      // GPB6  Q2 (MT8870)
-      /*15*/ {INPUT, 0},      // GPB7  Q1 (MT8870)
+      /*12*/ {INPUT, 0},      // GPB4  Q4 (MT8870) (pin 5)
+      /*13*/ {INPUT, 0},      // GPB5  Q3 (MT8870) (pin 6)
+      /*14*/ {INPUT, 0},      // GPB6  Q2 (MT8870) (pin 7)
+      /*15*/ {INPUT, 0},      // GPB7  Q1 (MT8870) (pin 8)
     };
 
 

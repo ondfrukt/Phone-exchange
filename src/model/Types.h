@@ -29,10 +29,10 @@ namespace model {
   };
 
   // Enum representing the sequence of tones played
-  enum class ToneSequence : uint8_t {
-    None,   // No tone played
-    Busy,   // Busy tone played
+  enum class ToneId : uint8_t {
     Ready,  // Ready tone played
+    Ring,   // Ring tone played
+    Busy,   // Busy tone played
     Fail    // Fail tone played
   };
 

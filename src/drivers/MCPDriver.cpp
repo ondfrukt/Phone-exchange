@@ -184,19 +184,35 @@ bool MCPDriver::begin() {
     pinMode(mcp::MCP_MAIN_INT_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_MAIN_INT_PIN),
                        &MCPDriver::isrMainThunk, this, FALLING);
+    Serial.print(F("MCP INT: MCP_MAIN interrupt attached to ESP32 pin "));
+    Serial.println(mcp::MCP_MAIN_INT_PIN);
+    util::UIConsole::log("MCP INT: MCP_MAIN interrupt attached to ESP32 pin " + 
+                         String(mcp::MCP_MAIN_INT_PIN), "MCPDriver");
   }
   // Attach interrupts for MCP_SLIC1
   if (haveSlic1_) {
     pinMode(mcp::MCP_SLIC_INT_1_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_1_PIN),
                        &MCPDriver::isrSlic1Thunk, this, FALLING);
+    Serial.print(F("MCP INT: MCP_SLIC1 interrupt attached to ESP32 pin "));
+    Serial.println(mcp::MCP_SLIC_INT_1_PIN);
+    util::UIConsole::log("MCP INT: MCP_SLIC1 interrupt attached to ESP32 pin " + 
+                         String(mcp::MCP_SLIC_INT_1_PIN), "MCPDriver");
   }
   // Attach interrupts for MCP_SLIC2
   if (haveSlic2_) {
     pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
                        &MCPDriver::isrSlic2Thunk, this, FALLING);
+    Serial.print(F("MCP INT: MCP_SLIC2 interrupt attached to ESP32 pin "));
+    Serial.println(mcp::MCP_SLIC_INT_2_PIN);
+    util::UIConsole::log("MCP INT: MCP_SLIC2 interrupt attached to ESP32 pin " + 
+                         String(mcp::MCP_SLIC_INT_2_PIN), "MCPDriver");
   }
+  
+  Serial.println(F("MCP init: All interrupts configured successfully"));
+  util::UIConsole::log("MCP init: All interrupts configured successfully", "MCPDriver");
+  
   return true;
 }
 
@@ -237,14 +253,44 @@ bool MCPDriver::digitalReadMCP(uint8_t addr, uint8_t pin, bool& out) {
 }
 
 // Interrupt service routines for each MCP device (thunks set flags)
-void IRAM_ATTR MCPDriver::isrMainThunk(void* arg)   { reinterpret_cast<MCPDriver*>(arg)->mainIntFlag_   = true; }
-void IRAM_ATTR MCPDriver::isrSlic1Thunk(void* arg)  { reinterpret_cast<MCPDriver*>(arg)->slic1IntFlag_  = true; }
-void IRAM_ATTR MCPDriver::isrSlic2Thunk(void* arg)  { reinterpret_cast<MCPDriver*>(arg)->slic2IntFlag_  = true; }
-void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg) { reinterpret_cast<MCPDriver*>(arg)->mt8816IntFlag_ = true; }
+void IRAM_ATTR MCPDriver::isrMainThunk(void* arg)   { 
+  auto* driver = reinterpret_cast<MCPDriver*>(arg);
+  driver->mainIntFlag_ = true; 
+  driver->mainIntCounter_++;
+}
+void IRAM_ATTR MCPDriver::isrSlic1Thunk(void* arg)  { 
+  auto* driver = reinterpret_cast<MCPDriver*>(arg);
+  driver->slic1IntFlag_ = true; 
+  driver->slic1IntCounter_++;
+}
+void IRAM_ATTR MCPDriver::isrSlic2Thunk(void* arg)  { 
+  auto* driver = reinterpret_cast<MCPDriver*>(arg);
+  driver->slic2IntFlag_ = true; 
+  driver->slic2IntCounter_++;
+}
+void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg) { 
+  auto* driver = reinterpret_cast<MCPDriver*>(arg);
+  driver->mt8816IntFlag_ = true; 
+  driver->mt8816IntCounter_++;
+}
 
 // Handle interrupts for MCP_MAIN
 IntResult MCPDriver::handleMainInterrupt()   {
   if (!haveMain_) return {};
+  
+  // Debug: Report interrupt counter periodically (only if debug is enabled)
+  static unsigned long lastDebugTime = 0;
+  auto& settings = Settings::instance();
+  if (settings.debugMCPLevel >= 1) {
+    unsigned long now = millis();
+    if (now - lastDebugTime >= 5000) {
+      Serial.print(F("MCP_MAIN: Total interrupts fired: "));
+      Serial.println(mainIntCounter_);
+      util::UIConsole::log("MCP_MAIN: Total interrupts fired: " + String(mainIntCounter_), "MCPDriver");
+      lastDebugTime = now;
+    }
+  }
+  
   return handleInterrupt_(mainIntFlag_,   mcpMain_,   mcp::MCP_MAIN_ADDRESS);
 }
 // Handle interrupts for MCP_SLIC1
@@ -279,72 +325,117 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   r.i2c_addr = addr;
   if (!fired) return r;
 
-  int8_t pin = mcp.getLastInterruptPin();
-  if (pin >= 0 && pin <= 15) {
-    r.pin = static_cast<uint8_t>(pin);
+  auto& settings = Settings::instance();
+  const bool verbose = settings.debugMCPLevel >= 2;
+  const bool basicDebug = settings.debugMCPLevel >= 1;
 
-    uint16_t intcap = 0;
-    if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r;
+  // Debug: Confirm interrupt flag was set
+  if (basicDebug) {
+    Serial.print(F("MCP INT: Processing interrupt for addr=0x"));
+    Serial.println(addr, HEX);
+    util::UIConsole::log("MCP INT: Processing interrupt for addr=0x" + String(addr, HEX),
+                         "MCPDriver");
+  }
 
-    r.level    = (intcap & (1u << r.pin)) != 0;
-    r.hasEvent = true;
-
-    // SLIC: map to line (do not return here)
-    if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
-      int8_t line = mapSlicPinToLine_(addr, r.pin);
-      r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
+  uint16_t intf = 0;
+  if (!readRegPair16_OK_(addr, REG_INTFA, intf)) {
+    if (basicDebug) {
+      Serial.println(F("MCP INT: Failed to read INTF register"));
+      util::UIConsole::log("MCP INT: Failed to read INTF register", "MCPDriver");
     }
-
-    // Extra clear after INTCAP (harmless but makes acknowledgment more robust)
+    return r;
+  }
+  
+  // Debug: Show INTF register value
+  if (verbose) {
+    Serial.print(F("MCP INT: INTF=0b"));
+    Serial.println(intf, BIN);
+    util::UIConsole::log("MCP INT: INTF=0b" + String(intf, BIN), "MCPDriver");
+  }
+  
+  if (intf == 0) {
+    // No pin reported despite the interrupt flag being set; make sure the
+    // event is acknowledged to avoid getting stuck in a busy loop.
     uint16_t dummy = 0;
     (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
-
-    // Sync DEFVAL to the captured level (MAIN only; requires INTCON=1 for the pin)
-    if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
-      if (r.pin < 8) {
-        uint8_t defvala = 0;
-        if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {
-          if (r.level) defvala |=  (1u << r.pin);
-          else         defvala &= ~(1u << r.pin);
-          (void)writeReg8_(addr, REG_DEFVALA, defvala);
-        }
-      } else {
-        uint8_t bit = r.pin - 8; // 0..7
-        uint8_t defvalb = 0;
-        if (readReg8_OK_(addr, REG_DEFVALB, defvalb)) {
-          if (r.level) defvalb |=  (1u << bit);
-          else         defvalb &= ~(1u << bit);
-          (void)writeReg8_(addr, REG_DEFVALB, defvalb);
-        }
-      }
+    if (verbose) {
+      Serial.print(F("MCP INT: flag set men INTF=0 på 0x"));
+      Serial.println(addr, HEX);
+      util::UIConsole::log("MCP INT: flag set men INTF=0 på 0x" + String(addr, HEX),
+                           "MCPDriver");
     }
     return r;
   }
 
-  // Fallback if the driver does not provide the "last pin"
-  r = readIntfIntcapFallback_(addr);
-  return r;
-}
+  uint16_t intcap = 0;
+  if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) {
+    if (basicDebug) {
+      Serial.println(F("MCP INT: Failed to read INTCAP register"));
+      util::UIConsole::log("MCP INT: Failed to read INTCAP register", "MCPDriver");
+    }
+    return r;
+  }
 
-// Fallback interrupt handler: scan INTf and INTCAP to find the pin and level
-IntResult MCPDriver::readIntfIntcapFallback_(uint8_t addr) {
-  IntResult r; r.i2c_addr = addr;
-  uint16_t intf=0, intcap=0;
+  // Debug: Show INTCAP register value (after reading it)
+  if (verbose) {
+    Serial.print(F("MCP INT: INTCAP=0b"));
+    Serial.println(intcap, BIN);
+    util::UIConsole::log("MCP INT: INTCAP=0b" + String(intcap, BIN), "MCPDriver");
+  }
 
-  if (!readRegPair16_OK_(addr, REG_INTFA,   intf))   return r;
-  if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) return r;
-  if (intf==0) return r;
-
-  for (uint8_t p=0; p<16; ++p) {
-    if (intf & (1u<<p)) {
-      r.pin      = p;
-      r.level    = (intcap & (1u<<p)) != 0;
+  for (uint8_t p = 0; p < 16; ++p) {
+    if (intf & (1u << p)) {
+      r.pin   = p;
+      r.level = (intcap & (1u << p)) != 0;
       r.hasEvent = true;
       break;
     }
   }
 
-  (void)readRegPair16_OK_(addr, REG_GPIOA, intcap);
+  // Extra clear after INTCAP (harmless but makes acknowledgment more robust)
+  uint16_t dummy = 0;
+  (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
+
+  if (!r.hasEvent) return r;
+
+  if (verbose) {
+    Serial.print(F("MCP INT: addr=0x"));
+    Serial.print(addr, HEX);
+    Serial.print(F(" pin="));
+    Serial.print(r.pin);
+    Serial.print(F(" level="));
+    Serial.println(r.level ? F("HIGH") : F("LOW"));
+    util::UIConsole::log("MCP INT 0x" + String(addr, HEX) + " pin=" + String(r.pin) +
+                             " level=" + String(r.level ? "HIGH" : "LOW"),
+                         "MCPDriver");
+  }
+
+  // SLIC: map to line (do not return here)
+  if (addr == cfg::mcp::MCP_SLIC1_ADDRESS || addr == cfg::mcp::MCP_SLIC2_ADDRESS) {
+    int8_t line = mapSlicPinToLine_(addr, r.pin);
+    r.line = (line >= 0) ? static_cast<uint8_t>(line) : 255;
+  }
+
+  // Sync DEFVAL to the captured level (MAIN only; requires INTCON=1 for the pin)
+  if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
+    if (r.pin < 8) {
+      uint8_t defvala = 0;
+      if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {
+        if (r.level) defvala |=  (1u << r.pin);
+        else         defvala &= ~(1u << r.pin);
+        (void)writeReg8_(addr, REG_DEFVALA, defvala);
+      }
+    } else {
+      uint8_t bit = r.pin - 8; // 0..7
+      uint8_t defvalb = 0;
+      if (readReg8_OK_(addr, REG_DEFVALB, defvalb)) {
+        if (r.level) defvalb |=  (1u << bit);
+        else         defvalb &= ~(1u << bit);
+        (void)writeReg8_(addr, REG_DEFVALB, defvalb);
+      }
+    }
+  }
+
   return r;
 }
 
@@ -422,6 +513,11 @@ void MCPDriver::enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp
 
 // Enable interrupts for MCP_MAIN (e.g. function button and MT8870 STD)
 void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
+  auto& settings = Settings::instance();
+  
+  Serial.println(F("MCP INT: Configuring MCP_MAIN interrupts..."));
+  util::UIConsole::log("MCP INT: Configuring MCP_MAIN interrupts...", "MCPDriver");
+  
   uint8_t gpintena=0, gpintenb=0;
   uint8_t intcona=0, intconb=0;
   uint8_t gppua=0, gppub=0;
@@ -440,6 +536,8 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   // ---- FUNCTION_BUTTON: CHANGE mode with pull-up ----
   {
     uint8_t p = cfg::mcp::FUNCTION_BUTTON;
+    Serial.print(F("MCP INT: Configuring FUNCTION_BUTTON on pin "));
+    Serial.println(p);
     if (p < 8) {
       gpintena |= (1u << p);   // enable INT
       gppua    |= (1u << p);   // pull-up
@@ -455,15 +553,20 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   // ---- MT8870 STD: compare-to-DEFVAL (INTCON=1). DEFVAL synced in handleInterrupt_ ----
   {
     uint8_t p = cfg::mcp::STD; // GPB3 according to config
+    Serial.print(F("MCP INT: Configuring MT8870 STD on pin "));
+    Serial.print(p);
+    Serial.println(F(" (compare-to-DEFVAL mode)"));
+    util::UIConsole::log("MCP INT: Configuring MT8870 STD on pin " + String(p) + 
+                         " (compare-to-DEFVAL mode)", "MCPDriver");
     if (p < 8) {
       gpintena |= (1u << p);
-      // STD is driven by MT8870 => pull-up usually unnecessary; leave gppua unchanged
+      gppua    |= (1u << p);  // håll linjen stabilt hög när MT8870 släpper STD
       intcona  |= (1u << p);  // enable compare-to-DEFVAL
       // DEFVALA updated dynamically by handleInterrupt_
     } else {
       uint8_t bit = p - 8;
       gpintenb |= (1u << bit);
-      // STD is driven by MT8870 => leave gppub as is
+      gppub    |= (1u << bit); // håll linjen stabilt hög när MT8870 släpper STD
       intconb  |= (1u << bit); // enable compare-to-DEFVAL
       // DEFVALB updated dynamically by handleInterrupt_
     }
@@ -481,6 +584,17 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
 
   writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
   writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
+  
+  Serial.print(F("MCP INT: GPINTENA=0b"));
+  Serial.print(gpintena, BIN);
+  Serial.print(F(" GPINTENB=0b"));
+  Serial.println(gpintenb, BIN);
+  Serial.print(F("MCP INT: INTCONA=0b"));
+  Serial.print(intcona, BIN);
+  Serial.print(F(" INTCONB=0b"));
+  Serial.println(intconb, BIN);
+  util::UIConsole::log("MCP INT: GPINTENA=0b" + String(gpintena, BIN) + 
+                       " GPINTENB=0b" + String(gpintenb, BIN), "MCPDriver");
 
   // Acknowledge any pending flags (read INTCAP followed by GPIO)
   uint16_t dummy=0;

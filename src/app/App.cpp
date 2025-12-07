@@ -5,8 +5,15 @@ App::App()
   : mcpDriver_(),
     mt8816Driver_(mcpDriver_, Settings::instance()),
     lineManager_(Settings::instance()),
+
+    toneGenerator1_(cfg::ad9833::CS1_PIN),
+    toneGenerator2_(cfg::ad9833::CS2_PIN),  
+    toneGenerator3_(cfg::ad9833::CS3_PIN),
+    toneReader_(mcpDriver_, Settings::instance(), lineManager_),
+
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
-    lineAction_(lineManager_, Settings::instance(), mt8816Driver_),
+    lineAction_(lineManager_, Settings::instance(), mt8816Driver_,
+                toneGenerator1_, toneGenerator2_, toneGenerator3_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
     functionButton_(mcpDriver_) {}
 
@@ -20,8 +27,8 @@ void App::begin() {
 
 		// ----  Settings ----
     auto& settings = Settings::instance();
-    settings.resetDefaults(); // sätt standardvärden. Används nu under utveckling
-    //settings.load();  // ladda sparade inställningar (om några) (ska användas i färdig produkt)
+    settings.resetDefaults(); 
+    //settings.load();
 
 		// ---- I2C och I2C-scanner ----
 		Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
@@ -33,9 +40,13 @@ void App::begin() {
 		// ---- Drivrutiner och tjänster ----
     mcpDriver_.begin();
 		mt8816Driver_.begin();
-
+    lineAction_.begin();
     lineManager_.begin();
     settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
+    
+    toneGenerator1_.begin();
+    toneGenerator2_.begin();
+    toneGenerator3_.begin();
 
 		// --- Net and webserver ---
     wifiClient_.begin("phoneexchange");
@@ -47,8 +58,20 @@ void App::begin() {
 }
 
 void App::loop() {
-	wifiClient_.loop();
+  auto& settings = Settings::instance();
+  
+  // Debug: Show that main loop is running (very low frequency)
+  static unsigned long lastLoopDebug = 0;
+  unsigned long now = millis();
+  
+	wifiClient_.loop();   // Handle WiFi events and connection
 	lineAction_.update(); // Check for line status changes and timers
 	SHKService_.update(); // Check for SHK changes and process pulses
+  toneReader_.update(); // Check for DTMF tones
+
+  if (toneGenerator1_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator1_.update();
+  if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
+  if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
+
   functionButton_.update();
 }
