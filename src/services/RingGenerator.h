@@ -10,17 +10,25 @@ class RingGenerator {
   public:
     RingGenerator(MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager);
     void update();
-    void generatRingingSignal();
-    void updateRinging();
+    void generateRingSignal(uint8_t lineNumber);
+    void stopRinging();
 
   private:
     MCPDriver& mcpDriver_;
     Settings& settings_;
     LineManager& lineManager_;
 
-    // Ringing state
-    bool isRinging_ = false;
-    unsigned long ringStartTime_ = 0;
-    unsigned long lastRingToggleTime_ = 0;
-    bool ringState_ = false; // true = ON, false = OFF
+    // Ringing state machine
+    enum class RingState {
+      Idle,
+      RingSignal,  // Generating ring signal (FR toggling)
+      RingPause    // Pause between rings
+    };
+
+    RingState state_ = RingState::Idle;
+    uint8_t activeLineNumber_ = 0;
+    uint32_t currentIteration_ = 0;
+    unsigned long stateStartTime_ = 0;
+    unsigned long lastFRToggleTime_ = 0;
+    bool frPinState_ = false; // Current state of FR pin
 };

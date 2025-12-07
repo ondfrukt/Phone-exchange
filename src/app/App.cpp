@@ -14,6 +14,7 @@ App::App()
     SHKService_(lineManager_, mcpDriver_, Settings::instance()),
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
+    ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
     functionButton_(mcpDriver_) {}
 
@@ -68,6 +69,7 @@ void App::loop() {
 	lineAction_.update(); // Check for line status changes and timers
 	SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones
+  ringGenerator_.update(); // Update ring signal generation
 
   if (toneGenerator1_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator1_.update();
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
