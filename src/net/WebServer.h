@@ -8,10 +8,11 @@
 namespace net { class WifiClient; } 
 
 class LineManager;
+class RingGenerator;
 
 class WebServer {
 public:
-  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, uint16_t port = 80);
+  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator* ringGenerator = nullptr, uint16_t port = 80);
   bool begin();
   void listFS();
 
@@ -26,6 +27,7 @@ public:
 private:
   Settings& settings_;
   LineManager& lm_;
+  RingGenerator* ringGenerator_;
   AsyncWebServer server_;
   AsyncEventSource events_{"/events"};
   net::WifiClient& wifi_;
