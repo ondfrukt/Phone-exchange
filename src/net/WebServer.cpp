@@ -235,7 +235,7 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
@@ -243,14 +243,15 @@ void WebServer::setupApiRoutes_() {
     bool hasMt  = getOptUChar("mt",  mt);
     bool hasTr  = getOptUChar("tr",  tr);
     bool hasTg  = getOptUChar("tg",  tg);
+    bool hasRg  = getOptUChar("rg",  rg);
 
-    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -263,6 +264,7 @@ void WebServer::setupApiRoutes_() {
     if (hasMt)  settings_.debugMTLevel  = (uint8_t)mt;
     if (hasTr)  settings_.debugTRLevel  = (uint8_t)tr;
     if (hasTg)  settings_.debugTonGenLevel  = (uint8_t)tg;
+    if (hasRg)  settings_.debugRGLevel  = (uint8_t)rg;
 
     // Spara till NVS
     //settings_.save();
@@ -589,6 +591,7 @@ String WebServer::buildDebugJson_() const {
   json += ",\"mt\":" + String(settings_.debugMTLevel);
   json += ",\"tr\":" + String(settings_.debugTRLevel);
   json += ",\"tg\":" + String(settings_.debugTonGenLevel);
+  json += ",\"rg\":" + String(settings_.debugRGLevel);
   json += "}";
   return json;
 }

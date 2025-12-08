@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgMt  = document.getElementById('dbg-mt');
   const $dbgTr  = document.getElementById('dbg-tr');
   const $dbgTg  = document.getElementById('dbg-tg');
+  const $dbgRg  = document.getElementById('dbg-rg');
 
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
       if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
       if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
+      if (typeof d.rg  === 'number') $dbgRg.value  = String(d.rg|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -120,7 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         la: $dbgLa.value,
         mt: $dbgMt.value,
         tr: $dbgTr.value,
-        tg: $dbgTg.value
+        tg: $dbgTg.value,
+        rg: $dbgRg.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -398,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mt  === 'number') $dbgMt.value  = String(d.mt|0);
       if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
       if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
+      if (typeof d.rg  === 'number') $dbgRg.value  = String(d.rg|0);
     } catch {}
   });
 
