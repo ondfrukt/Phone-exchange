@@ -75,8 +75,9 @@ To handle the logics in the exchange system, all lines has a current status whis
 | operator      | Connected to operator                 | ➖       | ❌    | ➖    | ❌   |
 
 ### Status flow chart ###
-The flowchart below shows how the statuses change based on the behavior of the phone hooks or when status timers expire.
-
+The flowchart below shows how the statuses change based on the behavior of the phone hooks or when status timers expire. This part is largely inspired by [GadgetReboot](https://github.com/GadgetReboot)
+ and his repository “Retro Phone”. Many thanks to him!
+ 
   <a href="https://raw.githubusercontent.com/ondfrukt/phone-exchange/main/docs/StatusflowChart.drawio.svg">
     <img src="docs/StatusflowChart.drawio.svg" width="800" alt="Diagram (SVG)">
   </a>
