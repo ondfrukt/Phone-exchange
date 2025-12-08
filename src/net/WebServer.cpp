@@ -1,10 +1,11 @@
 #include "WebServer.h"
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
+#include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
-WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi ,uint16_t port)
-: settings_ (settings), lm_(lineManager), wifi_(wifi), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator* ringGenerator, uint16_t port)
+: settings_ (settings), lm_(lineManager), ringGenerator_(ringGenerator), wifi_(wifi), server_(port) {}
 
 bool WebServer::begin() {
 
@@ -323,6 +324,169 @@ void WebServer::setupApiRoutes_() {
       self->restartDevice_();
       vTaskDelete(nullptr);
     }, "restartTask", 2048, this, 1, nullptr);
+  });
+
+  // Ring test: POST /api/ring/test (body: line=3)
+  server_.on("/api/ring/test", HTTP_POST, [this](AsyncWebServerRequest* req){
+    if (!ringGenerator_) {
+      req->send(500, "application/json", "{\"error\":\"ring generator not available\"}");
+      return;
+    }
+
+    int line = -1;
+    if (req->hasParam("line")) {
+      line = req->getParam("line")->value().toInt();
+    } else if (req->hasParam("line", true)) {
+      line = req->getParam("line", true)->value().toInt();
+    }
+
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    if (!settings_.isLineActive(line)) {
+      req->send(400, "application/json", "{\"error\":\"line not active\"}");
+      return;
+    }
+
+    ringGenerator_->generateRingSignal(line);
+    req->send(200, "application/json", "{\"ok\":true}");
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Ring test started on line %d\n", line);
+      util::UIConsole::log("Ring test started on line " + String(line), "WebServer");
+    }
+  });
+
+  // Stop ring: POST /api/ring/stop
+  server_.on("/api/ring/stop", HTTP_POST, [this](AsyncWebServerRequest* req){
+    if (!ringGenerator_) {
+      req->send(500, "application/json", "{\"error\":\"ring generator not available\"}");
+      return;
+    }
+
+    ringGenerator_->stopRinging();
+    req->send(200, "application/json", "{\"ok\":true}");
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Ring stopped");
+      util::UIConsole::log("Ring stopped", "WebServer");
+    }
+  });
+
+  // Get ring settings: GET /api/settings/ring
+  server_.on("/api/settings/ring", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"ringLengthMs\":" + String(settings_.ringLengthMs) + ",";
+    json += "\"ringPauseMs\":" + String(settings_.ringPauseMs) + ",";
+    json += "\"ringIterations\":" + String(settings_.ringIterations);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+
+  // Set ring settings: POST /api/settings/ring
+  server_.on("/api/settings/ring", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    int ringLength = getParam("ringLengthMs");
+    int ringPause = getParam("ringPauseMs");
+    int ringIter = getParam("ringIterations");
+
+    bool updated = false;
+    if (ringLength >= 100 && ringLength <= 10000) {
+      settings_.ringLengthMs = ringLength;
+      updated = true;
+    }
+    if (ringPause >= 100 && ringPause <= 10000) {
+      settings_.ringPauseMs = ringPause;
+      updated = true;
+    }
+    if (ringIter >= 1 && ringIter <= 10) {
+      settings_.ringIterations = ringIter;
+      updated = true;
+    }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: Ring settings updated");
+        util::UIConsole::log("Ring settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
+  });
+
+  // Get timer settings: GET /api/settings/timers
+  server_.on("/api/settings/timers", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"timer_Ready\":" + String(settings_.timer_Ready) + ",";
+    json += "\"timer_Dialing\":" + String(settings_.timer_Dialing) + ",";
+    json += "\"timer_Ringing\":" + String(settings_.timer_Ringing) + ",";
+    json += "\"timer_pulsDialing\":" + String(settings_.timer_pulsDialing) + ",";
+    json += "\"timer_toneDialing\":" + String(settings_.timer_toneDialing) + ",";
+    json += "\"timer_fail\":" + String(settings_.timer_fail) + ",";
+    json += "\"timer_disconnected\":" + String(settings_.timer_disconnected) + ",";
+    json += "\"timer_timeout\":" + String(settings_.timer_timeout) + ",";
+    json += "\"timer_busy\":" + String(settings_.timer_busy);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+
+  // Set timer settings: POST /api/settings/timers
+  server_.on("/api/settings/timers", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    bool updated = false;
+    int val;
+
+    val = getParam("timer_Ready");
+    if (val >= 1000 && val <= 600000) { settings_.timer_Ready = val; updated = true; }
+
+    val = getParam("timer_Dialing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_Dialing = val; updated = true; }
+
+    val = getParam("timer_Ringing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_Ringing = val; updated = true; }
+
+    val = getParam("timer_pulsDialing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_pulsDialing = val; updated = true; }
+
+    val = getParam("timer_toneDialing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_toneDialing = val; updated = true; }
+
+    val = getParam("timer_fail");
+    if (val >= 1000 && val <= 120000) { settings_.timer_fail = val; updated = true; }
+
+    val = getParam("timer_disconnected");
+    if (val >= 1000 && val <= 120000) { settings_.timer_disconnected = val; updated = true; }
+
+    val = getParam("timer_timeout");
+    if (val >= 1000 && val <= 120000) { settings_.timer_timeout = val; updated = true; }
+
+    val = getParam("timer_busy");
+    if (val >= 1000 && val <= 120000) { settings_.timer_busy = val; updated = true; }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: Timer settings updated");
+        util::UIConsole::log("Timer settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
   });
 
   // Statisk filserver

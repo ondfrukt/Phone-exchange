@@ -15,7 +15,7 @@ App::App()
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
     ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
-    webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
+    webServer_(Settings::instance(), lineManager_, wifiClient_, &ringGenerator_, 80),
     functionButton_(mcpDriver_) {}
 
 void App::begin() {
