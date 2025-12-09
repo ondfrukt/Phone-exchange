@@ -170,6 +170,9 @@ void ToneReader::update() {
       } else { // Falling edge
         if (lineManager_.lastLineReady >= 0) {
           lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
+        } else if (settings_.debugTRLevel >= 1) {
+          Serial.println(F("ToneReader: Falling edge - no valid lastLineReady to set timer"));
+          util::UIConsole::log("Falling edge - no valid lastLineReady to set timer", "ToneReader");
         }
         
         if (settings_.debugTRLevel >= 1) {
