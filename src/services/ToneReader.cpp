@@ -65,6 +65,14 @@ void ToneReader::update() {
         unsigned long now = millis();
         uint8_t nibble = 0;
         
+        // Only process DTMF if we have a valid lastLineReady
+        if (lineManager_.lastLineReady < 0) {
+          if (settings_.debugTRLevel >= 1) {
+            Serial.println(F("ToneReader: Ignoring DTMF - no valid lastLineReady"));
+            util::UIConsole::log("Ignoring DTMF - no valid lastLineReady", "ToneReader");
+          }
+          return;
+        }
         
         if (readDtmfNibble(nibble)) {
           
@@ -134,14 +142,15 @@ void ToneReader::update() {
                   util::UIConsole::log("WARNING - No lastLineReady available", "ToneReader");
                   }
                 }
-                if (settings_.debugTRLevel >= 1) {
+            } else {
+              if (settings_.debugTRLevel >= 1) {
                 Serial.print(F("ToneReader: WARNING - Decoded character is NULL (invalid nibble=0x"));
                 Serial.print(nibble, HEX);
                 Serial.println(F(")"));
                 util::UIConsole::log("WARNING - Decoded character is NULL (invalid nibble=0x" + 
                           String(nibble, HEX) + ")", "ToneReader");
-                }
               }
+            }
           } else if (settings_.debugTRLevel >= 1) {
             Serial.print(F("ToneReader: Duplicate ignored (debouncing) nibble=0x"));
             Serial.print(nibble, HEX);
@@ -159,7 +168,12 @@ void ToneReader::update() {
           }
         }
       } else { // Falling edge
-        lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
+        if (lineManager_.lastLineReady >= 0) {
+          lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
+        } else if (settings_.debugTRLevel >= 1) {
+          Serial.println(F("ToneReader: Falling edge - no valid lastLineReady to set timer"));
+          util::UIConsole::log("Falling edge - no valid lastLineReady to set timer", "ToneReader");
+        }
         
         if (settings_.debugTRLevel >= 1) {
           Serial.println(F("ToneReader: Falling edge detected (STD went LOW)"));

@@ -59,6 +59,10 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   if (newStatus == LineStatus::Idle) {
     lines[index].lineIdle();
     linesNotIdle &= ~(1 << index);          // Clear the bit for this line
+    // Reset lastLineReady if this was the line that was last ready
+    if (lastLineReady == index) {
+      lastLineReady = -1;
+    }
   }
   else if (newStatus == LineStatus::Ready) {
     lastLineReady = index;                   // Update the most recent Ready line
