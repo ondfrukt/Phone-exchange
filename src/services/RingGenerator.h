@@ -20,12 +20,12 @@ class RingGenerator {
 
     // Ringing state machine
     enum class RingState {
-      Idle,
-      RingSignal,  // Generating ring signal (FR toggling)
+      RingIdle,
+      RingToggling ,  // Generating ring signal (FR toggling)
       RingPause    // Pause between rings
     };
 
-    RingState state_ = RingState::Idle;
+    RingState state_ = RingState::RingIdle;
     uint8_t activeLineNumber_ = 0;
     uint32_t currentIteration_ = 0;
     unsigned long stateStartTime_ = 0;

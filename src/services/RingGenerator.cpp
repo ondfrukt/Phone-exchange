@@ -11,10 +11,18 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
     return;
   }
 
+  if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Idle) {
+    if (settings_.debugRGLevel >= 1) {
+      Serial.println("[RingGenerator] Line " + String(lineNumber) + " is not Idle");
+    }
+    return;
+  }
+
+
   // Start ringing for the specified line
   activeLineNumber_ = lineNumber;
   currentIteration_ = 0;
-  state_ = RingState::RingSignal;
+  state_ = RingState::RingToggling;
   stateStartTime_ = millis();
   lastFRToggleTime_ = millis();
   frPinState_ = false;
@@ -33,7 +41,7 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
 }
 
 void RingGenerator::stopRinging() {
-  if (state_ == RingState::Idle) {
+  if (state_ == RingState::RingIdle) {
     return;
   }
 
@@ -47,7 +55,7 @@ void RingGenerator::stopRinging() {
   mcpDriver_.digitalWriteMCP(mcpAddr, frPin, LOW);
   mcpDriver_.digitalWriteMCP(mcpAddr, rmPin, LOW);
 
-  state_ = RingState::Idle;
+  state_ = RingState::RingIdle;
 
   if (settings_.debugRGLevel >= 1) {
     Serial.println("[RingGenerator] Stopped ringing for line " + String(activeLineNumber_));
@@ -55,7 +63,7 @@ void RingGenerator::stopRinging() {
 }
 
 void RingGenerator::update() {
-  if (state_ == RingState::Idle) {
+  if (state_ == RingState::RingIdle) {
     return;
   }
 
@@ -64,12 +72,16 @@ void RingGenerator::update() {
   uint8_t frPin = cfg::mcp::FR_PINS[activeLineNumber_];
 
   switch (state_) {
-    case RingState::RingSignal: {
+    case RingState::RingToggling: {
       // Toggle FR pin at 20 Hz (50ms period: 25ms HIGH, 25ms LOW)
       if (currentTime - lastFRToggleTime_ >= 25) {
         frPinState_ = !frPinState_;
         mcpDriver_.digitalWriteMCP(mcpAddr, frPin, frPinState_);
         lastFRToggleTime_ = currentTime;
+        if (settings_.debugRGLevel >= 2) {
+          Serial.println("toggling FR pin to " + String(frPinState_) + " on Line " + String(activeLineNumber_));
+          
+        }
       }
 
       // Check if ring signal duration has elapsed
@@ -103,7 +115,7 @@ void RingGenerator::update() {
       // Check if pause duration has elapsed
       if (currentTime - stateStartTime_ >= settings_.ringPauseMs) {
         // Start next ring signal
-        state_ = RingState::RingSignal;
+        state_ = RingState::RingToggling;
         stateStartTime_ = currentTime;
         lastFRToggleTime_ = currentTime;
         frPinState_ = false;
@@ -115,7 +127,7 @@ void RingGenerator::update() {
       break;
     }
 
-    case RingState::Idle:
+    case RingState::RingIdle:
       // Nothing to do
       break;
   }

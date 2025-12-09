@@ -4,7 +4,7 @@
   --ok:#16a34a; --no:#ef4444;
 
   /* Badge width används för att räkna ut telefonfältets maxbredd */
-  --badge-w: 72px;
+  --badge-w: 150px;
 
   /* --- PHONE INPUT WIDTH --- 
      Justera värdet nedan om du vill ändra den fasta bredden på telefon-inputen.
