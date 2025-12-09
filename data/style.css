@@ -119,8 +119,8 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   white-space: nowrap;
 }
 
-.row > .k { max-width:160px; }       /* namn-kolumn */
-.row > .v { max-width:140px; }       /* status-kolumn */
+.row > .k { max-width: 200px; }       /* namn-kolumn */
+.row > .v { max-width: 140px; }       /* status-kolumn */
 
 /* Telefon-editor (tredje kolumn) */
 .phone-editor{
