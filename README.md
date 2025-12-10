@@ -21,10 +21,10 @@ This is a learning project and my personal introduction to programming, Arduino,
 ### Typical behaviour for all call ###
 
 A typical procedure of the system will be as shown below.
-- A hook is lifted, and the status of the line changes from "idle" to "ready."
+- A hook is lifted, the status of the line changes from "idle" to "ready" and a continuous tone can be heard in the phone hook.
 - A phone number is dialed using pulse dialing or DTMF tones, and the digits are captured by the microcontroller.
-- Ring pulses are generated for the dialed line. Once the hook is picked up, the audio lines are connected between the two lines and the conversation can begin
-- Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends
+- Ring pulses are generated to the dialed line and once the hook is picked up, the audio lines are connected between the two lines and the conversation can begin.
+- Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends.
 
 ## Hardware ##
 <p align="center">
