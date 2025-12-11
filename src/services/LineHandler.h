@@ -34,12 +34,6 @@ public:
     // Timer variables
     unsigned long lineTimerEnd;          // End time for the line timer
 
-    // Ring timing variables (used by RingGenerator)
-    uint32_t ringCurrentIteration;       // Current ring iteration count
-    unsigned long ringStateStartTime;    // When the current ring state started
-    unsigned long ringLastFRToggleTime;  // Last time FR pin was toggled
-    bool ringFRPinState;                 // Current state of FR pin during ringing
-
     LineHandler(int line);
     void lineIdle();
     
