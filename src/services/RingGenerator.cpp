@@ -3,6 +3,39 @@
 RingGenerator::RingGenerator(MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager)
     : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
+RingGenerator::RingState RingGenerator::getRingState(uint8_t lineNumber) const {
+  // Check the linesRinging bitmask in LineManager to determine if the line is ringing
+  auto& line = lineManager_.getLine(lineNumber);
+  
+  bool isRinging = (lineManager_.linesRinging & (1 << lineNumber)) != 0;
+  if (!isRinging) {
+    return RingState::RingIdle;
+  }
+  
+  // If ringing, check the timing state in LineHandler to determine the current phase
+  // We're either toggling (generating signal) or paused (between ring bursts)
+  unsigned long elapsed = millis() - line.ringStateStartTime;
+  if (elapsed < settings_.ringLengthMs) {
+    return RingState::RingToggling;
+  } else {
+    return RingState::RingPause;
+  }
+}
+
+void RingGenerator::setRingState(uint8_t lineNumber, RingState state) {
+  auto& line = lineManager_.getLine(lineNumber);
+  
+  if (state == RingState::RingIdle) {
+    // Clear the ringing bit
+    lineManager_.linesRinging &= ~(1 << lineNumber);
+    line.ringStateStartTime = 0;
+  } else {
+    // Set the ringing bit
+    lineManager_.linesRinging |= (1 << lineNumber);
+    // Note: ringStateStartTime should be set by the caller when entering a new state
+  }
+}
+
 void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
     if (settings_.debugRGLevel >= 1) {
@@ -19,12 +52,14 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   }
 
   // Start ringing for the specified line
-  auto& lineState = lineStates_[lineNumber];
-  lineState.currentIteration = 0;
-  lineState.state = RingState::RingToggling;
-  lineState.stateStartTime = millis();
-  lineState.lastFRToggleTime = millis();
-  lineState.frPinState = false;
+  auto& line = lineManager_.getLine(lineNumber);
+  line.ringCurrentIteration = 0;
+  line.ringStateStartTime = millis();
+  line.ringLastFRToggleTime = millis();
+  line.ringFRPinState = false;
+  
+  // Set the ringing bit in LineManager
+  setRingState(lineNumber, RingState::RingToggling);
 
   // Determine which MCP address to use for this line
   uint8_t mcpAddr = (lineNumber < 4) ? cfg::mcp::MCP_SLIC1_ADDRESS : cfg::mcp::MCP_SLIC2_ADDRESS;
@@ -51,8 +86,8 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
     return;
   }
 
-  auto& lineState = lineStates_[lineNumber];
-  if (lineState.state == RingState::RingIdle) {
+  RingState state = getRingState(lineNumber);
+  if (state == RingState::RingIdle) {
     return;
   }
 
@@ -66,7 +101,7 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
   mcpDriver_.digitalWriteMCP(mcpAddr, frPin, LOW);
   mcpDriver_.digitalWriteMCP(mcpAddr, rmPin, LOW);
 
-  lineState.state = RingState::RingIdle;
+  setRingState(lineNumber, RingState::RingIdle);
 
   if (settings_.debugRGLevel >= 1) {
     Serial.println("[RingGenerator] Stopped ringing for line " + String(lineNumber));
@@ -76,20 +111,26 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
 void RingGenerator::update() {
   unsigned long currentTime = millis();
 
-  // Process each line independently
+  // Process each line independently using the linesRinging bitmask
   for (uint8_t lineNumber = 0; lineNumber < cfg::mcp::SHK_LINE_COUNT; lineNumber++) {
-    auto& lineState = lineStates_[lineNumber];
-
-    if (lineState.state == RingState::RingIdle) {
+    // Skip lines that are not ringing
+    if ((lineManager_.linesRinging & (1 << lineNumber)) == 0) {
       continue;
     }
 
-    // Check if the line status has changed from Idle (e.g., phone picked up)
-    // If so, stop ringing this line immediately
-    if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Idle) {
+    auto& line = lineManager_.getLine(lineNumber);
+    RingState state = getRingState(lineNumber);
+
+    if (state == RingState::RingIdle) {
+      continue;
+    }
+
+    // Check if the phone has been picked up (hook status changed to Off)
+    // Only stop ringing if the physical hook is off, not just status changes
+    if (line.currentHookStatus == model::HookStatus::Off) {
       if (settings_.debugRGLevel >= 1) {
         Serial.println("[RingGenerator] Line " + String(lineNumber) + 
-                      " status changed from Idle, stopping ring");
+                      " phone picked up (hook off), stopping ring");
       }
       stopRingingLine(lineNumber);
       continue;
@@ -98,27 +139,27 @@ void RingGenerator::update() {
     uint8_t mcpAddr = (lineNumber < 4) ? cfg::mcp::MCP_SLIC1_ADDRESS : cfg::mcp::MCP_SLIC2_ADDRESS;
     uint8_t frPin = cfg::mcp::FR_PINS[lineNumber];
 
-    switch (lineState.state) {
+    switch (state) {
       case RingState::RingToggling: {
         // Toggle FR pin at 20 Hz (50ms period: 25ms HIGH, 25ms LOW)
-        if (currentTime - lineState.lastFRToggleTime >= 25) {
-          lineState.frPinState = !lineState.frPinState;
-          mcpDriver_.digitalWriteMCP(mcpAddr, frPin, lineState.frPinState);
-          lineState.lastFRToggleTime = currentTime;
+        if (currentTime - line.ringLastFRToggleTime >= 25) {
+          line.ringFRPinState = !line.ringFRPinState;
+          mcpDriver_.digitalWriteMCP(mcpAddr, frPin, line.ringFRPinState);
+          line.ringLastFRToggleTime = currentTime;
           if (settings_.debugRGLevel >= 2) {
-            Serial.println("toggling FR pin to " + String(lineState.frPinState) + " on Line " + String(lineNumber));
+            Serial.println("toggling FR pin to " + String(line.ringFRPinState) + " on Line " + String(lineNumber));
           }
         }
 
         // Check if ring signal duration has elapsed
-        if (currentTime - lineState.stateStartTime >= settings_.ringLengthMs) {
+        if (currentTime - line.ringStateStartTime >= settings_.ringLengthMs) {
           // Stop FR pin toggling, set it LOW
           mcpDriver_.digitalWriteMCP(mcpAddr, frPin, LOW);
-          lineState.frPinState = false;
+          line.ringFRPinState = false;
 
-          lineState.currentIteration++;
+          line.ringCurrentIteration++;
           
-          if (lineState.currentIteration >= settings_.ringIterations) {
+          if (line.ringCurrentIteration >= settings_.ringIterations) {
             // All iterations complete, stop ringing this line
             stopRingingLine(lineNumber);
             if (settings_.debugRGLevel >= 2) {
@@ -127,11 +168,10 @@ void RingGenerator::update() {
             }
           } else {
             // Move to pause state
-            lineState.state = RingState::RingPause;
-            lineState.stateStartTime = currentTime;
+            line.ringStateStartTime = currentTime;
             if (settings_.debugRGLevel >= 2) {
               Serial.println("[RingGenerator] Line " + String(lineNumber) + 
-                           " ring iteration " + String(lineState.currentIteration) + 
+                           " ring iteration " + String(line.ringCurrentIteration) + 
                            " complete, pausing for " + String(settings_.ringPauseMs) + "ms");
             }
           }
@@ -141,16 +181,15 @@ void RingGenerator::update() {
 
       case RingState::RingPause: {
         // Check if pause duration has elapsed
-        if (currentTime - lineState.stateStartTime >= settings_.ringPauseMs) {
+        if (currentTime - line.ringStateStartTime >= settings_.ringPauseMs) {
           // Start next ring signal
-          lineState.state = RingState::RingToggling;
-          lineState.stateStartTime = currentTime;
-          lineState.lastFRToggleTime = currentTime;
-          lineState.frPinState = false;
+          line.ringStateStartTime = currentTime;
+          line.ringLastFRToggleTime = currentTime;
+          line.ringFRPinState = false;
           
           if (settings_.debugRGLevel >= 2) {
             Serial.println("[RingGenerator] Line " + String(lineNumber) + 
-                         " starting ring iteration " + String(lineState.currentIteration + 1));
+                         " starting ring iteration " + String(line.ringCurrentIteration + 1));
           }
         }
         break;

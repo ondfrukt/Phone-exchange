@@ -26,14 +26,7 @@ class RingGenerator {
       RingPause      // Pause between rings
     };
 
-    // Per-line ringing state
-    struct LineRingState {
-      RingState state = RingState::RingIdle;
-      uint32_t currentIteration = 0;
-      unsigned long stateStartTime = 0;
-      unsigned long lastFRToggleTime = 0;
-      bool frPinState = false; // Current state of FR pin
-    };
-
-    LineRingState lineStates_[cfg::mcp::SHK_LINE_COUNT]; // State for each line
+    // Helper methods to get/set ring state from LineHandler and LineManager
+    RingState getRingState(uint8_t lineNumber) const;
+    void setRingState(uint8_t lineNumber, RingState state);
 };
