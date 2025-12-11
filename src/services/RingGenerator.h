@@ -22,8 +22,8 @@ class RingGenerator {
     // Ringing state machine
     enum class RingState {
       RingIdle,
-      RingToggling ,  // Generating ring signal (FR toggling)
-      RingPause    // Pause between rings
+      RingToggling,  // Generating ring signal (FR toggling)
+      RingPause      // Pause between rings
     };
 
     // Per-line ringing state
