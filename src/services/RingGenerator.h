@@ -12,6 +12,7 @@ class RingGenerator {
     void update();
     void generateRingSignal(uint8_t lineNumber);
     void stopRinging();
+    void stopRingingLine(uint8_t lineNumber);
 
   private:
     MCPDriver& mcpDriver_;
@@ -25,10 +26,14 @@ class RingGenerator {
       RingPause    // Pause between rings
     };
 
-    RingState state_ = RingState::RingIdle;
-    uint8_t activeLineNumber_ = 0;
-    uint32_t currentIteration_ = 0;
-    unsigned long stateStartTime_ = 0;
-    unsigned long lastFRToggleTime_ = 0;
-    bool frPinState_ = false; // Current state of FR pin
+    // Per-line ringing state
+    struct LineRingState {
+      RingState state = RingState::RingIdle;
+      uint32_t currentIteration = 0;
+      unsigned long stateStartTime = 0;
+      unsigned long lastFRToggleTime = 0;
+      bool frPinState = false; // Current state of FR pin
+    };
+
+    LineRingState lineStates_[8]; // State for each of the 8 lines
 };
