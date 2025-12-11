@@ -17,11 +17,6 @@ LineHandler::LineHandler(int line) {
     SHK = 0;
     dialedDigits = "";
     lineTimerEnd = -1;
-    
-    ringCurrentIteration = 0;
-    ringStateStartTime = 0;
-    ringLastFRToggleTime = 0;
-    ringFRPinState = false;
 }
 
 
@@ -31,8 +26,4 @@ void LineHandler::lineIdle() {
   lineTimerEnd  = -1;
   incomingFrom    = -1;
   outgoingTo      = -1;
-  ringCurrentIteration = 0;
-  ringStateStartTime = 0;
-  ringLastFRToggleTime = 0;
-  ringFRPinState = false;
 }
