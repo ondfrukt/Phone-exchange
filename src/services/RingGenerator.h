@@ -26,7 +26,7 @@ class RingGenerator {
       RingPause      // Pause between rings
     };
 
-    // Helper to get/set ring state from LineHandler
+    // Helper methods to get/set ring state from LineHandler and LineManager
     RingState getRingState(uint8_t lineNumber) const;
     void setRingState(uint8_t lineNumber, RingState state);
 };

@@ -14,10 +14,10 @@ LineManager::LineManager(Settings& settings)
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
-  lineChangeFlag = 0;     // Intiate to zero (no changes)
-  activeTimersMask = 0;   // Intiate to zero (no active timers)
-  linesNotIdle = 0;       // Intiate to zero (all lines idle)
-  linesRinging = 0;       // Intiate to zero (no lines ringing)
+  lineChangeFlag = 0;     // Initiate to zero (no changes)
+  activeTimersMask = 0;   // Initiate to zero (no active timers)
+  linesNotIdle = 0;       // Initiate to zero (all lines idle)
+  linesRinging = 0;       // Initiate to zero (no lines ringing)
   lastLineReady = -1;     // No line is ready at start
 }
 

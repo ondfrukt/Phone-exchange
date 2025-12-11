@@ -4,18 +4,16 @@ RingGenerator::RingGenerator(MCPDriver& mcpDriver, Settings& settings, LineManag
     : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
 RingGenerator::RingState RingGenerator::getRingState(uint8_t lineNumber) const {
-  // Map the ring state stored in LineHandler
-  // We use ringStateStartTime as a marker: if it's 0, the state is Idle
+  // Check the linesRinging bitmask in LineManager to determine if the line is ringing
   auto& line = lineManager_.getLine(lineNumber);
   
-  // Check the linesRinging bitmask to determine state
   bool isRinging = (lineManager_.linesRinging & (1 << lineNumber)) != 0;
   if (!isRinging) {
     return RingState::RingIdle;
   }
   
-  // If we're in the middle of a ring cycle, we're either toggling or paused
-  // We determine this by checking if we're still within the ring length period
+  // If ringing, check the timing state in LineHandler to determine the current phase
+  // We're either toggling (generating signal) or paused (between ring bursts)
   unsigned long elapsed = millis() - line.ringStateStartTime;
   if (elapsed < settings_.ringLengthMs) {
     return RingState::RingToggling;
