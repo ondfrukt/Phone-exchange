@@ -35,5 +35,5 @@ class RingGenerator {
       bool frPinState = false; // Current state of FR pin
     };
 
-    LineRingState lineStates_[8]; // State for each of the 8 lines
+    LineRingState lineStates_[cfg::mcp::SHK_LINE_COUNT]; // State for each line
 };

@@ -4,7 +4,7 @@ RingGenerator::RingGenerator(MCPDriver& mcpDriver, Settings& settings, LineManag
     : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
 void RingGenerator::generateRingSignal(uint8_t lineNumber) {
-  if (lineNumber >= 8) {
+  if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
     if (settings_.debugRGLevel >= 1) {
       Serial.println("[RingGenerator] Invalid line number: " + String(lineNumber));
     }
@@ -41,13 +41,13 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
 
 void RingGenerator::stopRinging() {
   // Stop all ringing lines
-  for (uint8_t lineNumber = 0; lineNumber < 8; lineNumber++) {
+  for (uint8_t lineNumber = 0; lineNumber < cfg::mcp::SHK_LINE_COUNT; lineNumber++) {
     stopRingingLine(lineNumber);
   }
 }
 
 void RingGenerator::stopRingingLine(uint8_t lineNumber) {
-  if (lineNumber >= 8) {
+  if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
     return;
   }
 
@@ -77,7 +77,7 @@ void RingGenerator::update() {
   unsigned long currentTime = millis();
 
   // Process each line independently
-  for (uint8_t lineNumber = 0; lineNumber < 8; lineNumber++) {
+  for (uint8_t lineNumber = 0; lineNumber < cfg::mcp::SHK_LINE_COUNT; lineNumber++) {
     auto& lineState = lineStates_[lineNumber];
 
     if (lineState.state == RingState::RingIdle) {
