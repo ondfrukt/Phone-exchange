@@ -234,6 +234,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 void SHKService::setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs) {
   auto& line = lineManager_.getLine(index);
 
+
   model::HookStatus newHook = offHook ? model::HookStatus::Off : model::HookStatus::On;
   if (newHook != line.currentHookStatus) {
     line.currentHookStatus = newHook;

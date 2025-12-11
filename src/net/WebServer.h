@@ -30,7 +30,9 @@ private:
   RingGenerator* ringGenerator_;
   AsyncWebServer server_;
   AsyncEventSource events_{"/events"};
+  
   net::WifiClient& wifi_;
+
 
   bool serverStarted_ = false;
   bool fsMounted_ = false;

@@ -1,0 +1,6 @@
+Jag får många felmeddelanden likt denna:
+[2055072][E][AsyncEventSource.cpp:237] _queueMessage(): Event message queue overflow: discard message
+Justera köns storlek för att avhjälpa problemet. Skicka även bara event om det finns klienter anslutna
+
+
+

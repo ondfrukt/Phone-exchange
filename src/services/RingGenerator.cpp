@@ -18,7 +18,6 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
     return;
   }
 
-
   // Start ringing for the specified line
   activeLineNumber_ = lineNumber;
   currentIteration_ = 0;
