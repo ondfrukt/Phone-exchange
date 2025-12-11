@@ -17,6 +17,7 @@ LineManager::LineManager(Settings& settings)
   lineChangeFlag = 0;     // Intiate to zero (no changes)
   activeTimersMask = 0;   // Intiate to zero (no active timers)
   linesNotIdle = 0;       // Intiate to zero (all lines idle)
+  linesRinging = 0;       // Intiate to zero (no lines ringing)
   lastLineReady = -1;     // No line is ready at start
 }
 
