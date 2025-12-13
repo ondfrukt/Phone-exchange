@@ -562,25 +562,23 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
     }
   }
 
-  // ---- MT8870 STD: compare-to-DEFVAL (INTCON=1). DEFVAL synced in handleInterrupt_ ----
+  // ---- MT8870 STD: CHANGE mode (INTCON=0). Edge detection done in ToneReader ----
   {
     uint8_t p = cfg::mcp::STD; // GPB3 according to config
     Serial.print(F("Configuring MT8870 STD on pin "));
     Serial.print(p);
-    Serial.println(F(" (compare-to-DEFVAL mode)"));
+    Serial.println(F(" (CHANGE mode)"));
     util::UIConsole::log("Configuring MT8870 STD on pin " + String(p) + 
-                         " (compare-to-DEFVAL mode)", "MCPDriver");
+                         " (CHANGE mode)", "MCPDriver");
     if (p < 8) {
       gpintena |= (1u << p);
       gppua    |= (1u << p);  // håll linjen stabilt hög när MT8870 släpper STD
-      intcona  |= (1u << p);  // enable compare-to-DEFVAL
-      // DEFVALA updated dynamically by handleInterrupt_
+      intcona  &= ~(1u << p);  // CHANGE mode (disable compare-to-DEFVAL)
     } else {
       uint8_t bit = p - 8;
       gpintenb |= (1u << bit);
       gppub    |= (1u << bit); // håll linjen stabilt hög när MT8870 släpper STD
-      intconb  |= (1u << bit); // enable compare-to-DEFVAL
-      // DEFVALB updated dynamically by handleInterrupt_
+      intconb  &= ~(1u << bit); // CHANGE mode (disable compare-to-DEFVAL)
     }
   }
 
