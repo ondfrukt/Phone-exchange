@@ -43,12 +43,14 @@ void Settings::resetDefaults() {
 
   // --- Other settings ---
   burstTickMs           = 2;
-  // Hook stability filtering: Increased to filter out FR pin toggle noise during ringing.
-  // FR pin toggles every 25ms; requiring 100ms stability (4 toggle periods) and 25 consecutive
-  // readings (50ms at 2ms tick rate) ensures real hook changes are detected while filtering
-  // electrical noise from the ringing circuit.
-  hookStableMs          = 100;  // Minimum time (ms) a hook state must be stable
-  hookStableConsec      = 25;   // Minimum consecutive stable readings (at 2ms tick rate)
+  // Hook stability filtering: Context-aware filtering based on whether line is ringing.
+  // Normal conditions: 50ms is sufficient for hook state detection
+  hookStableMs          = 50;   // Minimum time (ms) a hook state must be stable (normal)
+  hookStableConsec      = 10;   // Minimum consecutive stable readings (at 2ms tick rate)
+  // During ringing: FR pin toggles every 25ms causing electrical noise on SHK pin.
+  // Requiring 150ms stability (6 toggle periods) filters noise while still detecting
+  // real hook lifts within acceptable latency for answering calls.
+  hookStableMsDuringRing = 150; // Minimum time (ms) during active ringing
   pulseGlitchMs         = 2;
   debounceMs            = 25;
   pulseLowMaxMs         = 150;
@@ -112,6 +114,7 @@ bool Settings::load() {
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
     hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
     hookStableConsec      = prefs.getUChar("hookStbCnt",           hookStableConsec);
+    hookStableMsDuringRing= prefs.getUInt ("hookStbRing",          hookStableMsDuringRing);
     pulseGlitchMs         = prefs.getUInt ("pulseGlitchMs",        pulseGlitchMs);
     pulseLowMaxMs         = prefs.getUInt ("pulseLowMaxMs",        pulseLowMaxMs);
     digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
@@ -171,6 +174,7 @@ void Settings::save() const {
   prefs.putUInt ("burstTickMs",          burstTickMs);
   prefs.putUInt ("hookStableMs",         hookStableMs);
   prefs.putUChar("hookStbCnt",           hookStableConsec);
+  prefs.putUInt ("hookStbRing",          hookStableMsDuringRing);
   prefs.putUInt ("pulseGlitchMs",        pulseGlitchMs);
   prefs.putUInt ("pulseLowMaxMs",        pulseLowMaxMs);
   prefs.putUInt ("digitGapMinMs",        digitGapMinMs);

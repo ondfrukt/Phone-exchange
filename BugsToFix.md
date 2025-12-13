@@ -13,6 +13,8 @@
 
 - **Statusändringar vid ringning** ✅ FIXED
     - När en ringsignal genereras uppstår falska SHK-pinändringar på grund av elektriskt brus från FR-pin toggling
-    - Lösning: Ökad hookStableMs från 50ms till 100ms och hookStableConsec från 2 till 25 läsningar
-    - Detta kräver att SHK-signalen är stabil i både tid (100ms) och antal på varandra följande läsningar (25 × 2ms = 50ms) innan en hook-statusändring accepteras
-    - Filtrerar brus från FR-pin toggling (25ms period) samtidigt som äkta hook-lyft detekteras inom ~100ms
+    - Lösning: Kontextmedveten filtrering med olika tröskelvärden beroende på om linjen ringer
+      - Normal drift: `hookStableMs = 50ms`, `hookStableConsec = 10` läsningar
+      - Under ringning: `hookStableMsDuringRing = 150ms` (6× FR toggle-period på 25ms)
+    - SHKService detekterar nu om en linje aktivt ringer via RingGenerator och använder strängare filtrering
+    - Filtrerar brus från FR-pin toggling samtidigt som äkta hook-lyft detekteras inom ~150ms under ringning

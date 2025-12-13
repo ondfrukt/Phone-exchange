@@ -17,7 +17,10 @@ App::App()
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
     ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, &ringGenerator_, 80),
-    functionButton_(interruptManager_) {}
+    functionButton_(interruptManager_) {
+  // Set RingGenerator reference in SHKService after construction to avoid circular dependency
+  SHKService_.setRingGenerator(&ringGenerator_);
+}
 
 void App::begin() {
     Serial.begin(115200);

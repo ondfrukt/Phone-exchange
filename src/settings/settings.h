@@ -44,8 +44,9 @@ public:
 
   // ---- Settings (adjust according to your settings class/constants) ----
   uint32_t burstTickMs;           // Time for a burst tick
-  uint32_t hookStableMs;          // Time for stable hook state
+  uint32_t hookStableMs;          // Time for stable hook state (normal conditions)
   uint8_t hookStableConsec;       // Number of consecutive stable readings for hook state
+  uint32_t hookStableMsDuringRing; // Time for stable hook state during ringing (to filter FR toggle noise)
   uint32_t pulseGlitchMs;         // Max glitch time for pulse dialing
   uint32_t pulseLowMaxMs;         // Max low time for pulse dialing
   uint32_t digitGapMinMs;         // Min gap time between digits for pulse dialing

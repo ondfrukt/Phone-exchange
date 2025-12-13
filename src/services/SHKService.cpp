@@ -1,4 +1,5 @@
 #include "SHKService.h"
+#include "RingGenerator.h"
 
 // Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
 SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings)
@@ -27,6 +28,12 @@ SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptMana
     line.currentHookStatus  = offHook ? model::HookStatus::Off : model::HookStatus::On;
   }
 }
+
+// Set RingGenerator reference (called after construction to avoid circular dependency)
+void SHKService::setRingGenerator(RingGenerator* ringGenerator) {
+  ringGenerator_ = ringGenerator;
+}
+
 
 // Notifies SHKService when MCP reports changes (bitmask per line).
 void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs) {
@@ -217,7 +224,12 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
     s.hookCandConsec++;
   }
 
-  bool timeOk   = (nowMs - s.hookCandSince) >= settings_.hookStableMs;
+  // Context-aware filtering: Use stricter threshold when line is being rung
+  // to filter out FR pin toggle noise, while maintaining responsiveness.
+  bool isRinging = (ringGenerator_ != nullptr && ringGenerator_->isLineRinging(idx));
+  uint32_t requiredStableMs = isRinging ? settings_.hookStableMsDuringRing : settings_.hookStableMs;
+  
+  bool timeOk   = (nowMs - s.hookCandSince) >= requiredStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
