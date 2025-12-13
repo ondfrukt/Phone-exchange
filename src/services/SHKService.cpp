@@ -43,7 +43,7 @@ void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs
   // caused by electrical interference from FR pin toggling
   if (ringGenerator_ != nullptr) {
     for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
-      if (ringGenerator_->isLineRinging(i)) {
+      if (ringGenerator_->isLineRinging(static_cast<uint8_t>(i))) {
         changedMask &= ~(1u << i);
       }
     }
