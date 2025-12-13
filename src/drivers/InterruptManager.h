@@ -3,6 +3,7 @@
 #include <queue>
 #include "drivers/MCPDriver.h"
 #include "settings/settings.h"
+#include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
 // InterruptManager: Centralt samlingspunkt för alla MCP-interrupts

@@ -6,12 +6,13 @@
 #include "LineManager.h"
 #include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
+#include "services/RingGenerator.h"
 #include "settings.h"
 #include "model/Types.h"
 
 class SHKService {
 public:
-  SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings);
+  SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, RingGenerator& ringGenerator);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)
   void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs, bool value);
@@ -66,6 +67,7 @@ private:
   InterruptManager& interruptManager_;
   MCPDriver&   mcpDriver_;
   Settings&    settings_;
+  RingGenerator& ringGenerator_;
 
   std::vector<PerLine> lineState_;
 

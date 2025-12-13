@@ -4,6 +4,7 @@
 #include "drivers/MCPDriver.h"
 #include "services/LineManager.h"
 #include "settings.h"
+#include "model/Types.h"
 
 
 class RingGenerator {
@@ -14,17 +15,9 @@ class RingGenerator {
     void stopRinging();
     void stopRingingLine(uint8_t lineNumber);
 
-  private:
     MCPDriver& mcpDriver_;
     Settings& settings_;
     LineManager& lineManager_;
-
-    // Ringing state machine
-    enum class RingState {
-      RingIdle,
-      RingToggling,  // Generating ring signal (FR toggling)
-      RingPause      // Pause between rings
-    };
 
     // Per-line ringing state
     struct LineRingState {

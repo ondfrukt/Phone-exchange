@@ -73,6 +73,11 @@ void LineAction::action(int index) {
   LineStatus previousStatus = line.previousLineStatus;
 
   switch (newStatus) {
+
+    if (newStatus == previousStatus) {
+      // No status change, do nothing
+      return;
+    }
     
     case LineStatus::Idle:
       turnOffToneGenIfUsed(line);

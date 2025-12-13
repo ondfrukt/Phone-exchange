@@ -6,16 +6,17 @@ App::App()
     interruptManager_(mcpDriver_, Settings::instance()),
     mt8816Driver_(mcpDriver_, Settings::instance()),
     lineManager_(Settings::instance()),
+    ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
 
     toneGenerator1_(cfg::ad9833::CS1_PIN),
     toneGenerator2_(cfg::ad9833::CS2_PIN),  
     toneGenerator3_(cfg::ad9833::CS3_PIN),
     toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
 
-    SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance()),
+    SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance(), ringGenerator_),
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
-    ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
+    
     webServer_(Settings::instance(), lineManager_, wifiClient_, &ringGenerator_, 80),
     functionButton_(interruptManager_) {}
 

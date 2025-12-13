@@ -1,8 +1,8 @@
 #include "SHKService.h"
 
 // Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
-SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings)
-: lineManager_(lineManager), interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings) {
+SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, RingGenerator& ringGenerator)
+: lineManager_(lineManager), interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), ringGenerator_(ringGenerator){
 
   // Set maximum number of physical lines.
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
@@ -79,6 +79,7 @@ bool SHKService::tick(uint32_t nowMs) {
     updatePulseDetector_(static_cast<int>(lineIndex), rawHigh, nowMs);
 
     const auto& s = lineState_[lineIndex];
+
     bool hookUnstable =
       ((settings_.hookStableConsec > 0 && s.hookCandConsec < settings_.hookStableConsec) ||
       ((nowMs - s.hookCandSince) < settings_.hookStableMs));
@@ -231,7 +232,15 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
     s.hookCandConsec++;
   }
 
-  bool timeOk   = (nowMs - s.hookCandSince) >= settings_.hookStableMs;
+  uint8_t hookStableMs;
+  if (ringGenerator_.lineStates_[idx].state == RingState::RingToggling){
+    Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
+    hookStableMs = settings_.hookStableMs * 10; // Longer stable time 
+  } else {
+    hookStableMs = settings_.hookStableMs;
+  }
+
+  bool timeOk   = (nowMs - s.hookCandSince) >= hookStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);

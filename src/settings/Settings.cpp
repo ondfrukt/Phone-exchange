@@ -103,6 +103,7 @@ bool Settings::load() {
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
     debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
     debugIMLevel          = prefs.getUChar ("debugIM",     debugIMLevel);
+  
 
     // --- Other settings ---    
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);

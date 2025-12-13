@@ -33,7 +33,6 @@ public:
     void loop();
 
     MCPDriver mcpDriver_;
-    InterruptManager interruptManager_;
     MT8816Driver mt8816Driver_;
 
 private:
@@ -46,6 +45,7 @@ private:
     ToneGenerator toneGenerator3_;
     ToneReader toneReader_;
     RingGenerator ringGenerator_;
+    InterruptManager interruptManager_;
 
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;

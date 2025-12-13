@@ -5,12 +5,12 @@ InterruptManager::InterruptManager(MCPDriver& mcpDriver, Settings& settings)
 
 // Samla in alla väntande interrupts från MCPDriver och lägg i kön
 void InterruptManager::collectInterrupts() {
-
+  uint8_t now = millis();
   // Samla in alla MCP_MAIN interrupts
   while (true) {
     IntResult r = mcpDriver_.handleMainInterrupt();
     if (!r.hasEvent) break;
-    
+
     if (eventQueue_.size() >= MAX_QUEUE_SIZE) {
       if (settings_.debugIMLevel >= 1) {
         Serial.println(F("InterruptManager: WARNING - Queue full, dropping MCP_MAIN event"));
@@ -40,6 +40,8 @@ void InterruptManager::collectInterrupts() {
     IntResult r = mcpDriver_.handleSlic1Interrupt();
     if (!r.hasEvent) break;
     
+
+
     if (eventQueue_.size() >= MAX_QUEUE_SIZE) {
       if (settings_.debugIMLevel >= 1) {
         Serial.println(F("InterruptManager: WARNING - Queue full, dropping MCP_SLIC1 event"));

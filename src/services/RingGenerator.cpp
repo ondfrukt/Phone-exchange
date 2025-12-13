@@ -25,6 +25,11 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   auto& lineState = lineStates_[lineNumber];
   lineState.currentIteration = 0;
   lineState.state = RingState::RingToggling;
+
+  if (settings_.debugRGLevel >= 2) {
+    Serial.println("RingGenerator: Line " + String(lineNumber) + " set to RingToggling");
+  }
+
   lineState.stateStartTime = millis();
   lineState.lastFRToggleTime = millis();
   lineState.frPinState = false;
