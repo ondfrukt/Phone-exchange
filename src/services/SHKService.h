@@ -16,7 +16,7 @@ class SHKService {
 public:
   SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings);
 
-  // Set reference to RingGenerator (called after construction)
+  // Set reference to RingGenerator (called after construction).
   void setRingGenerator(RingGenerator* ringGenerator);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)

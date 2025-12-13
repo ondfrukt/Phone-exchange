@@ -29,7 +29,7 @@ SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptMana
   }
 }
 
-// Set reference to RingGenerator (called after construction)
+// Set reference to RingGenerator (called after construction).
 void SHKService::setRingGenerator(RingGenerator* ringGenerator) {
   ringGenerator_ = ringGenerator;
 }
