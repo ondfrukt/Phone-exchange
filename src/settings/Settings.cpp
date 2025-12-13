@@ -43,8 +43,8 @@ void Settings::resetDefaults() {
 
   // --- Other settings ---
   burstTickMs           = 2;
-  hookStableMs          = 50;
-  hookStableConsec      = 2;
+  hookStableMs          = 100;
+  hookStableConsec      = 25;
   pulseGlitchMs         = 2;
   debounceMs            = 25;
   pulseLowMaxMs         = 150;
