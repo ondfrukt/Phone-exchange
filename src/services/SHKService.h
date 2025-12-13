@@ -52,7 +52,8 @@ private:
   uint32_t readShkMask_() const;
 
   // Logik
-  void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs);
+  void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32_t hookStableMs);
+  uint32_t getHookStableMs_(int idx) const;
   void setStableHook(int index, bool offHook, bool rawHigh, uint32_t nowMs);
   void updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs);
   bool pulseModeAllowed_(const LineHandler& line) const;

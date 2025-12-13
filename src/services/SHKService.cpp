@@ -75,14 +75,15 @@ bool SHKService::tick(uint32_t nowMs) {
     }
 
     bool rawHigh = (rawMask >> lineIndex) & 0x1U;
-    updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs);
+    uint32_t hookStableMs = getHookStableMs_(static_cast<int>(lineIndex));
+    updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs, hookStableMs);
     updatePulseDetector_(static_cast<int>(lineIndex), rawHigh, nowMs);
 
     const auto& s = lineState_[lineIndex];
 
     bool hookUnstable =
       ((settings_.hookStableConsec > 0 && s.hookCandConsec < settings_.hookStableConsec) ||
-      ((nowMs - s.hookCandSince) < settings_.hookStableMs));
+      ((nowMs - s.hookCandSince) < hookStableMs));
     bool pdActive = (s.pdState != PerLine::PDState::Idle);
 
     // Continue ticking lines that are not yet stable.
@@ -218,9 +219,17 @@ uint32_t SHKService::readShkMask_() const {
   return mask;
 }
 
+uint32_t SHKService::getHookStableMs_(int idx) const {
+  if (ringGenerator_.lineStates_[idx].state == RingState::RingToggling) {
+    Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
+    return settings_.hookStableMs * 10; // Longer stable time during ringing
+  }
+  return settings_.hookStableMs;
+}
+
 // ---------------- Hook Filter ----------------
 // Updates hook filter state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'.
-void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
+void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32_t hookStableMs) {
   auto& s = lineState_[idx];
 
   // Track candidate level and how long it has been stable.
@@ -230,14 +239,6 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
     s.hookCandConsec = 1;
   } else if (s.hookCandConsec < 255) {
     s.hookCandConsec++;
-  }
-
-  uint8_t hookStableMs;
-  if (ringGenerator_.lineStates_[idx].state == RingState::RingToggling){
-    Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
-    hookStableMs = settings_.hookStableMs * 10; // Longer stable time 
-  } else {
-    hookStableMs = settings_.hookStableMs;
   }
 
   bool timeOk   = (nowMs - s.hookCandSince) >= hookStableMs;
