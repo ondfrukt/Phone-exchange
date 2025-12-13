@@ -5,12 +5,13 @@
 #include "config.h"
 #include "LineManager.h"
 #include "drivers/InterruptManager.h"
+#include "drivers/MCPDriver.h"
 #include "settings.h"
 #include "model/Types.h"
 
 class SHKService {
 public:
-  SHKService(LineManager& lineManager, InterruptManager& interruptManager, Settings& settings);
+  SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)
   void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs);
