@@ -35,6 +35,7 @@ void Settings::resetDefaults() {
   debugMCPLevel         = 0;
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
+  debugRGLevel          = 0;
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
@@ -49,6 +50,10 @@ void Settings::resetDefaults() {
   digitGapMinMs         = 600;
   globalPulseTimeoutMs  = 500;
   highMeansOffHook      = true;
+
+  ringLengthMs          = 500;
+  ringPauseMs           = 2000;
+  ringIterations        = 2;
 
   // --- Timers ---
   timer_Ready           = 240000;
@@ -95,6 +100,7 @@ bool Settings::load() {
     debugMCPLevel         = prefs.getUChar ("debugMCP",   debugMCPLevel);
     debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
+    debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
 
     // --- Other settings ---    
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
@@ -106,6 +112,10 @@ bool Settings::load() {
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
     toneGeneratorEnabled  = prefs.getBool ("toneGenEn",            toneGeneratorEnabled);
+
+    ringLengthMs          = prefs.getUInt ("ringLengthMs",         ringLengthMs);
+    ringPauseMs           = prefs.getUInt ("ringPauseMs",          ringPauseMs);
+    ringIterations        = prefs.getUInt ("ringIterations",       ringIterations);
 
     // --- Timers ---
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
@@ -148,6 +158,7 @@ void Settings::save() const {
   prefs.putUChar ("debugMCP",   debugMCPLevel);
   prefs.putUChar ("debugI2C",   debugI2CLevel);
   prefs.putUChar ("debugTonGen", debugTonGenLevel);
+  prefs.putUChar ("debugRG",     debugRGLevel);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",          burstTickMs);
@@ -159,6 +170,11 @@ void Settings::save() const {
   prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",            highMeansOffHook);
   prefs.putBool ("toneGenEn",            toneGeneratorEnabled);
+
+  prefs.putUInt ("ringLengthMs",         ringLengthMs);
+  prefs.putUInt ("ringPauseMs",          ringPauseMs);
+  prefs.putUInt ("ringIterations",       ringIterations);
+
 
   // --- Timers ---
   prefs.putUInt ("timerReady",        timer_Ready);

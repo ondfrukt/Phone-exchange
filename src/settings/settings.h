@@ -34,6 +34,7 @@ public:
   uint8_t debugTRLevel;           // 0=none, 1=low, 2=high Debug level for TonReader service
   uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high Debug level for MCP service
   uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high Debug level for ToneGenerator
+  uint8_t debugRGLevel;           // 0=none, 1=low, 2=high Debug level for RingGenerator
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 
@@ -49,6 +50,10 @@ public:
   uint32_t digitGapMinMs;         // Min gap time between digits for pulse dialing
   uint32_t globalPulseTimeoutMs;  // Global timeout for pulse dialing
   bool highMeansOffHook;          // True if high signal means off-hook
+
+  uint32_t ringLengthMs;          // Length of ringing signal in ms
+  uint32_t ringPauseMs;           // Pause between rings in ms
+  uint32_t ringIterations;        // Iterations of ringing signal
 
   uint8_t allowMask;
 

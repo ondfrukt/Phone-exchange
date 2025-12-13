@@ -234,6 +234,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 void SHKService::setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs) {
   auto& line = lineManager_.getLine(index);
 
+
   model::HookStatus newHook = offHook ? model::HookStatus::Off : model::HookStatus::On;
   if (newHook != line.currentHookStatus) {
     line.currentHookStatus = newHook;
@@ -303,6 +304,7 @@ void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d gap=%u ms (thr=%u)\n",
                     idx, (unsigned)sinceRise, (unsigned)settings_.digitGapMinMs);
+      util::UIConsole::log("SHKService: L" + String(idx) + " gap=" + String(sinceRise) + " ms (thr=" + String(settings_.digitGapMinMs) + ")", "SHKService");
     }
     if (sinceRise >= settings_.digitGapMinMs) {
       emitDigitAndReset_(idx, rawHigh, nowMs);
@@ -336,8 +338,6 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
     return; // No pulses should start on OnHook.
   }
 
-  lineManager_.setStatus(idx, model::LineStatus::PulseDialing);
-
   auto& s = lineState_[idx];
   if (s.pdState == PerLine::PDState::Idle || s.pdState == PerLine::PDState::BetweenPulses) {
     s.pdState   = PerLine::PDState::InPulse;
@@ -370,8 +370,7 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
 
       if (s.pulseCountWork == 0 &&
           line.currentHookStatus == model::HookStatus::Off &&
-          line.currentLineStatus == model::LineStatus::Ready) {
-        lineManager_.setStatus(idx, model::LineStatus::PulseDialing);
+          line.currentLineStatus == model::LineStatus::Ready) {lineManager_.setStatus(idx, model::LineStatus::PulseDialing);
       }
       s.pulseCountWork += 1;
       s.pdState     = PerLine::PDState::BetweenPulses;
@@ -401,13 +400,12 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
 
     if (settings_.debugSHKLevel >= 1) {
       Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
-      Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
       util::UIConsole::log("Line " + String(idx) + " digit '" + String(d) + "' (pulses=" + String(s.pulseCountWork) + ")", "SHKService");
-      util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
     }
+    Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+    util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
   }
   lineManager_.setLineTimer(idx, settings_.timer_pulsDialing); // Reset inter-digit timer.
-
   resetPulseState_(idx);
   s.blockUntilMs = nowMs + 80;
   resyncFast_(idx, rawHigh, nowMs);
