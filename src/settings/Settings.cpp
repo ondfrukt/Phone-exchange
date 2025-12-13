@@ -43,8 +43,12 @@ void Settings::resetDefaults() {
 
   // --- Other settings ---
   burstTickMs           = 2;
-  hookStableMs          = 100;
-  hookStableConsec      = 25;
+  // Hook stability filtering: Increased to filter out FR pin toggle noise during ringing.
+  // FR pin toggles every 25ms; requiring 100ms stability (4 toggle periods) and 25 consecutive
+  // readings (50ms at 2ms tick rate) ensures real hook changes are detected while filtering
+  // electrical noise from the ringing circuit.
+  hookStableMs          = 100;  // Minimum time (ms) a hook state must be stable
+  hookStableConsec      = 25;   // Minimum consecutive stable readings (at 2ms tick rate)
   pulseGlitchMs         = 2;
   debounceMs            = 25;
   pulseLowMaxMs         = 150;

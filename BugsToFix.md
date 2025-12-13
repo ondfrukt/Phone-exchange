@@ -11,5 +11,8 @@
     - **Möjlig lösning:** Dela upp i flera CSS-varianter
 
 
-- **Statusändringar vid ringning**
-    - När en ringsignal genereras till linje 0. 
+- **Statusändringar vid ringning** ✅ FIXED
+    - När en ringsignal genereras uppstår falska SHK-pinändringar på grund av elektriskt brus från FR-pin toggling
+    - Lösning: Ökad hookStableMs från 50ms till 100ms och hookStableConsec från 2 till 25 läsningar
+    - Detta kräver att SHK-signalen är stabil i både tid (100ms) och antal på varandra följande läsningar (25 × 2ms = 50ms) innan en hook-statusändring accepteras
+    - Filtrerar brus från FR-pin toggling (25ms period) samtidigt som äkta hook-lyft detekteras inom ~100ms
