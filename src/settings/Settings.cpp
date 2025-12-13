@@ -36,7 +36,7 @@ void Settings::resetDefaults() {
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
   debugRGLevel          = 0;
-  debugIMLevel          = 0;
+  debugIMLevel          = 2;
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;

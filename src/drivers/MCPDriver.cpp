@@ -428,7 +428,8 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   }
 
   // Sync DEFVAL to the captured level (MAIN only; requires INTCON=1 for the pin)
-  if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
+  // BUT NOT for STD pin which uses pure CHANGE mode
+  if (addr == cfg::mcp::MCP_MAIN_ADDRESS && r.pin != cfg::mcp::STD) {
     if (r.pin < 8) {
       uint8_t defvala = 0;
       if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {

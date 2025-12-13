@@ -5,10 +5,6 @@ InterruptManager::InterruptManager(MCPDriver& mcpDriver, Settings& settings)
 
 // Samla in alla väntande interrupts från MCPDriver och lägg i kön
 void InterruptManager::collectInterrupts() {
-  if (settings_.debugIMLevel >= 2) {
-    Serial.println(F("InterruptManager: Collecting interrupts from MCPDriver"));
-    util::UIConsole::log("Collecting interrupts from MCPDriver", "InterruptManager");
-  }
 
   // Samla in alla MCP_MAIN interrupts
   while (true) {
@@ -130,13 +126,6 @@ void InterruptManager::collectInterrupts() {
                           " level=" + String(r.level ? "HIGH" : "LOW"),
                           "InterruptManager");
     }
-  }
-
-  if (settings_.debugIMLevel >= 2) {
-    Serial.print(F("InterruptManager: Queue size after collection: "));
-    Serial.println(eventQueue_.size());
-    util::UIConsole::log("Queue size after collection: " + String(eventQueue_.size()), 
-                        "InterruptManager");
   }
 }
 
