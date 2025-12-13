@@ -43,8 +43,8 @@ void Settings::resetDefaults() {
 
   // --- Other settings ---
   burstTickMs           = 2;
-  hookStableMs          = 50;
-  hookStableConsec      = 2;
+  hookStableMs          = 100;  // Increased from 50 to 100ms to filter crosstalk from 20Hz ring frequency (50ms period)
+  hookStableConsec      = 3;    // Increased from 2 to 3 for better filtering
   pulseGlitchMs         = 2;
   debounceMs            = 25;
   pulseLowMaxMs         = 150;
