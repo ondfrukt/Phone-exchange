@@ -164,7 +164,6 @@ void ToneReader::update() {
           Serial.println(F("ToneReader: Falling edge detected (STD went LOW)"));
           util::UIConsole::log("Falling edge detected (STD LOW)", "ToneReader");
         }
-      }
     }
   }
 }
