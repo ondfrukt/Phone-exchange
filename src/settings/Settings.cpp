@@ -35,7 +35,7 @@ void Settings::resetDefaults() {
   debugMCPLevel         = 0;
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
-  debugRGLevel          = 0;
+  debugRGLevel          = 2;
   debugIMLevel          = 2;
 
   toneGeneratorEnabled  = true;

@@ -33,6 +33,7 @@ class RingGenerator {
       unsigned long stateStartTime = 0;
       unsigned long lastFRToggleTime = 0;
       bool frPinState = false; // Current state of FR pin
+      bool rmPinState = false; // Current state of RM pin
     };
 
     LineRingState lineStates_[cfg::mcp::SHK_LINE_COUNT]; // State for each line

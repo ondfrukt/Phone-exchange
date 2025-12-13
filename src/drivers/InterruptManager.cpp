@@ -114,7 +114,7 @@ void InterruptManager::collectInterrupts() {
     
     eventQueue_.push(r);
     
-    if (settings_.debugIMLevel >= 2) {
+    if (settings_.debugIMLevel >= 1) {
       Serial.print(F("InterruptManager: Queued MCP_MT8816 event - addr=0x"));
       Serial.print(r.i2c_addr, HEX);
       Serial.print(F(" pin="));

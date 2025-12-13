@@ -44,6 +44,7 @@ LineHandler& LineManager::getLine(int index) {
 }
 
 void LineManager::setStatus(int index, LineStatus newStatus) {
+  // Validate index
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setStatus - ogiltigt index: ");
     Serial.println(index);
@@ -56,6 +57,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   lines[index].currentLineStatus = newStatus;
 
 
+  // Handle specific actions based on new status
   if (newStatus == LineStatus::Idle) {
     lines[index].lineIdle();
     linesNotIdle &= ~(1 << index);          // Clear the bit for this line

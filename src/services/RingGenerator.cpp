@@ -4,6 +4,8 @@ RingGenerator::RingGenerator(MCPDriver& mcpDriver, Settings& settings, LineManag
     : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
 void RingGenerator::generateRingSignal(uint8_t lineNumber) {
+  
+  // Validate line number
   if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
     if (settings_.debugRGLevel >= 1) {
       Serial.println("[RingGenerator] Invalid line number: " + String(lineNumber));
@@ -11,6 +13,7 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
     return;
   }
 
+  // Check if line is currently Idle. Only ring if Idle
   if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Idle) {
     if (settings_.debugRGLevel >= 1) {
       Serial.println("[RingGenerator] Line " + String(lineNumber) + " is not Idle");
@@ -25,17 +28,14 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   lineState.stateStartTime = millis();
   lineState.lastFRToggleTime = millis();
   lineState.frPinState = false;
+  lineState.rmPinState = false;
 
   // Determine which MCP address to use for this line
   uint8_t mcpAddr = (lineNumber < 4) ? cfg::mcp::MCP_SLIC1_ADDRESS : cfg::mcp::MCP_SLIC2_ADDRESS;
-  
-  // Set RM pin HIGH to activate ring mode
   uint8_t rmPin = cfg::mcp::RM_PINS[lineNumber];
-  mcpDriver_.digitalWriteMCP(mcpAddr, rmPin, HIGH);
-
+  
   if (settings_.debugRGLevel >= 1) {
-    Serial.println("[RingGenerator] Started ringing for line " + String(lineNumber) + 
-                   " (RM pin " + String(rmPin) + " on MCP 0x" + String(mcpAddr, HEX) + ")");
+    Serial.println("RingGenerator: Started ringing for line " + String(lineNumber));
   }
 }
 
@@ -69,7 +69,7 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
   lineState.state = RingState::RingIdle;
 
   if (settings_.debugRGLevel >= 1) {
-    Serial.println("[RingGenerator] Stopped ringing for line " + String(lineNumber));
+    Serial.println("RingGenerator: Stopped ringing for line " + String(lineNumber));
   }
 }
 
@@ -88,7 +88,7 @@ void RingGenerator::update() {
     // If so, stop ringing this line immediately
     if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Idle) {
       if (settings_.debugRGLevel >= 1) {
-        Serial.println("[RingGenerator] Line " + String(lineNumber) + 
+        Serial.println("RingGenerator: Line " + String(lineNumber) + 
                       " status changed from Idle, stopping ring");
       }
       stopRingingLine(lineNumber);
@@ -100,13 +100,20 @@ void RingGenerator::update() {
 
     switch (lineState.state) {
       case RingState::RingToggling: {
+
+        // Set RM pin HIGH to activate ring mode
+        if (!lineState.rmPinState) {
+          mcpDriver_.digitalWriteMCP(mcpAddr, cfg::mcp::RM_PINS[lineNumber], HIGH);
+          lineState.rmPinState = true;
+        }
+
         // Toggle FR pin at 20 Hz (50ms period: 25ms HIGH, 25ms LOW)
         if (currentTime - lineState.lastFRToggleTime >= 25) {
           lineState.frPinState = !lineState.frPinState;
           mcpDriver_.digitalWriteMCP(mcpAddr, frPin, lineState.frPinState);
           lineState.lastFRToggleTime = currentTime;
           if (settings_.debugRGLevel >= 2) {
-            Serial.println("toggling FR pin to " + String(lineState.frPinState) + " on Line " + String(lineNumber));
+            Serial.println("RingGenerator: Toggling FR pin to " + String(lineState.frPinState) + " on Line " + String(lineNumber));
           }
         }
 
@@ -122,7 +129,7 @@ void RingGenerator::update() {
             // All iterations complete, stop ringing this line
             stopRingingLine(lineNumber);
             if (settings_.debugRGLevel >= 2) {
-              Serial.println("[RingGenerator] Line " + String(lineNumber) + 
+              Serial.println("RingGenerator: Line " + String(lineNumber) + 
                            " completed all " + String(settings_.ringIterations) + " ring iterations");
             }
           } else {
@@ -130,7 +137,7 @@ void RingGenerator::update() {
             lineState.state = RingState::RingPause;
             lineState.stateStartTime = currentTime;
             if (settings_.debugRGLevel >= 2) {
-              Serial.println("[RingGenerator] Line " + String(lineNumber) + 
+              Serial.println("RingGenerator: Line " + String(lineNumber) + 
                            " ring iteration " + String(lineState.currentIteration) + 
                            " complete, pausing for " + String(settings_.ringPauseMs) + "ms");
             }
@@ -147,9 +154,10 @@ void RingGenerator::update() {
           lineState.stateStartTime = currentTime;
           lineState.lastFRToggleTime = currentTime;
           lineState.frPinState = false;
-          
+          lineState.rmPinState = false;
+
           if (settings_.debugRGLevel >= 2) {
-            Serial.println("[RingGenerator] Line " + String(lineNumber) + 
+            Serial.println("RingGenerator: Line " + String(lineNumber) + 
                          " starting ring iteration " + String(lineState.currentIteration + 1));
           }
         }
