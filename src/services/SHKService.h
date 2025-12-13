@@ -16,7 +16,8 @@ class SHKService {
 public:
   SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings);
 
-  // Set RingGenerator reference (called after construction)
+  // Set RingGenerator reference (called after construction to avoid circular dependency).
+  // Must be called before SHKService.update() is used to enable context-aware filtering.
   void setRingGenerator(RingGenerator* ringGenerator);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)

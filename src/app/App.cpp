@@ -18,7 +18,9 @@ App::App()
     ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
     webServer_(Settings::instance(), lineManager_, wifiClient_, &ringGenerator_, 80),
     functionButton_(interruptManager_) {
-  // Set RingGenerator reference in SHKService after construction to avoid circular dependency
+  // Wire RingGenerator to SHKService after construction to avoid circular dependency.
+  // This enables context-aware hook filtering based on whether a line is actively ringing.
+  // Must be called before App::begin() which starts calling SHKService::update().
   SHKService_.setRingGenerator(&ringGenerator_);
 }
 

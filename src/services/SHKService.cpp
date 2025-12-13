@@ -226,6 +226,8 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
 
   // Context-aware filtering: Use stricter threshold when line is being rung
   // to filter out FR pin toggle noise, while maintaining responsiveness.
+  // Note: ringGenerator_ may be null during early initialization before App constructor completes.
+  // In that case, we safely fall back to normal (non-ringing) threshold.
   bool isRinging = (ringGenerator_ != nullptr && ringGenerator_->isLineRinging(idx));
   uint32_t requiredStableMs = isRinging ? settings_.hookStableMsDuringRing : settings_.hookStableMs;
   
