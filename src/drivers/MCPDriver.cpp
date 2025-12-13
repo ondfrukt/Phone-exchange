@@ -288,20 +288,6 @@ void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg) {
 // Handle interrupts for MCP_MAIN
 IntResult MCPDriver::handleMainInterrupt()   {
   if (!haveMain_) return {};
-  
-  // Debug: Report interrupt counter periodically (only if debug is enabled)
-  static unsigned long lastDebugTime = 0;
-  auto& settings = Settings::instance();
-  if (settings.debugMCPLevel >= 1) {
-    unsigned long now = millis();
-    if (now - lastDebugTime >= 5000) {
-      Serial.print(F("MCP_MAIN: Total interrupts fired: "));
-      Serial.println(mainIntCounter_);
-      util::UIConsole::log("Total interrupts fired: " + String(mainIntCounter_), "MCPDriver");
-      lastDebugTime = now;
-    }
-  }
-  
   return handleInterrupt_(mainIntFlag_,   mcpMain_,   mcp::MCP_MAIN_ADDRESS);
 }
 // Handle interrupts for MCP_SLIC1

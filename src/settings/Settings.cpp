@@ -26,15 +26,15 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 0;
-  debugLmLevel          = 0;
+  debugSHKLevel         = 2;
+  debugLmLevel          = 2;
   debugWSLevel          = 0;
-  debugLALevel          = 0;
+  debugLALevel          = 2;
   debugMTLevel          = 0;
-  debugTRLevel          = 0;
-  debugMCPLevel         = 0;
-  debugI2CLevel         = 0;
-  debugTonGenLevel      = 0;
+  debugTRLevel          = 2;
+  debugMCPLevel         = 2;
+  debugI2CLevel         = 2;
+  debugTonGenLevel      = 2;
   debugRGLevel          = 2;
   debugIMLevel          = 2;
 
@@ -44,7 +44,7 @@ void Settings::resetDefaults() {
   // --- Other settings ---
   burstTickMs           = 2;
   hookStableMs          = 50;
-  hookStableConsec      = 2;
+  hookStableConsec      = 10;
   pulseGlitchMs         = 2;
   debounceMs            = 25;
   pulseLowMaxMs         = 150;

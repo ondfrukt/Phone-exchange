@@ -14,7 +14,7 @@ public:
   SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)
-  void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs);
+  void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs, bool value);
 
   // Anropa från app.loop()
   bool needsTick(uint32_t nowMs) const;
@@ -52,7 +52,7 @@ private:
 
   // Logik
   void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs);
-  void setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs);
+  void setStableHook(int index, bool offHook, bool rawHigh, uint32_t nowMs);
   void updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs);
   bool pulseModeAllowed_(const LineHandler& line) const;
   void pulseFalling_(int idx, uint32_t nowMs);

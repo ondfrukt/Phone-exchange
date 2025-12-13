@@ -12,4 +12,7 @@
 
 
 - **Statusändringar vid ringning**
-    - När en ringsignal genereras till linje 0. 
+    - När en ringsignal genereras till linje 0.
+
+- **Krachar när webserverDebug ändras**
+    - När debugnivån på webserver ändras krachar espn och startar om

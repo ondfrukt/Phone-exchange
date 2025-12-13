@@ -84,10 +84,8 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
   if (settings_.debugLmLevel >= 0) {
-    Serial.print("LineManager: Line ");
-    Serial.print(index);
-    Serial.print(" status changed to ");
-    Serial.println(model::toString(newStatus));
+
+    Serial.println("[INFO]LineManager: Line " + String(index) + " status changed to " + model::toString(newStatus));
     util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
   }
 }
