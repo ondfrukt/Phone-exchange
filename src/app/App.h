@@ -2,7 +2,7 @@
 #include "config.h"
 #include <Wire.h>
 #include "drivers/MCPDriver.h"
-#include "drivers/MCPDriver.h"
+#include "drivers/InterruptManager.h"
 #include "drivers/MT8816Driver.h"
 
 #include "services/LineHandler.h"
@@ -33,6 +33,7 @@ public:
     void loop();
 
     MCPDriver mcpDriver_;
+    InterruptManager interruptManager_;
     MT8816Driver mt8816Driver_;
 
 private:

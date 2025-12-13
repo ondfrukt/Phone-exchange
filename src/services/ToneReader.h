@@ -1,16 +1,18 @@
 #pragma once
 #include <Arduino.h>
 #include "config.h"
+#include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
 #include "services/LineManager.h"
 #include "settings.h"
 
 class ToneReader {
   public:
-    ToneReader(MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager);
+    ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager);
     void update();
 
   private:
+    InterruptManager& interruptManager_;
     MCPDriver& mcpDriver_;
     Settings& settings_;
     LineManager& lineManager_;
