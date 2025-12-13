@@ -425,6 +425,48 @@ void WebServer::setupApiRoutes_() {
     }
   });
 
+  // Get SHK/ring-detection settings: GET /api/settings/shk
+  server_.on("/api/settings/shk", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"burstTickMs\":" + String(settings_.burstTickMs) + ",";
+    json += "\"hookStableMs\":" + String(settings_.hookStableMs) + ",";
+    json += "\"hookStableConsec\":" + String(settings_.hookStableConsec);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+
+  // Set SHK/ring-detection settings: POST /api/settings/shk
+  server_.on("/api/settings/shk", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    bool updated = false;
+    int val;
+
+    val = getParam("burstTickMs");
+    if (val >= 1 && val <= 100) { settings_.burstTickMs = (uint32_t)val; updated = true; }
+
+    val = getParam("hookStableMs");
+    if (val >= 10 && val <= 2000) { settings_.hookStableMs = (uint32_t)val; updated = true; }
+
+    val = getParam("hookStableConsec");
+    if (val >= 0 && val <= 100) { settings_.hookStableConsec = (uint8_t)val; updated = true; }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: SHK settings updated");
+        util::UIConsole::log("SHK settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
+  });
+
   // Get timer settings: GET /api/settings/timers
   server_.on("/api/settings/timers", HTTP_GET, [this](AsyncWebServerRequest* req){
     String json = "{";

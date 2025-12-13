@@ -190,6 +190,43 @@
       </div>
     </section>
 
+    <!-- SHK/Ring Detection Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Hook Detection & Burst</h2>
+      <p class="description">Tune SHK sampling during ringing/off-hook detection</p>
+
+      <div class="row">
+        <span class="k">Burst Tick (ms)</span>
+        <span class="v">
+          <input type="number" id="burst-tick-ms" class="form-input" min="1" max="100" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Hook Stable Time (ms)</span>
+        <span class="v">
+          <input type="number" id="hook-stable-ms" class="form-input" min="10" max="2000" step="10" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Hook Stable Consec</span>
+        <span class="v">
+          <input type="number" id="hook-stable-consec" class="form-input" min="0" max="100" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="shk-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update SHK Settings
+        </button>
+        <div id="shk-settings-status" class="status"></div>
+      </div>
+    </section>
+
     <!-- Timer Settings Section -->
     <section class="card">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Timer Settings</h2>
