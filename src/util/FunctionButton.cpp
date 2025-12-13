@@ -10,8 +10,8 @@ void FunctionButton::update() {
     static uint32_t pressedAtMs  = 0;
     static uint32_t lastEvtMs    = 0;
 
-    auto r = mcpDriver_.handleMainInterrupt();
-    if (r.hasEvent && r.pin == cfg::mcp::FUNCTION_BUTTON) {
+    auto r = interruptManager_.pollEvent(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::FUNCTION_BUTTON);
+    if (r.hasEvent) {
         uint32_t now = millis();
         if (now - lastEvtMs < 20) return;
         lastEvtMs = now;

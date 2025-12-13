@@ -1,8 +1,8 @@
 #include "SHKService.h"
 
-// Constructor: Initializes SHKService with references to LineManager, MCPDriver, and Settings.
-SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings& settings)
-: lineManager_(lineManager), mcpDriver_(mcpDriver), settings_(settings) {
+// Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
+SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings)
+: lineManager_(lineManager), interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings) {
 
   // Set maximum number of physical lines.
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
@@ -95,17 +95,22 @@ bool SHKService::tick(uint32_t nowMs) {
 
 // Handles interrupts and triggers line change notifications.
 void SHKService::update() {
-  for (int i = 0; i < 16; ++i) {
-    IntResult r = mcpDriver_.handleSlic1Interrupt();
-    if (r.hasEvent && r.line < 8) {
+  // Poll all SLIC1 events
+  while (true) {
+    IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC1_ADDRESS);
+    if (!r.hasEvent) break;
+    if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis());
       yield();
     }
   }
-  for (int i = 0; i < 16; ++i) {
-    IntResult r = mcpDriver_.handleSlic2Interrupt();
-    if (r.hasEvent && r.line < 8) {
+  
+  // Poll all SLIC2 events
+  while (true) {
+    IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC2_ADDRESS);
+    if (!r.hasEvent) break;
+    if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis());
       yield();
