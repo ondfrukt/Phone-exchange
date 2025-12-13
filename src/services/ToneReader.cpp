@@ -5,11 +5,8 @@ ToneReader::ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver,
 
 void ToneReader::update() {
 
-  // Debug: Check STD pin state and print only on change
-  static bool lastDebugStdLevel = false;
-  static bool firstCheck = true;
-  bool stdLevel = false;
-  // Note: Direct pin reading removed - we now rely on interrupt events
+  // Note: We now rely on interrupt-driven events from InterruptManager
+  // instead of direct GPIO polling for more reliable edge detection
   
   // Hantera MAIN-interrupts (bl.a. MT8870 STD). Töm alla väntande events.
   while (true) {

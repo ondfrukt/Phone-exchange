@@ -95,24 +95,25 @@ bool SHKService::tick(uint32_t nowMs) {
 
 // Handles interrupts and triggers line change notifications.
 void SHKService::update() {
-  for (int i = 0; i < 16; ++i) {
+  // Poll all SLIC1 events
+  while (true) {
     IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC1_ADDRESS);
-    if (r.hasEvent && r.line < 8) {
+    if (!r.hasEvent) break;
+    if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis());
       yield();
-    } else {
-      break; // No more events for SLIC1
     }
   }
-  for (int i = 0; i < 16; ++i) {
+  
+  // Poll all SLIC2 events
+  while (true) {
     IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC2_ADDRESS);
-    if (r.hasEvent && r.line < 8) {
+    if (!r.hasEvent) break;
+    if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis());
       yield();
-    } else {
-      break; // No more events for SLIC2
     }
   }
 

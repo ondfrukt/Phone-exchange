@@ -141,6 +141,9 @@ void InterruptManager::collectInterrupts() {
 }
 
 // Polla nästa händelse för en specifik MCP-adress och pin
+// Note: This implementation has O(n) complexity but is acceptable for small queue sizes
+// and the expected low interrupt rate (typically < 100 events/sec).
+// Events are requeued if they don't match, which may alter ordering slightly.
 IntResult InterruptManager::pollEvent(uint8_t i2c_addr, uint8_t pin) {
   if (eventQueue_.empty()) {
     return IntResult{}; // Tom händelse
