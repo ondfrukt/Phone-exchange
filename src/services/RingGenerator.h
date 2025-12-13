@@ -13,6 +13,7 @@ class RingGenerator {
     void generateRingSignal(uint8_t lineNumber);
     void stopRinging();
     void stopRingingLine(uint8_t lineNumber);
+    bool isLineRinging(uint8_t lineNumber) const;
 
   private:
     MCPDriver& mcpDriver_;

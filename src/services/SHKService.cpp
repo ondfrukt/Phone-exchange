@@ -1,4 +1,5 @@
 #include "SHKService.h"
+#include "RingGenerator.h"
 
 // Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
 SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings)
@@ -28,10 +29,26 @@ SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptMana
   }
 }
 
+// Set reference to RingGenerator (called after construction)
+void SHKService::setRingGenerator(RingGenerator* ringGenerator) {
+  ringGenerator_ = ringGenerator;
+}
+
 // Notifies SHKService when MCP reports changes (bitmask per line).
 void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs) {
   uint32_t allowMask = settings_.activeLinesMask & settings_.allowMask;
   changedMask &= allowMask;
+  
+  // Filter out lines that are currently ringing to avoid false hook detections
+  // caused by electrical interference from FR pin toggling
+  if (ringGenerator_ != nullptr) {
+    for (std::size_t i = 0; i < maxPhysicalLines_; ++i) {
+      if (ringGenerator_->isLineRinging(i)) {
+        changedMask &= ~(1u << i);
+      }
+    }
+  }
+  
   if (!changedMask) return;
 
   activeMask_ |= changedMask;

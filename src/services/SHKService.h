@@ -9,9 +9,15 @@
 #include "settings.h"
 #include "model/Types.h"
 
+// Forward declaration
+class RingGenerator;
+
 class SHKService {
 public:
   SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings);
+
+  // Set reference to RingGenerator (called after construction)
+  void setRingGenerator(RingGenerator* ringGenerator);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)
   void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs);
@@ -66,6 +72,7 @@ private:
   InterruptManager& interruptManager_;
   MCPDriver&   mcpDriver_;
   Settings&    settings_;
+  RingGenerator* ringGenerator_ = nullptr;
 
   std::vector<PerLine> lineState_;
 

@@ -73,6 +73,13 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
   }
 }
 
+bool RingGenerator::isLineRinging(uint8_t lineNumber) const {
+  if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
+    return false;
+  }
+  return lineStates_[lineNumber].state != RingState::RingIdle;
+}
+
 void RingGenerator::update() {
   unsigned long currentTime = millis();
 

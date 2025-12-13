@@ -46,6 +46,9 @@ void App::begin() {
     lineManager_.begin();
     settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
     
+    // Set RingGenerator reference in SHKService to filter out ringing lines
+    SHKService_.setRingGenerator(&ringGenerator_);
+    
     toneGenerator1_.begin();
     toneGenerator2_.begin();
     toneGenerator3_.begin();
