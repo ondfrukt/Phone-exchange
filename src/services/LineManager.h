@@ -2,16 +2,15 @@
 #include <functional>
 #include "settings/settings.h"
 #include "model/Types.h"
+#include "services/ToneReader.h"
 #include "util/UIConsole.h"
 #include "LineHandler.h"
-
-class ToneReader;
 
 class LineManager {
 public:
   LineManager(Settings& settings);
   void begin();
-  void setToneReader(ToneReader* toneReader) { toneReader_ = toneReader; };
+  void setToneReader(ToneReader* toneReader){ toneReader_ = toneReader; };
   void syncLineActive(size_t i);
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);

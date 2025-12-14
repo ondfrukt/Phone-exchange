@@ -5,22 +5,20 @@ App::App()
   : mcpDriver_(),
     interruptManager_(mcpDriver_, Settings::instance()),
     mt8816Driver_(mcpDriver_, Settings::instance()),
+    lineManager_(Settings::instance(), &toneReader_),
+    ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
 
     toneGenerator1_(cfg::ad9833::CS1_PIN),
-    toneGenerator2_(cfg::ad9833::CS2_PIN),
+    toneGenerator2_(cfg::ad9833::CS2_PIN),  
     toneGenerator3_(cfg::ad9833::CS3_PIN),
-
-    lineManager_(Settings::instance()),
     toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
-    ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
+
     SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance(), ringGenerator_),
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_, toneReader_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
-
+    
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
-    functionButton_(interruptManager_) {
-    lineManager_.setToneReader(&toneReader_);
-}
+    functionButton_(interruptManager_) {}
 
 void App::begin() {
     Serial.begin(115200);
