@@ -1,4 +1,5 @@
 #include "services/ToneReader.h"
+#include "services/LineManager.h"
 
 ToneReader::ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager)
   : interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}

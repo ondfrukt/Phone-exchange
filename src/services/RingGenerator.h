@@ -2,10 +2,10 @@
 #include <Arduino.h>
 #include "config.h"
 #include "drivers/MCPDriver.h"
-#include "services/LineManager.h"
 #include "settings.h"
 #include "model/Types.h"
 
+class LineManager;
 
 class RingGenerator {
   public:
