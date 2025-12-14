@@ -680,7 +680,6 @@ void WebServer::sendFullStatusSse() {
     const String json = buildStatusJson_();
     events_.send(json.c_str(), nullptr, millis());
 
-    Serial.println(settings_.debugWSLevel);
     if (settings_.debugWSLevel >= 1) {
       Serial.println("WebServer: Full status skickad via SSE");
       util::UIConsole::log("Full status sent via SSE", "WebServer");
