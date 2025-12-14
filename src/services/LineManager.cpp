@@ -87,17 +87,12 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   } 
 
   lineChangeFlag |= (1 << index);           // Set the change flag for the specified line
-  
-  if (settings_.debugLmLevel >= 1){
-    Serial.println("LineManager: Callback function called");
-    util::UIConsole::log("LineManager: Callback function called", "LineManager");
-  }
 
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
   if (settings_.debugLmLevel >= 0) {
 
-    Serial.println("[INFO]LineManager: Line " + String(index) + " status changed to " + model::toString(newStatus));
+    Serial.println("LineManager: Line " + String(index) + " status changed to " + model::toString(newStatus));
     util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
   }
 }

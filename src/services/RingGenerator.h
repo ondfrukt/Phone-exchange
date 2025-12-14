@@ -21,7 +21,7 @@ class RingGenerator {
 
     // Per-line ringing state
     struct LineRingState {
-      RingState state = RingState::RingIdle;
+      model::RingState state = model::RingState::RingIdle;
       uint32_t currentIteration = 0;
       unsigned long stateStartTime = 0;
       unsigned long lastFRToggleTime = 0;

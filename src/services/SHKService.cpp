@@ -220,7 +220,7 @@ uint32_t SHKService::readShkMask_() const {
 }
 
 uint32_t SHKService::getHookStableMs_(int idx) const {
-  if (ringGenerator_.lineStates_[idx].state == RingState::RingToggling) {
+  if (ringGenerator_.lineStates_[idx].state == model::RingState::RingToggling) {
     Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
     return settings_.hookStableMs * 10; // Longer stable time during ringing
   }

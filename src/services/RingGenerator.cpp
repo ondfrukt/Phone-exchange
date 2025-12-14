@@ -15,9 +15,9 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   }
 
   // Check if line is currently Idle. Only ring if Idle
-  if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Idle) {
+  if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Incoming) {
     if (settings_.debugRGLevel >= 1) {
-      Serial.println("[RingGenerator] Line " + String(lineNumber) + " is not Idle");
+      Serial.println("[RingGenerator] Line " + String(lineNumber) + " is not Incoming");
     }
     return;
   }
@@ -25,7 +25,7 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   // Start ringing for the specified line
   auto& lineState = lineStates_[lineNumber];
   lineState.currentIteration = 0;
-  lineState.state = RingState::RingToggling;
+  lineState.state = model::RingState::RingToggling;
 
   if (settings_.debugRGLevel >= 2) {
     Serial.println("RingGenerator: Line " + String(lineNumber) + " set to RingToggling");
@@ -58,7 +58,7 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
   }
 
   auto& lineState = lineStates_[lineNumber];
-  if (lineState.state == RingState::RingIdle) {
+  if (lineState.state == model::RingState::RingIdle) {
     return;
   }
 
@@ -72,7 +72,7 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
   mcpDriver_.digitalWriteMCP(mcpAddr, frPin, LOW);
   mcpDriver_.digitalWriteMCP(mcpAddr, rmPin, LOW);
 
-  lineState.state = RingState::RingIdle;
+  lineState.state = model::RingState::RingIdle;
 
   if (settings_.debugRGLevel >= 1) {
     Serial.println("RingGenerator: Stopped ringing for line " + String(lineNumber));
@@ -86,16 +86,16 @@ void RingGenerator::update() {
   for (uint8_t lineNumber = 0; lineNumber < cfg::mcp::SHK_LINE_COUNT; lineNumber++) {
     auto& lineState = lineStates_[lineNumber];
 
-    if (lineState.state == RingState::RingIdle) {
+    if (lineState.state == model::RingState::RingIdle) {
       continue;
     }
 
     // Check if the line status has changed from Idle (e.g., phone picked up)
     // If so, stop ringing this line immediately
-    if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Idle) {
+    if (lineManager_.getLine(lineNumber).currentLineStatus != model::LineStatus::Incoming) {
       if (settings_.debugRGLevel >= 1) {
         Serial.println("RingGenerator: Line " + String(lineNumber) + 
-                      " status changed from Idle, stopping ring");
+                      " status changed from Incoming, stopping ring");
       }
       stopRingingLine(lineNumber);
       continue;
@@ -105,7 +105,7 @@ void RingGenerator::update() {
     uint8_t frPin = cfg::mcp::FR_PINS[lineNumber];
 
     switch (lineState.state) {
-      case RingState::RingToggling: {
+      case model::RingState::RingToggling: {
 
         // Set RM pin HIGH to activate ring mode
         if (!lineState.rmPinState) {
@@ -140,7 +140,7 @@ void RingGenerator::update() {
             }
           } else {
             // Move to pause state
-            lineState.state = RingState::RingPause;
+            lineState.state = model::RingState::RingPause;
             lineState.stateStartTime = currentTime;
             if (settings_.debugRGLevel >= 2) {
               Serial.println("RingGenerator: Line " + String(lineNumber) + 
@@ -152,11 +152,11 @@ void RingGenerator::update() {
         break;
       }
 
-      case RingState::RingPause: {
+      case model::RingState::RingPause: {
         // Check if pause duration has elapsed
         if (currentTime - lineState.stateStartTime >= settings_.ringPauseMs) {
           // Start next ring signal
-          lineState.state = RingState::RingToggling;
+          lineState.state = model::RingState::RingToggling;
           lineState.stateStartTime = currentTime;
           lineState.lastFRToggleTime = currentTime;
           lineState.frPinState = false;
@@ -170,7 +170,7 @@ void RingGenerator::update() {
         break;
       }
 
-      case RingState::RingIdle:
+      case model::RingState::RingIdle:
         // Nothing to do
         break;
     }
