@@ -33,19 +33,20 @@ public:
     void loop();
 
     MCPDriver mcpDriver_;
+    InterruptManager interruptManager_;
     MT8816Driver mt8816Driver_;
 
 private:
-    
-    LineManager lineManager_;
-    SHKService SHKService_;
-    LineAction lineAction_;
+
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;
     ToneGenerator toneGenerator3_;
+
+    LineManager lineManager_;
     ToneReader toneReader_;
     RingGenerator ringGenerator_;
-    InterruptManager interruptManager_;
+    SHKService SHKService_;
+    LineAction lineAction_;
 
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
