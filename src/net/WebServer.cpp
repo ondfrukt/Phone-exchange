@@ -4,8 +4,8 @@
 #include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
-WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator* ringGenerator, uint16_t port)
-: settings_ (settings), lm_(lineManager), ringGenerator_(ringGenerator), wifi_(wifi), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
+: settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), server_(port) {}
 
 bool WebServer::begin() {
 
@@ -79,29 +79,29 @@ void WebServer::setupCallbacks_() {
 }
 
 void WebServer::setupLineManagerCallback_() {
-  lm_.setStatusChangedCallback([this](int index, LineStatus status){
+  lineManager_.setStatusChangedCallback([this](int index, LineStatus status){
     String json = "{\"line\":" + String(index) +
                   ",\"status\":\"" + model::toString(status) + "\"}";
     events_.send(json.c_str(), "lineStatus", millis());
   });
 }
 
+
+// API routes. Routes which provide JSON data or accept commands.
 void WebServer::setupApiRoutes_() {
-  // Health check
+
+  // Simple health check endpoint
   server_.on("/health", HTTP_GET, [](AsyncWebServerRequest *req){
     req->send(200, "text/plain", "ok");
   });
-
   // Full status som JSON
   server_.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildStatusJson_());
   });
-
   // Aktiva linjer som JSON
   server_.on("/api/active", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
-
   // Toggle: POST /api/active/toggle  (body: line=3)
   server_.on("/api/active/toggle", HTTP_POST, [this](AsyncWebServerRequest* req){
     int line = -1;
@@ -122,7 +122,6 @@ void WebServer::setupApiRoutes_() {
     toggleLineActiveBit_(line);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
-
   // Set: POST /api/active/set  (body: line=3&active=1)
   server_.on("/api/active/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     int line = -1, active = -1;
@@ -148,7 +147,7 @@ void WebServer::setupApiRoutes_() {
     setLineActiveBit_(line, active != 0);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
-
+  // Set phone number: POST /api/line/phone  (body: line=3&phone=123456789)
   server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
     const AsyncWebParameter* lineParam = nullptr;
     const AsyncWebParameter* phoneParam = nullptr;
@@ -210,7 +209,7 @@ void WebServer::setupApiRoutes_() {
       }
     }
 
-    lm_.setPhoneNumber(line, value);
+    lineManager_.setPhoneNumber(line, value);
     settings_.save();
 
     sendFullStatusSse();
@@ -222,11 +221,11 @@ void WebServer::setupApiRoutes_() {
 
     req->send(200, "application/json", "{\"ok\":true}");
   });
-
+  // Debug nivåer: GET /api/debug , POST /api/debug/set
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
   });
-
+  // Set debug nivåer: POST /api/debug/set  (body: shk=1&lm=2&ws=0&la=1&mt=2&tr=0&tg=1&rg=2)
   server_.on("/api/debug/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getOptUChar = [req](const char* k, int& out) {
       out = -1;
@@ -275,11 +274,11 @@ void WebServer::setupApiRoutes_() {
     // Svara med aktuella nivåer
     req->send(200, "application/json", buildDebugJson_());
   });
-
+  // Tone generator: GET /api/tone-generator , POST /api/tone-generator/set
   server_.on("/api/tone-generator", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildToneGeneratorJson_());
   });
-
+  // Set tone generator: POST /api/tone-generator/set  (body: enabled=1)
   server_.on("/api/tone-generator/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     int enabled = -1;
 
@@ -297,7 +296,7 @@ void WebServer::setupApiRoutes_() {
     sendToneGeneratorSse();
     req->send(200, "application/json", buildToneGeneratorJson_());
   });
-
+  // Enhetsinfo: GET /api/info
   server_.on("/api/info", HTTP_GET, [this](AsyncWebServerRequest* req){
     String hn = wifi_.getHostname();
     if (hn.isEmpty()) hn = "phoneexchange";
@@ -313,7 +312,6 @@ void WebServer::setupApiRoutes_() {
 
     req->send(200, "application/json", json);
   });
-
   // Restart: POST /api/restart
   server_.on("/api/restart", HTTP_POST, [this](AsyncWebServerRequest* req){
     // Svara först, sedan schemalägg omstart så HTTP-svaret hinner ut
@@ -327,13 +325,8 @@ void WebServer::setupApiRoutes_() {
       vTaskDelete(nullptr);
     }, "restartTask", 2048, this, 1, nullptr);
   });
-
   // Ring test: POST /api/ring/test (body: line=3)
   server_.on("/api/ring/test", HTTP_POST, [this](AsyncWebServerRequest* req){
-    if (!ringGenerator_) {
-      req->send(500, "application/json", "{\"error\":\"ring generator not available\"}");
-      return;
-    }
 
     int line = -1;
     if (req->hasParam("line")) {
@@ -352,7 +345,7 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
-    ringGenerator_->generateRingSignal(line);
+    lineManager_.setStatus(line, LineStatus::Incoming);
     req->send(200, "application/json", "{\"ok\":true}");
 
     if (settings_.debugWSLevel >= 1) {
@@ -360,15 +353,27 @@ void WebServer::setupApiRoutes_() {
       util::UIConsole::log("Ring test started on line " + String(line), "WebServer");
     }
   });
-
   // Stop ring: POST /api/ring/stop
   server_.on("/api/ring/stop", HTTP_POST, [this](AsyncWebServerRequest* req){
-    if (!ringGenerator_) {
-      req->send(500, "application/json", "{\"error\":\"ring generator not available\"}");
+
+    int line = -1;
+    if (req->hasParam("line")) {
+      line = req->getParam("line")->value().toInt();
+    } else if (req->hasParam("line", true)) {
+      line = req->getParam("line", true)->value().toInt();
+    }
+
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
       return;
     }
 
-    ringGenerator_->stopRinging();
+    if (!settings_.isLineActive(line)) {
+      req->send(400, "application/json", "{\"error\":\"line not active\"}");
+      return;
+    }
+
+    lineManager_.setStatus(line, LineStatus::Idle);
     req->send(200, "application/json", "{\"ok\":true}");
 
     if (settings_.debugWSLevel >= 1) {
@@ -376,7 +381,6 @@ void WebServer::setupApiRoutes_() {
       util::UIConsole::log("Ring stopped", "WebServer");
     }
   });
-
   // Get ring settings: GET /api/settings/ring
   server_.on("/api/settings/ring", HTTP_GET, [this](AsyncWebServerRequest* req){
     String json = "{";
@@ -386,7 +390,6 @@ void WebServer::setupApiRoutes_() {
     json += "}";
     req->send(200, "application/json", json);
   });
-
   // Set ring settings: POST /api/settings/ring
   server_.on("/api/settings/ring", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getParam = [req](const char* key) -> int {
@@ -424,7 +427,6 @@ void WebServer::setupApiRoutes_() {
       req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
     }
   });
-
   // Get SHK/ring-detection settings: GET /api/settings/shk
   server_.on("/api/settings/shk", HTTP_GET, [this](AsyncWebServerRequest* req){
     String json = "{";
@@ -434,7 +436,6 @@ void WebServer::setupApiRoutes_() {
     json += "}";
     req->send(200, "application/json", json);
   });
-
   // Set SHK/ring-detection settings: POST /api/settings/shk
   server_.on("/api/settings/shk", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getParam = [req](const char* key) -> int {
@@ -466,7 +467,6 @@ void WebServer::setupApiRoutes_() {
       req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
     }
   });
-
   // Get timer settings: GET /api/settings/timers
   server_.on("/api/settings/timers", HTTP_GET, [this](AsyncWebServerRequest* req){
     String json = "{";
@@ -482,7 +482,6 @@ void WebServer::setupApiRoutes_() {
     json += "}";
     req->send(200, "application/json", json);
   });
-
   // Set timer settings: POST /api/settings/timers
   server_.on("/api/settings/timers", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getParam = [req](const char* key) -> int {
@@ -564,7 +563,7 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   //settings_.save();
 
   // Spegla in masken i LineManager direkt (så UI och logik följer med)
-  lm_.syncLineActive(line);
+  lineManager_.syncLineActive(line);
 
   // Skicka ut ny mask till alla via SSE
   sendActiveMaskSse();
@@ -607,7 +606,7 @@ void WebServer::restartDevice_() {
 // --- Help functions ---
 
 String WebServer::buildStatusJson_() const {
-  return net::buildLinesStatusJson(lm_);
+  return net::buildLinesStatusJson(lineManager_);
 }
 
 String WebServer::buildActiveJson_(uint8_t mask) {

@@ -179,6 +179,7 @@ void LineAction::action(int index) {
     
     case LineStatus::Connected:
       turnOffToneGenIfUsed(line);
+      ringGenerator_.stopRingingLine(index); // Stop ringing if active
 
     //   mqttHandler.publishMQTT(line, line_connected);
     //   // Setting for the calling line
@@ -220,6 +221,7 @@ void LineAction::action(int index) {
     // mqttHandler.publishMQTT(line, line_abandoned);
     // break;
     case LineStatus::Incoming:
+      ringGenerator_.generateRingSignal(index);
     //   mqttHandler.publishMQTT(line, line_incoming);
     //   break;
     case LineStatus::Operator:

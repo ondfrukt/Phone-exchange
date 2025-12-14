@@ -17,7 +17,7 @@ App::App()
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
     
-    webServer_(Settings::instance(), lineManager_, wifiClient_, &ringGenerator_, 80),
+    webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
     functionButton_(interruptManager_) {}
 
 void App::begin() {
