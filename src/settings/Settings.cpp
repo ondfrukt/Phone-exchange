@@ -121,15 +121,15 @@ bool Settings::load() {
     ringIterations        = prefs.getUInt ("ringIterations",       ringIterations);
 
     // --- Timers ---
-    timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
-    timer_Dialing         = prefs.getUInt ("timerDialing",      timer_Dialing);
-    timer_Ringing         = prefs.getUInt ("timerRinging",      timer_Ringing);
-    timer_pulsDialing     = prefs.getUInt ("timerPulsDialing",  timer_pulsDialing);
-    timer_toneDialing     = prefs.getUInt ("timerToneDialing",  timer_toneDialing);
-    timer_fail            = prefs.getUInt ("timerFail",         timer_fail);
-    timer_disconnected    = prefs.getUInt ("timerDisconnected", timer_disconnected);
-    timer_timeout         = prefs.getUInt ("timerTimeout",      timer_timeout);
-    timer_busy            = prefs.getUInt ("timerBusy",         timer_busy);
+    timer_Ready           = prefs.getUInt ("tmReady",        timer_Ready);
+    timer_Dialing         = prefs.getUInt ("tmDialing",      timer_Dialing);
+    timer_Ringing         = prefs.getUInt ("tmRinging",      timer_Ringing);
+    timer_pulsDialing     = prefs.getUInt ("tmPulseDial",    timer_pulsDialing);
+    timer_toneDialing     = prefs.getUInt ("tmToneDial",     timer_toneDialing);
+    timer_fail            = prefs.getUInt ("tmFail",         timer_fail);
+    timer_disconnected    = prefs.getUInt ("tmDisconnect",   timer_disconnected);
+    timer_timeout         = prefs.getUInt ("tmTimeout",      timer_timeout);
+    timer_busy            = prefs.getUInt ("tmBusy",         timer_busy);
 
     // --- Phone numbers ---
     for (int i = 0; i < 8; ++i) {
@@ -181,15 +181,15 @@ void Settings::save() const {
 
 
   // --- Timers ---
-  prefs.putUInt ("timerReady",        timer_Ready);
-  prefs.putUInt ("timerDialing",      timer_Dialing);
-  prefs.putUInt ("timerRinging",      timer_Ringing);
-  prefs.putUInt ("timerPulsDialing",  timer_pulsDialing);
-  prefs.putUInt ("timerToneDialing",  timer_toneDialing);
-  prefs.putUInt ("timerFail",         timer_fail);
-  prefs.putUInt ("timerDisconnected", timer_disconnected);
-  prefs.putUInt ("timerTimeout",      timer_timeout);
-  prefs.putUInt ("timerBusy",         timer_busy);
+  prefs.putUInt ("tmReady",        timer_Ready);
+  prefs.putUInt ("tmDialing",      timer_Dialing);
+  prefs.putUInt ("tmRinging",      timer_Ringing);
+  prefs.putUInt ("tmPulseDial",    timer_pulsDialing);
+  prefs.putUInt ("tmToneDial",     timer_toneDialing);
+  prefs.putUInt ("tmFail",         timer_fail);
+  prefs.putUInt ("tmDisconnect",   timer_disconnected);
+  prefs.putUInt ("tmTimeout",      timer_timeout);
+  prefs.putUInt ("tmBusy",         timer_busy);
 
   // --- Phone numbers ---
   for (int i = 0; i < 8; ++i) {
