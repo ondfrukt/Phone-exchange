@@ -3,6 +3,27 @@
 ToneReader::ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager)
   : interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
 
+
+void ToneReader::activate()
+{ 
+  if (settings_.debugTRLevel >= 1) {
+    Serial.println(F("ToneReader: Activating MT8870 power"));
+    util::UIConsole::log("ToneReader: Activating MT8870 power", "ToneReader");
+  }
+  isActive = true;
+  mcpDriver_.digitalWriteMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::PWDN_MT8870 , false);
+}
+
+void ToneReader::deactivate()
+{
+  if (settings_.debugTRLevel >= 1) {
+    Serial.println(F("ToneReader: Deactivating MT8870 power"));
+    util::UIConsole::log("ToneReader: Deactivating MT8870 power", "ToneReader");
+  }
+  isActive = false;
+  mcpDriver_.digitalWriteMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::PWDN_MT8870 , true);
+}
+
 void ToneReader::update() {
 
   // Note: We now rely on interrupt-driven events from InterruptManager

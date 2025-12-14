@@ -10,6 +10,9 @@ class ToneReader {
   public:
     ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager);
     void update();
+    void activate();
+    void deactivate();
+    bool isActive;
 
   private:
     InterruptManager& interruptManager_;

@@ -1,5 +1,6 @@
 #include "LineManager.h"
 #include <Arduino.h>
+#include "services/ToneReader.h"
 #include <vector>
 
 LineManager::LineManager(Settings& settings)
@@ -60,15 +61,26 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   // Handle specific actions based on new status
   if (newStatus == LineStatus::Idle) {
     lines[index].lineIdle();
+
     linesNotIdle &= ~(1 << index);          // Clear the bit for this line
     // Reset lastLineReady if this was the line that was last ready
     if (lastLineReady == index) {
       lastLineReady = -1;
     }
+    if (linesNotIdle == 0) {
+      toneReader_->deactivate();
+    }
+
   }
   else if (newStatus == LineStatus::Ready) {
     lastLineReady = index;                   // Update the most recent Ready line
     linesNotIdle |= (1 << index);            // Set the bit for this line
+    
+    // Activate MT8870 if not already active
+    if (!toneReader_->isActive) {
+      toneReader_->activate();
+    }
+
   }
   else {
     linesNotIdle |= (1 << index);           // Set the bit for this line

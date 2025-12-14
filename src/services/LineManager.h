@@ -2,6 +2,7 @@
 #include <functional>
 #include "settings/settings.h"
 #include "model/Types.h"
+#include "services/ToneReader.h"
 #include "util/UIConsole.h"
 #include "LineHandler.h"
 
@@ -9,6 +10,7 @@ class LineManager {
 public:
   LineManager(Settings& settings);
   void begin();
+  void setToneReader(ToneReader* toneReader){ toneReader_ = toneReader; };
   void syncLineActive(size_t i);
   void setStatus(int index, LineStatus newStatus);
   void clearChangeFlag(int index);
@@ -37,6 +39,7 @@ private:
   std::vector<LineHandler> lines;
 
   Settings& settings_;
+  ToneReader* toneReader_ = nullptr;
   StatusChangedCallback pushStatusChanged_{nullptr};
 
 };

@@ -5,7 +5,7 @@ App::App()
   : mcpDriver_(),
     interruptManager_(mcpDriver_, Settings::instance()),
     mt8816Driver_(mcpDriver_, Settings::instance()),
-    lineManager_(Settings::instance()),
+    lineManager_(Settings::instance(), &toneReader_),
     ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
 
     toneGenerator1_(cfg::ad9833::CS1_PIN),
@@ -14,7 +14,7 @@ App::App()
     toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
 
     SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance(), ringGenerator_),
-    lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_,
+    lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_, toneReader_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
     
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
