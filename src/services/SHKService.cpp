@@ -1,8 +1,8 @@
 #include "SHKService.h"
 
-// Constructor: Initializes SHKService with references to LineManager, MCPDriver, and Settings.
-SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings& settings)
-: lineManager_(lineManager), mcpDriver_(mcpDriver), settings_(settings) {
+// Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
+SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, RingGenerator& ringGenerator)
+: lineManager_(lineManager), interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), ringGenerator_(ringGenerator){
 
   // Set maximum number of physical lines.
   maxPhysicalLines_ = cfg::mcp::SHK_LINE_COUNT;
@@ -29,10 +29,15 @@ SHKService::SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings&
 }
 
 // Notifies SHKService when MCP reports changes (bitmask per line).
-void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs) {
+void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs, bool value) {
   uint32_t allowMask = settings_.activeLinesMask & settings_.allowMask;
   changedMask &= allowMask;
   if (!changedMask) return;
+
+  if (settings_.debugSHKLevel >= 2) {
+    Serial.printf("SHKService: notifyLinesPossiblyChanged mask=0x%X at %u ms, value=%d\n", changedMask, nowMs, value);
+    util::UIConsole::log("notifyLinesPossiblyChanged mask=0x" + String(changedMask, HEX) + " at " + String(nowMs) + " ms", "SHKService");
+  }
 
   activeMask_ |= changedMask;
   burstActive_ = true;
@@ -70,22 +75,33 @@ bool SHKService::tick(uint32_t nowMs) {
     }
 
     bool rawHigh = (rawMask >> lineIndex) & 0x1U;
-    updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs);
+    uint32_t hookStableMs = getHookStableMs_(static_cast<int>(lineIndex));
+    updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs, hookStableMs);
     updatePulseDetector_(static_cast<int>(lineIndex), rawHigh, nowMs);
 
     const auto& s = lineState_[lineIndex];
+
     bool hookUnstable =
       ((settings_.hookStableConsec > 0 && s.hookCandConsec < settings_.hookStableConsec) ||
-      ((nowMs - s.hookCandSince) < settings_.hookStableMs));
+      ((nowMs - s.hookCandSince) < hookStableMs));
     bool pdActive = (s.pdState != PerLine::PDState::Idle);
 
     // Continue ticking lines that are not yet stable.
     if (hookUnstable || pdActive) nextActiveMask |= (1u << lineIndex);
-  }
 
+    if (settings_.debugSHKLevel >= 2) {
+      Serial.printf("SHKService: tick line %u rawHigh=%d hookCand=%d hookCandTime=%u hookCandConsec=%u", 
+                    lineIndex, rawHigh ? 1 : 0, s.hookCand ? 1 : 0, nowMs - s.hookCandSince, s.hookCandConsec);
+      Serial.println();
+    }
+  }
   activeMask_ = nextActiveMask;
   if (activeMask_ == 0) {
     burstActive_ = false;
+    if (settings_.debugSHKLevel >= 2) {
+      Serial.println("SHKService: burst finished, going idle");
+      util::UIConsole::log("burst finished, going idle", "SHKService");
+    }
   } else {
     burstNextTickAtMs_ = nowMs + settings_.burstTickMs;
   }
@@ -95,19 +111,24 @@ bool SHKService::tick(uint32_t nowMs) {
 
 // Handles interrupts and triggers line change notifications.
 void SHKService::update() {
-  for (int i = 0; i < 16; ++i) {
-    IntResult r = mcpDriver_.handleSlic1Interrupt();
-    if (r.hasEvent && r.line < 8) {
+  // Poll all SLIC1 events
+  while (true) {
+    IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC1_ADDRESS);
+    if (!r.hasEvent) break;
+    if (r.line < 8) {
       uint32_t mask = (1u << r.line);
-      notifyLinesPossiblyChanged(mask, millis());
+      notifyLinesPossiblyChanged(mask, millis(), r.level);
       yield();
     }
   }
-  for (int i = 0; i < 16; ++i) {
-    IntResult r = mcpDriver_.handleSlic2Interrupt();
-    if (r.hasEvent && r.line < 8) {
+  
+  // Poll all SLIC2 events
+  while (true) {
+    IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC2_ADDRESS);
+    if (!r.hasEvent) break;
+    if (r.line < 8) {
       uint32_t mask = (1u << r.line);
-      notifyLinesPossiblyChanged(mask, millis());
+      notifyLinesPossiblyChanged(mask, millis(), r.level);
       yield();
     }
   }
@@ -198,9 +219,17 @@ uint32_t SHKService::readShkMask_() const {
   return mask;
 }
 
+uint32_t SHKService::getHookStableMs_(int idx) const {
+  if (ringGenerator_.lineStates_[idx].state == model::RingState::RingToggling) {
+    Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
+    return settings_.hookStableMs * 10; // Longer stable time during ringing
+  }
+  return settings_.hookStableMs;
+}
+
 // ---------------- Hook Filter ----------------
 // Updates hook filter state for line 'idx' with new raw reading 'rawHigh' at time 'nowMs'.
-void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
+void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32_t hookStableMs) {
   auto& s = lineState_[idx];
 
   // Track candidate level and how long it has been stable.
@@ -212,7 +241,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
     s.hookCandConsec++;
   }
 
-  bool timeOk   = (nowMs - s.hookCandSince) >= settings_.hookStableMs;
+  bool timeOk   = (nowMs - s.hookCandSince) >= hookStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
@@ -226,12 +255,16 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs) {
         resetPulseState_(idx);
       }
     }
-    setStableHook_(idx, offHook, rawHigh, nowMs);
+    if (settings_.debugSHKLevel >= 2) {
+      Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n",idx, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, nowMs - s.hookCandSince);
+      util::UIConsole::log("L" + String(idx) + " stable hook " + (offHook ? "OffHook" : "OnHook") + " (raw=" + String(rawHigh ? 1 : 0) + ") at " + String(nowMs) + " ms", "SHKService");
+    }
+    setStableHook(idx, offHook, rawHigh, nowMs);
   }
 }
 
 // Sets stable hook status for a line and updates related state.
-void SHKService::setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs) {
+void SHKService::setStableHook(int index, bool offHook, bool rawHigh, uint32_t nowMs) {
   auto& line = lineManager_.getLine(index);
 
 
@@ -405,13 +438,12 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
     Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
     util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
   }
-  lineManager_.setLineTimer(idx, settings_.timer_pulsDialing); // Reset inter-digit timer.
+  lineManager_.setLineTimer(idx, settings_.timer_pulsDialing);
   resetPulseState_(idx);
   s.blockUntilMs = nowMs + 80;
   resyncFast_(idx, rawHigh, nowMs);
 }
 
-// Resets pulse state for line 'idx'.
 void SHKService::resetPulseState_(int idx) {
   auto& s = lineState_[idx];
   auto& line = lineManager_.getLine(idx);

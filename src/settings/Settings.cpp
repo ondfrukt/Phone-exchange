@@ -26,16 +26,17 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 0;
-  debugLmLevel          = 0;
+  debugSHKLevel         = 2;
+  debugLmLevel          = 2;
   debugWSLevel          = 0;
-  debugLALevel          = 0;
+  debugLALevel          = 2;
   debugMTLevel          = 0;
-  debugTRLevel          = 0;
-  debugMCPLevel         = 0;
-  debugI2CLevel         = 0;
-  debugTonGenLevel      = 0;
-  debugRGLevel          = 0;
+  debugTRLevel          = 2;
+  debugMCPLevel         = 2;
+  debugI2CLevel         = 2;
+  debugTonGenLevel      = 2;
+  debugRGLevel          = 2;
+  debugIMLevel          = 2;
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
@@ -43,7 +44,7 @@ void Settings::resetDefaults() {
   // --- Other settings ---
   burstTickMs           = 2;
   hookStableMs          = 50;
-  hookStableConsec      = 2;
+  hookStableConsec      = 10;
   pulseGlitchMs         = 2;
   debounceMs            = 25;
   pulseLowMaxMs         = 150;
@@ -101,6 +102,8 @@ bool Settings::load() {
     debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
     debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
+    debugIMLevel          = prefs.getUChar ("debugIM",     debugIMLevel);
+  
 
     // --- Other settings ---    
     burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
@@ -159,6 +162,7 @@ void Settings::save() const {
   prefs.putUChar ("debugI2C",   debugI2CLevel);
   prefs.putUChar ("debugTonGen", debugTonGenLevel);
   prefs.putUChar ("debugRG",     debugRGLevel);
+  prefs.putUChar ("debugIM",     debugIMLevel);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",          burstTickMs);

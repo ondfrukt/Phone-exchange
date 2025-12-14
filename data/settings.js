@@ -31,6 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ringSaveBtn = document.getElementById('ring-save');
   const $ringSettingsStatus = document.getElementById('ring-settings-status');
 
+  // --- SHK/Ring Detection Settings UI ---
+  const $burstTickMs = document.getElementById('burst-tick-ms');
+  const $hookStableMs = document.getElementById('hook-stable-ms');
+  const $hookStableConsec = document.getElementById('hook-stable-consec');
+  const $shkSaveBtn = document.getElementById('shk-save');
+  const $shkSettingsStatus = document.getElementById('shk-settings-status');
+
   // --- Timer Settings UI ---
   const $timerReady = document.getElementById('timer-ready');
   const $timerDialing = document.getElementById('timer-dialing');
@@ -52,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const setDbgMsg = (t) => { if ($dbgMsg) $dbgMsg.textContent = t; };
   const setRingStatus = (t) => { if ($ringStatus) $ringStatus.textContent = t; };
   const setRingSettingsStatus = (t) => { if ($ringSettingsStatus) $ringSettingsStatus.textContent = t; };
+  const setShkSettingsStatus = (t) => { if ($shkSettingsStatus) $shkSettingsStatus.textContent = t; };
   const setTimerStatus = (t) => { if ($timerStatus) $timerStatus.textContent = t; };
 
   const setToneEnabledUi = (enabled) => {
@@ -222,6 +230,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Load SHK/ring-detection settings from server
+  async function loadShkSettings() {
+    try {
+      const r = await fetch('/api/settings/shk');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (typeof d.burstTickMs === 'number') $burstTickMs.value = d.burstTickMs;
+      if (typeof d.hookStableMs === 'number') $hookStableMs.value = d.hookStableMs;
+      if (typeof d.hookStableConsec === 'number') $hookStableConsec.value = d.hookStableConsec;
+    } catch (e) {
+      console.warn('Could not read SHK settings', e);
+      setShkSettingsStatus('Could not read SHK settings');
+    }
+  }
+
+  // Save SHK/ring-detection settings to server
+  async function saveShkSettings() {
+    try {
+      $shkSaveBtn.classList.add('working');
+      setShkSettingsStatus('Saving…');
+      const body = new URLSearchParams({
+        burstTickMs: $burstTickMs.value,
+        hookStableMs: $hookStableMs.value,
+        hookStableConsec: $hookStableConsec.value
+      }).toString();
+      const r = await fetch('/api/settings/shk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      await r.json();
+      setShkSettingsStatus('Saved.');
+    } catch (e) {
+      setShkSettingsStatus('Failed to save.');
+      console.warn(e);
+    } finally {
+      $shkSaveBtn.classList.remove('working');
+      setTimeout(() => setShkSettingsStatus(''), 1500);
+    }
+  }
+
   // Load timer settings from server
   async function loadTimerSettings() {
     try {
@@ -355,6 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $ringTestBtn?.addEventListener('click', testRing);
   $ringStopBtn?.addEventListener('click', stopRing);
   $ringSaveBtn?.addEventListener('click', saveRingSettings);
+  $shkSaveBtn?.addEventListener('click', saveShkSettings);
   $timerSaveBtn?.addEventListener('click', saveTimerSettings);
 
   // Load current activeMask
@@ -411,5 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDebug();
   loadToneGenerator();
   loadRingSettings();
+  loadShkSettings();
   loadTimerSettings();
 });

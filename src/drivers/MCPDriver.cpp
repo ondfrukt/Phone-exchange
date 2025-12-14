@@ -288,20 +288,6 @@ void IRAM_ATTR MCPDriver::isrMT8816Thunk(void* arg) {
 // Handle interrupts for MCP_MAIN
 IntResult MCPDriver::handleMainInterrupt()   {
   if (!haveMain_) return {};
-  
-  // Debug: Report interrupt counter periodically (only if debug is enabled)
-  static unsigned long lastDebugTime = 0;
-  auto& settings = Settings::instance();
-  if (settings.debugMCPLevel >= 1) {
-    unsigned long now = millis();
-    if (now - lastDebugTime >= 5000) {
-      Serial.print(F("MCP_MAIN: Total interrupts fired: "));
-      Serial.println(mainIntCounter_);
-      util::UIConsole::log("Total interrupts fired: " + String(mainIntCounter_), "MCPDriver");
-      lastDebugTime = now;
-    }
-  }
-  
   return handleInterrupt_(mainIntFlag_,   mcpMain_,   mcp::MCP_MAIN_ADDRESS);
 }
 // Handle interrupts for MCP_SLIC1
@@ -428,7 +414,8 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   }
 
   // Sync DEFVAL to the captured level (MAIN only; requires INTCON=1 for the pin)
-  if (addr == cfg::mcp::MCP_MAIN_ADDRESS) {
+  // BUT NOT for STD pin which uses pure CHANGE mode
+  if (addr == cfg::mcp::MCP_MAIN_ADDRESS && r.pin != cfg::mcp::STD) {
     if (r.pin < 8) {
       uint8_t defvala = 0;
       if (readReg8_OK_(addr, REG_DEFVALA, defvala)) {
@@ -561,25 +548,23 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
     }
   }
 
-  // ---- MT8870 STD: compare-to-DEFVAL (INTCON=1). DEFVAL synced in handleInterrupt_ ----
+   // ---- MT8870 STD: CHANGE mode (INTCON=0). Edge detection done in ToneReader ----
   {
     uint8_t p = cfg::mcp::STD; // GPB3 according to config
     Serial.print(F("Configuring MT8870 STD on pin "));
     Serial.print(p);
-    Serial.println(F(" (compare-to-DEFVAL mode)"));
+    Serial.println(F(" (CHANGE mode)"));
     util::UIConsole::log("Configuring MT8870 STD on pin " + String(p) + 
-                         " (compare-to-DEFVAL mode)", "MCPDriver");
+                         " (CHANGE mode)", "MCPDriver");
     if (p < 8) {
       gpintena |= (1u << p);
       gppua    |= (1u << p);  // håll linjen stabilt hög när MT8870 släpper STD
-      intcona  |= (1u << p);  // enable compare-to-DEFVAL
-      // DEFVALA updated dynamically by handleInterrupt_
+      intcona  &= ~(1u << p);  // CHANGE mode (disable compare-to-DEFVAL)
     } else {
       uint8_t bit = p - 8;
       gpintenb |= (1u << bit);
       gppub    |= (1u << bit); // håll linjen stabilt hög när MT8870 släpper STD
-      intconb  |= (1u << bit); // enable compare-to-DEFVAL
-      // DEFVALB updated dynamically by handleInterrupt_
+      intconb  &= ~(1u << bit); // CHANGE mode (disable compare-to-DEFVAL)
     }
   }
 

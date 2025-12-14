@@ -35,6 +35,7 @@ public:
   uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high Debug level for MCP service
   uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high Debug level for ToneGenerator
   uint8_t debugRGLevel;           // 0=none, 1=low, 2=high Debug level for RingGenerator
+  uint8_t debugIMLevel;           // 0=none, 1=low, 2=high Debug level for InterruptManager
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 

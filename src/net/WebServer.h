@@ -4,6 +4,7 @@
 #include <LittleFS.h>
 #include "net/WifiClient.h"
 #include "settings/settings.h"
+#include "services/LineAction.h"
 
 namespace net { class WifiClient; } 
 
@@ -12,7 +13,7 @@ class RingGenerator;
 
 class WebServer {
 public:
-  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator* ringGenerator = nullptr, uint16_t port = 80);
+  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port = 80);
   bool begin();
   void listFS();
 
@@ -26,8 +27,9 @@ public:
 
 private:
   Settings& settings_;
-  LineManager& lm_;
-  RingGenerator* ringGenerator_;
+  LineManager& lineManager_;
+  RingGenerator& ringGenerator_;
+  LineAction& lineAction_;
   AsyncWebServer server_;
   AsyncEventSource events_{"/events"};
   

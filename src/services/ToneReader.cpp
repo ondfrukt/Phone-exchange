@@ -1,172 +1,179 @@
 #include "services/ToneReader.h"
+#include "services/LineManager.h"
 
-ToneReader::ToneReader(MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager)
-  : mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
+ToneReader::ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager)
+  : interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), lineManager_(lineManager) {}
+
+
+void ToneReader::activate()
+{ 
+  if (settings_.debugTRLevel >= 1) {
+    Serial.println(F("ToneReader: Activating MT8870 power"));
+    util::UIConsole::log("ToneReader: Activating MT8870 power", "ToneReader");
+  }
+  isActive = true;
+  mcpDriver_.digitalWriteMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::PWDN_MT8870 , false);
+}
+
+void ToneReader::deactivate()
+{
+  if (settings_.debugTRLevel >= 1) {
+    Serial.println(F("ToneReader: Deactivating MT8870 power"));
+    util::UIConsole::log("ToneReader: Deactivating MT8870 power", "ToneReader");
+  }
+  isActive = false;
+  mcpDriver_.digitalWriteMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::PWDN_MT8870 , true);
+}
 
 void ToneReader::update() {
 
-  // Debug: Check STD pin state and print only on change
-  static bool lastDebugStdLevel = false;
-  static bool firstCheck = true;
-  bool stdLevel = false;
-  if (mcpDriver_.digitalReadMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD, stdLevel)) {
-    if (firstCheck || stdLevel != lastDebugStdLevel) {
-      if(settings_.debugTRLevel >= 2) {
-      Serial.print(F("ToneReader: STD pin changed to: "));
-      Serial.println(stdLevel ? F("HIGH") : F("LOW"));
-      util::UIConsole::log("ToneReader: STD pin changed to " + String(stdLevel ? "HIGH" : "LOW"), "ToneReader");
-      }
-      lastDebugStdLevel = stdLevel;
-      firstCheck = false;
-    }
-  }
+  // Note: We now rely on interrupt-driven events from InterruptManager
+  // instead of direct GPIO polling for more reliable edge detection
   
   // Hantera MAIN-interrupts (bl.a. MT8870 STD). Töm alla väntande events.
   while (true) {
-    IntResult ir = mcpDriver_.handleMainInterrupt();
+    IntResult ir = interruptManager_.pollEvent(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD);
     if (!ir.hasEvent) break;
 
-    // Vi bryr oss bara om STD-pinnen från MT8870
-    if (ir.i2c_addr == cfg::mcp::MCP_MAIN_ADDRESS && ir.pin == cfg::mcp::STD) {
-      if (settings_.debugTRLevel >= 2) {
-        Serial.print(F("ToneReader: STD interrupt detected - addr=0x"));
-        Serial.print(ir.i2c_addr, HEX);
-        Serial.print(F(" pin="));
-        Serial.print(ir.pin);
-        Serial.print(F(" level="));
-        Serial.println(ir.level ? F("HIGH") : F("LOW"));
-        util::UIConsole::log("ToneReader: STD INT 0x" + String(ir.i2c_addr, HEX) +
-                                 " pin=" + String(ir.pin) +
-                                 " level=" + String(ir.level ? "HIGH" : "LOW"),
-                             "ToneReader");
+    if (settings_.debugTRLevel >= 2) {
+      Serial.print(F("ToneReader: STD interrupt detected - addr=0x"));
+      Serial.print(ir.i2c_addr, HEX);
+      Serial.print(F(" pin="));
+      Serial.print(ir.pin);
+      Serial.print(F(" level="));
+      Serial.println(ir.level ? F("HIGH") : F("LOW"));
+      util::UIConsole::log("ToneReader: STD INT 0x" + String(ir.i2c_addr, HEX) +
+                               " pin=" + String(ir.pin) +
+                               " level=" + String(ir.level ? "HIGH" : "LOW"),
+                           "ToneReader");
+    }
+    // Detect rising edge (LOW -> HIGH transition)
+    bool risingEdge = ir.level && !lastStdLevel_;
+    
+    if (settings_.debugTRLevel >= 2) {
+      Serial.print(F("ToneReader: Edge detection - lastStdLevel_="));
+      Serial.print(lastStdLevel_ ? F("HIGH") : F("LOW"));
+      Serial.print(F(" currentLevel="));
+      Serial.print(ir.level ? F("HIGH") : F("LOW"));
+      Serial.print(F(" risingEdge="));
+      Serial.println(risingEdge ? F("YES") : F("NO"));
+    }
+    
+    lastStdLevel_ = ir.level;
+    
+    // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
+    if (risingEdge) {
+      if (settings_.debugTRLevel >= 1) {
+        Serial.println(F("ToneReader: Rising edge detected - attempting to read DTMF nibble"));
+        util::UIConsole::log("ToneReader: Rising edge detected - attempting to read DTMF nibble", "ToneReader");
       }
-      // Detect rising edge (LOW -> HIGH transition)
-      bool risingEdge = ir.level && !lastStdLevel_;
       
-      if (settings_.debugTRLevel >= 2) {
-        Serial.print(F("ToneReader: Edge detection - lastStdLevel_="));
-        Serial.print(lastStdLevel_ ? F("HIGH") : F("LOW"));
-        Serial.print(F(" currentLevel="));
-        Serial.print(ir.level ? F("HIGH") : F("LOW"));
-        Serial.print(F(" risingEdge="));
-        Serial.println(risingEdge ? F("YES") : F("NO"));
-      }
       
-      lastStdLevel_ = ir.level;
+      unsigned long now = millis();
+      uint8_t nibble = 0;
       
-      // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
-      if (risingEdge) {
+      // Only process DTMF if we have a valid lastLineReady
+      if (lineManager_.lastLineReady < 0) {
         if (settings_.debugTRLevel >= 1) {
-          Serial.println(F("ToneReader: Rising edge detected - attempting to read DTMF nibble"));
-          util::UIConsole::log("ToneReader: Rising edge detected - attempting to read DTMF nibble", "ToneReader");
+          Serial.println(F("ToneReader: Ignoring DTMF - no valid lastLineReady"));
+          util::UIConsole::log("Ignoring DTMF - no valid lastLineReady", "ToneReader");
+        }
+        return;
+      }
+      
+      if (readDtmfNibble(nibble)) {
+        
+        lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
+        lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
+        
+        // Check debouncing: ignore if same digit detected within debounce period
+        // Use unsigned subtraction which handles millis() rollover correctly
+        unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
+        bool isSameDigit = (nibble == lastDtmfNibble_);
+        bool withinDebounceWindow = (timeSinceLastDtmf < DTMF_DEBOUNCE_MS);
+        bool isDuplicate = isSameDigit && withinDebounceWindow;
+        
+        if (settings_.debugTRLevel >= 2) {
+          Serial.print(F("ToneReader: Debounce check - timeSince="));
+          Serial.print(timeSinceLastDtmf);
+          Serial.print(F("ms isSameDigit="));
+          Serial.print(isSameDigit ? F("YES") : F("NO"));
+          Serial.print(F(" withinWindow="));
+          Serial.print(withinDebounceWindow ? F("YES") : F("NO"));
+          Serial.print(F(" isDuplicate="));
+          Serial.println(isDuplicate ? F("YES") : F("NO"));
         }
         
-        
-        unsigned long now = millis();
-        uint8_t nibble = 0;
-        
-        // Only process DTMF if we have a valid lastLineReady
-        if (lineManager_.lastLineReady < 0) {
-          if (settings_.debugTRLevel >= 1) {
-            Serial.println(F("ToneReader: Ignoring DTMF - no valid lastLineReady"));
-            util::UIConsole::log("Ignoring DTMF - no valid lastLineReady", "ToneReader");
-          }
-          return;
-        }
-        
-        if (readDtmfNibble(nibble)) {
+        if (!isDuplicate) {
+          lastDtmfTime_ = now;
+          lastDtmfNibble_ = nibble;
           
-          lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
-          lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
-          
-          // Check debouncing: ignore if same digit detected within debounce period
-          // Use unsigned subtraction which handles millis() rollover correctly
-          unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
-          bool isSameDigit = (nibble == lastDtmfNibble_);
-          bool withinDebounceWindow = (timeSinceLastDtmf < DTMF_DEBOUNCE_MS);
-          bool isDuplicate = isSameDigit && withinDebounceWindow;
-          
+          char ch = decodeDtmf(nibble);
           if (settings_.debugTRLevel >= 2) {
-            Serial.print(F("ToneReader: Debounce check - timeSince="));
-            Serial.print(timeSinceLastDtmf);
-            Serial.print(F("ms isSameDigit="));
-            Serial.print(isSameDigit ? F("YES") : F("NO"));
-            Serial.print(F(" withinWindow="));
-            Serial.print(withinDebounceWindow ? F("YES") : F("NO"));
-            Serial.print(F(" isDuplicate="));
-            Serial.println(isDuplicate ? F("YES") : F("NO"));
+            Serial.print(F("ToneReader: DECODED - nibble=0x"));
+            Serial.print(nibble, HEX);
+            Serial.print(F(" => char='"));
+            Serial.print(ch);
+            Serial.println('\'');
+            util::UIConsole::log("ToneReader DECODED: nibble=0x" + String(nibble, HEX) +
+                                     " => '" + String(ch) + "'",
+                                 "ToneReader");
           }
-          
-          if (!isDuplicate) {
-            lastDtmfTime_ = now;
-            lastDtmfNibble_ = nibble;
-            
-            char ch = decodeDtmf(nibble);
-            if (settings_.debugTRLevel >= 2) {
-              Serial.print(F("ToneReader: DECODED - nibble=0x"));
-              Serial.print(nibble, HEX);
-              Serial.print(F(" => char='"));
+
+          if (ch != '\0') {
+            int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
+
+            // To avoid strange signals thats detected as dtomf tones, only accept tones when line is in Ready or ToneDialing state
+            if (idx >= 0 && (lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready || 
+                     lineManager_.getLine(idx).currentLineStatus == model::LineStatus::ToneDialing)) {
+              auto& line = lineManager_.getLine(idx);
+              line.dialedDigits += ch;
+              
+              Serial.print(F("ToneReader: Added to line "));
+              Serial.print(idx);
+              Serial.print(F(" digit='"));
               Serial.print(ch);
-              Serial.println('\'');
-              util::UIConsole::log("ToneReader DECODED: nibble=0x" + String(nibble, HEX) +
-                                       " => '" + String(ch) + "'",
-                                   "ToneReader");
-            }
-
-            if (ch != '\0') {
-              int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
-
-                // To avoid strange signals thats detected as dtomf tones, only accept tones when line is in Ready or ToneDialing state
-                if (idx >= 0 && (lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready || 
-                         lineManager_.getLine(idx).currentLineStatus == model::LineStatus::ToneDialing)) {
-                  auto& line = lineManager_.getLine(idx);
-                  line.dialedDigits += ch;
-                  
-                  Serial.print(F("ToneReader: Added to line "));
-                  Serial.print(idx);
-                  Serial.print(F(" digit='"));
-                  Serial.print(ch);
-                  Serial.print(F("' dialedDigits=\""));
-                  Serial.print(line.dialedDigits);
-                  Serial.println('"');
-                  util::UIConsole::log("ToneReader: line " + String(idx) + " +=" + String(ch) + 
-                      " dialedDigits=\"" + line.dialedDigits + "\"", "ToneReader");
-                } else if (idx >= 0) {
-                  if (settings_.debugTRLevel >= 1) {
-                  Serial.println(F("ToneReader: WARNING - Line not in Ready/ToneDialing state"));
-                  util::UIConsole::log("WARNING - Line not in valid state for DTMF", "ToneReader");
-                  }
-                } else {
-                  if (settings_.debugTRLevel >= 1) {
-                  Serial.println(F("ToneReader: WARNING - No lastLineReady available to store digit"));
-                  util::UIConsole::log("WARNING - No lastLineReady available", "ToneReader");
-                  }
-                }
+              Serial.print(F("' dialedDigits=\""));
+              Serial.print(line.dialedDigits);
+              Serial.println('"');
+              util::UIConsole::log("ToneReader: line " + String(idx) + " +=" + String(ch) + 
+                  " dialedDigits=\"" + line.dialedDigits + "\"", "ToneReader");
+            } else if (idx >= 0) {
+              if (settings_.debugTRLevel >= 1) {
+                Serial.println(F("ToneReader: WARNING - Line not in Ready/ToneDialing state"));
+                util::UIConsole::log("WARNING - Line not in valid state for DTMF", "ToneReader");
+              }
             } else {
               if (settings_.debugTRLevel >= 1) {
-                Serial.print(F("ToneReader: WARNING - Decoded character is NULL (invalid nibble=0x"));
-                Serial.print(nibble, HEX);
-                Serial.println(F(")"));
-                util::UIConsole::log("WARNING - Decoded character is NULL (invalid nibble=0x" + 
-                          String(nibble, HEX) + ")", "ToneReader");
+                Serial.println(F("ToneReader: WARNING - No lastLineReady available to store digit"));
+                util::UIConsole::log("WARNING - No lastLineReady available", "ToneReader");
               }
             }
-          } else if (settings_.debugTRLevel >= 1) {
-            Serial.print(F("ToneReader: Duplicate ignored (debouncing) nibble=0x"));
-            Serial.print(nibble, HEX);
-            Serial.print(F(" time="));
-            Serial.print(timeSinceLastDtmf);
-            Serial.println(F("ms"));
-            util::UIConsole::log("Duplicate ignored (debouncing) nibble=0x" + 
-                                String(nibble, HEX) + " time=" + String(timeSinceLastDtmf) + "ms", 
-                                "ToneReader");
+          } else {
+            if (settings_.debugTRLevel >= 1) {
+              Serial.print(F("ToneReader: WARNING - Decoded character is NULL (invalid nibble=0x"));
+              Serial.print(nibble, HEX);
+              Serial.println(F(")"));
+              util::UIConsole::log("WARNING - Decoded character is NULL (invalid nibble=0x" + 
+                        String(nibble, HEX) + ")", "ToneReader");
+            }
           }
-        } else {
-          if (settings_.debugTRLevel >= 1) {
-            Serial.println(F("ToneReader: ERROR - Failed to read DTMF nibble from MCP"));
-            util::UIConsole::log("ERROR - Failed to read nibble", "ToneReader");
-          }
+        } else if (settings_.debugTRLevel >= 1) {
+          Serial.print(F("ToneReader: Duplicate ignored (debouncing) nibble=0x"));
+          Serial.print(nibble, HEX);
+          Serial.print(F(" time="));
+          Serial.print(timeSinceLastDtmf);
+          Serial.println(F("ms"));
+          util::UIConsole::log("Duplicate ignored (debouncing) nibble=0x" + 
+                              String(nibble, HEX) + " time=" + String(timeSinceLastDtmf) + "ms", 
+                              "ToneReader");
         }
+      } else {
+        if (settings_.debugTRLevel >= 1) {
+          Serial.println(F("ToneReader: ERROR - Failed to read DTMF nibble from MCP"));
+          util::UIConsole::log("ERROR - Failed to read nibble", "ToneReader");
+        }
+      }
       } else { // Falling edge
         if (lineManager_.lastLineReady >= 0) {
           lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
@@ -179,16 +186,6 @@ void ToneReader::update() {
           Serial.println(F("ToneReader: Falling edge detected (STD went LOW)"));
           util::UIConsole::log("Falling edge detected (STD LOW)", "ToneReader");
         }
-      }
-      // Falling edge på STD – no action needed (giltig data läses vid rising edge)
-    } else if (settings_.debugTRLevel >= 2) {
-      // Interrupt from different pin
-      Serial.print(F("ToneReader: Ignoring interrupt from pin "));
-      Serial.print(ir.pin);
-      Serial.print(F(" (not STD="));
-      Serial.print(cfg::mcp::STD);
-      Serial.println(F(")"));
-      util::UIConsole::log("Ignoring interrupt from pin " + String(ir.pin) + " (not STD=" + String(cfg::mcp::STD) + ")", "ToneReader");
     }
   }
 }

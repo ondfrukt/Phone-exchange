@@ -1,5 +1,6 @@
 #include "LineManager.h"
 #include <Arduino.h>
+#include "services/ToneReader.h"
 #include <vector>
 
 LineManager::LineManager(Settings& settings)
@@ -44,6 +45,7 @@ LineHandler& LineManager::getLine(int index) {
 }
 
 void LineManager::setStatus(int index, LineStatus newStatus) {
+  // Validate index
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setStatus - ogiltigt index: ");
     Serial.println(index);
@@ -56,36 +58,41 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   lines[index].currentLineStatus = newStatus;
 
 
+  // Handle specific actions based on new status
   if (newStatus == LineStatus::Idle) {
     lines[index].lineIdle();
+
     linesNotIdle &= ~(1 << index);          // Clear the bit for this line
     // Reset lastLineReady if this was the line that was last ready
     if (lastLineReady == index) {
       lastLineReady = -1;
     }
+    if (linesNotIdle == 0) {
+      toneReader_->deactivate();
+    }
+
   }
   else if (newStatus == LineStatus::Ready) {
     lastLineReady = index;                   // Update the most recent Ready line
     linesNotIdle |= (1 << index);            // Set the bit for this line
+    
+    // Activate MT8870 if not already active
+    if (!toneReader_->isActive) {
+      toneReader_->activate();
+    }
+
   }
   else {
     linesNotIdle |= (1 << index);           // Set the bit for this line
   } 
 
   lineChangeFlag |= (1 << index);           // Set the change flag for the specified line
-  
-  if (settings_.debugLmLevel >= 1){
-    Serial.println("LineManager: Callback function called");
-    util::UIConsole::log("LineManager: Callback function called", "LineManager");
-  }
 
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
   if (settings_.debugLmLevel >= 0) {
-    Serial.print("LineManager: Line ");
-    Serial.print(index);
-    Serial.print(" status changed to ");
-    Serial.println(model::toString(newStatus));
+
+    Serial.println("LineManager: Line " + String(index) + " status changed to " + model::toString(newStatus));
     util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
   }
 }
