@@ -3,9 +3,8 @@
 #include "config.h"
 #include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
+#include "services/LineManager.h"
 #include "settings.h"
-
-class LineManager;
 
 class ToneReader {
   public:
