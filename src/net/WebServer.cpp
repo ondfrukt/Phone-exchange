@@ -64,8 +64,10 @@ void WebServer::initSse_() {
 void WebServer::bindConsoleSink_() {
   // Register the sink that forwards Console JSON strings to SSE "console"
   util::UIConsole::setSink([this](const String& json) {
-    // Forward the ready-made JSON to SSE clients
-    events_.send(json.c_str(), "console", millis());
+    // Forward the ready-made JSON to SSE clients only if there are connected clients
+    if (events_.count() > 0) {
+      events_.send(json.c_str(), "console", millis());
+    }
     if (settings_.debugWSLevel >= 2) {
       Serial.println("WebServer: forwarded console message to SSE");
       util::UIConsole::log("Forwarded console message to SSE", "WebServer");
@@ -80,9 +82,12 @@ void WebServer::setupCallbacks_() {
 
 void WebServer::setupLineManagerCallback_() {
   lineManager_.setStatusChangedCallback([this](int index, LineStatus status){
-    String json = "{\"line\":" + String(index) +
-                  ",\"status\":\"" + model::toString(status) + "\"}";
-    events_.send(json.c_str(), "lineStatus", millis());
+    // Only send SSE if there are connected clients
+    if (events_.count() > 0) {
+      String json = "{\"line\":" + String(index) +
+                    ",\"status\":\"" + model::toString(status) + "\"}";
+      events_.send(json.c_str(), "lineStatus", millis());
+    }
   });
 }
 
@@ -266,7 +271,7 @@ void WebServer::setupApiRoutes_() {
     if (hasRg)  settings_.debugRGLevel  = (uint8_t)rg;
 
     // Spara till NVS
-    //settings_.save();
+    settings_.save();
 
     // Skicka live-uppdatering till andra klienter
     sendDebugSse();
@@ -638,11 +643,14 @@ String WebServer::buildDebugJson_() const {
 }
 
 void WebServer::sendDebugSse() {
-  const String json = buildDebugJson_();
-  events_.send(json.c_str(), "debug", millis());
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Debug levels skickade via SSE");
-    util::UIConsole::log("Debug levels sent via SSE", "WebServer");
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildDebugJson_();
+    events_.send(json.c_str(), "debug", millis());
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Debug levels skickade via SSE");
+      util::UIConsole::log("Debug levels sent via SSE", "WebServer");
+    }
   }
 }
 
@@ -655,30 +663,38 @@ String WebServer::buildToneGeneratorJson_() const {
 }
 
 void WebServer::sendToneGeneratorSse() {
-  const String json = buildToneGeneratorJson_();
-  events_.send(json.c_str(), "toneGen", millis());
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Tone generator state skickad via SSE");
-    util::UIConsole::log("Tone generator state sent via SSE", "WebServer");
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildToneGeneratorJson_();
+    events_.send(json.c_str(), "toneGen", millis());
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Tone generator state skickad via SSE");
+      util::UIConsole::log("Tone generator state sent via SSE", "WebServer");
+    }
   }
 }
 
 void WebServer::sendFullStatusSse() {
-  const String json = buildStatusJson_();
-  events_.send(json.c_str(), nullptr, millis());
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildStatusJson_();
+    events_.send(json.c_str(), nullptr, millis());
 
-  Serial.println(settings_.debugWSLevel);
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Full status skickad via SSE");
-    util::UIConsole::log("Full status sent via SSE", "WebServer");
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Full status skickad via SSE");
+      util::UIConsole::log("Full status sent via SSE", "WebServer");
+    }
   }
 }
 
 void WebServer::sendActiveMaskSse() {
-  const String json = buildActiveJson_(settings_.activeLinesMask);
-  events_.send(json.c_str(), "activeMask", millis());
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Active mask skickad via SSE");
-    util::UIConsole::log("Active mask sent via SSE", "WebServer");
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildActiveJson_(settings_.activeLinesMask);
+    events_.send(json.c_str(), "activeMask", millis());
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Active mask skickad via SSE");
+      util::UIConsole::log("Active mask sent via SSE", "WebServer");
+    }
   }
 }
