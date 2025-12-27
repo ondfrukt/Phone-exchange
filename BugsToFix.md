@@ -14,8 +14,9 @@
     - När en ringsignal genereras till linje 0 får jag även in singaler in i min SHK-pin på samma linje. testat och samma beteende sker på både linje 0 och 1.
     - kanske kan det delade jordplanen spela roll men samtidigt har jag bara problemet på den linje som jag ringer till enskilt.
 
-- **Krachar när webserverDebug ändras**
-    - När debugnivån på webserver ändras krachar espn och startar om
+- **~~Krachar när webserverDebug ändras~~ FIXED**
+    - ~~När debugnivån på webserver ändras krachar espn och startar om~~
+    - Fixed: Removed infinite recursion in console sink callback that was triggered when debugWSLevel >= 2
 
 - **Settings ändringar för ringsignaler ändras inte när man trycker på knappen**
     - man får bara följande felmeddelanden:
