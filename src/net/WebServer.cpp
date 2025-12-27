@@ -70,7 +70,7 @@ void WebServer::bindConsoleSink_() {
     }
     if (settings_.debugWSLevel >= 2) {
       Serial.println("WebServer: forwarded console message to SSE");
-      util::UIConsole::log("Forwarded console message to SSE", "WebServer");
+      // NOTE: Do NOT call util::UIConsole::log() here as it would cause infinite recursion
     }
   });
 }
