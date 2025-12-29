@@ -75,7 +75,7 @@ bool SHKService::tick(uint32_t nowMs) {
     }
 
     bool rawHigh = (rawMask >> lineIndex) & 0x1U;
-    uint32_t hookStableMs = getHookStableMs_(static_cast<int>(lineIndex));
+    uint32_t hookStableMs = settings_.hookStableMs;
     updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs, hookStableMs);
     updatePulseDetector_(static_cast<int>(lineIndex), rawHigh, nowMs);
 
@@ -115,6 +115,12 @@ void SHKService::update() {
   while (true) {
     IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC1_ADDRESS);
     if (!r.hasEvent) break;
+
+    // Ignore SHK changes during ringing due to a interference error.
+    if (ringGenerator_.lineStates_[r.line].state == model::RingState::RingToggling) {
+      continue;
+    }
+
     if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis(), r.level);
@@ -126,6 +132,12 @@ void SHKService::update() {
   while (true) {
     IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC2_ADDRESS);
     if (!r.hasEvent) break;
+
+    // Ignore SHK changes during ringing due to a interference error.
+    if (ringGenerator_.lineStates_[r.line].state == model::RingState::RingToggling) {
+      continue;
+    }
+
     if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis(), r.level);
@@ -217,14 +229,6 @@ uint32_t SHKService::readShkMask_() const {
     }
   }
   return mask;
-}
-
-uint32_t SHKService::getHookStableMs_(int idx) const {
-  if (ringGenerator_.lineStates_[idx].state == model::RingState::RingToggling) {
-    Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
-    return settings_.hookStableMs * 10; // Longer stable time during ringing
-  }
-  return settings_.hookStableMs;
 }
 
 // ---------------- Hook Filter ----------------
