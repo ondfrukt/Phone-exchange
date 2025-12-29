@@ -7,7 +7,6 @@ LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Drive
             toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3) {
 };
 
-
 void LineAction::begin() {
   toneGenerators[0] = &toneGen1_;
   toneGenerators[1] = &toneGen2_;
@@ -43,34 +42,6 @@ void LineAction::update() {
             timerExpired(line);
           }
       } 
-  }
-}
-
-void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
-  if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed -1]->stop();
-    line.toneGenUsed = 0;
-  }
-}
-
-void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
-  if (!toneGen1_.isPlaying()){
-    toneGen1_.startToneSequence(status);
-    line.toneGenUsed = 1;
-  }
-  else if (!toneGen2_.isPlaying()){
-    toneGen2_.startToneSequence(status);
-    line.toneGenUsed = 2;
-  }
-  else if (!toneGen3_.isPlaying()){
-    toneGen3_.startToneSequence(status);
-    line.toneGenUsed = 3;
-  }
-  else {
-    if (settings_.debugLALevel >= 1) {
-      Serial.println("LineAction: All tone generators are busy, cannot start tone for line " + String(line.lineNumber));
-      util::UIConsole::log("LineAction: All tone generators are busy, cannot start tone for line " + String(line.lineNumber), "LineAction");
-    }
   }
 }
 
@@ -288,14 +259,6 @@ void LineAction::timerExpired(LineHandler& line) {
   }
 }
 
-// Turn off tone generator if it is being used by the line
-void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
-  if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed -1]->stop();
-    line.toneGenUsed = 0;
-  }
-}
-
 // Start tone generator for specific line status
 void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
   if (!toneGen1_.isPlaying()){
@@ -309,5 +272,13 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
   else if (!toneGen3_.isPlaying()){
     toneGen3_.startToneSequence(status);
     line.toneGenUsed = 3;
+  }
+}
+
+// Turn off tone generator if it is being used by the line
+void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
+  if (line.toneGenUsed != 0){
+    toneGenerators[line.toneGenUsed -1]->stop();
+    line.toneGenUsed = 0;
   }
 }

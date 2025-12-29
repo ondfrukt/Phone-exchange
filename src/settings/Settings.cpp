@@ -56,6 +56,11 @@ void Settings::resetDefaults() {
   ringPauseMs           = 2000;
   ringIterations        = 2;
 
+  // --- ToneReader (DTMF) settings ---
+  dtmfDebounceMs        = 150;   // 150ms debounce between same digit detections
+  dtmfMinToneDurationMs = 40;    // Minimum 40ms tone duration (MT8870 spec: 40ms typical)
+  dtmfStdStableMs       = 5;     // STD signal must be stable for 5ms before reading
+
   // --- Timers ---
   timer_Ready           = 240000;
   timer_Dialing         = 5000;
@@ -121,6 +126,11 @@ bool Settings::load() {
     ringPauseMs           = prefs.getUInt ("ringPauseMs",          ringPauseMs);
     ringIterations        = prefs.getUInt ("ringIterations",       ringIterations);
 
+    // --- ToneReader (DTMF) settings ---
+    dtmfDebounceMs        = prefs.getUInt ("dtmfDebounce",         dtmfDebounceMs);
+    dtmfMinToneDurationMs = prefs.getUInt ("dtmfMinTone",          dtmfMinToneDurationMs);
+    dtmfStdStableMs       = prefs.getUInt ("dtmfStdStable",        dtmfStdStableMs);
+
     // --- Timers ---
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
     timer_Dialing         = prefs.getUInt ("timerDialing",      timer_Dialing);
@@ -181,6 +191,11 @@ void Settings::save() const {
   prefs.putUInt ("ringLengthMs",         ringLengthMs);
   prefs.putUInt ("ringPauseMs",          ringPauseMs);
   prefs.putUInt ("ringIterations",       ringIterations);
+
+  // --- ToneReader (DTMF) settings ---
+  prefs.putUInt ("dtmfDebounce",         dtmfDebounceMs);
+  prefs.putUInt ("dtmfMinTone",          dtmfMinToneDurationMs);
+  prefs.putUInt ("dtmfStdStable",        dtmfStdStableMs);
 
 
   // --- Timers ---
