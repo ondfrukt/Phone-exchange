@@ -14,6 +14,7 @@ void LineAction::begin() {
   toneGenerators[2] = &toneGen3_;
 }
 
+// Main update loop to check for line status changes and timer expirations
 void LineAction::update() {
 
   // Check if any line has changed status
@@ -22,6 +23,8 @@ void LineAction::update() {
     for (int index = 0; index < 8; ++index)
         if (changes & (1 << index)) {
           lineManager_.clearChangeFlag(index); // Clear the change flag
+
+          // Handle the action for the line
           action(index);
       } 
   }
@@ -40,28 +43,6 @@ void LineAction::update() {
             timerExpired(line);
           }
       } 
-  }
-}
-
-void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
-  if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed -1]->stop();
-    line.toneGenUsed = 0;
-  }
-}
-
-void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
-  if (!toneGen1_.isPlaying()){
-    toneGen1_.startToneSequence(status);
-    line.toneGenUsed = 1;
-  }
-  else if (!toneGen2_.isPlaying()){
-    toneGen2_.startToneSequence(status);
-    line.toneGenUsed = 2;
-  }
-  else if (!toneGen3_.isPlaying()){
-    toneGen3_.startToneSequence(status);
-    line.toneGenUsed = 3;
   }
 }
 
@@ -116,7 +97,6 @@ void LineAction::action(int index) {
     case LineStatus::Busy:
       turnOffToneGenIfUsed(line);
       startToneGenForStatus(line, model::ToneId::Busy);
-
       lineManager_.setLineTimer(index, settings_.timer_busy); // Set timer for Busy state
     //   mqttHandler.publishMQTT(line, line_busy);
     //   Line[line].startLineTimer(statusTimer_busy);
@@ -127,7 +107,6 @@ void LineAction::action(int index) {
     case LineStatus::Fail:
       turnOffToneGenIfUsed(line);
       startToneGenForStatus(line, model::ToneId::Fail);
-
       lineManager_.setLineTimer(index, settings_.timer_fail); // Set timer for Fail state
     //   mqttHandler.publishMQTT(line, line_fail);
     //   Line[line].resetDialedDigits();
@@ -139,7 +118,6 @@ void LineAction::action(int index) {
     case LineStatus::Ringing:
       turnOffToneGenIfUsed(line);
       startToneGenForStatus(line, model::ToneId::Ring);
-
       lineManager_.setLineTimer(index, settings_.timer_Ringing); // Set timer for Ringing state
     // Serial.println("Line " + String(line) + " dialed digits: " + Line[line].dialedDigits);
     // for (int i = 0; i < activeLines; i++) {
@@ -219,6 +197,7 @@ void LineAction::action(int index) {
     // break;
     case LineStatus::Incoming:
       ringGenerator_.generateRingSignal(index);
+      lineManager_.setLineTimer(index, settings_.timer_incoming); // Set timer for Incoming state
     //   mqttHandler.publishMQTT(line, line_incoming);
     //   break;
     case LineStatus::Operator:
@@ -231,6 +210,7 @@ void LineAction::action(int index) {
   }
 }
 
+// Handles a line when its timer has expired
 void LineAction::timerExpired(LineHandler& line) {
   using namespace model;
   int index = line.lineNumber;
@@ -243,36 +223,70 @@ void LineAction::timerExpired(LineHandler& line) {
 
   switch (currentStatus) {
     case LineStatus::Ready:
-
+      lineManager_.setStatus(index, LineStatus::Timeout);
       break;
 
     case LineStatus::PulseDialing:
-    case LineStatus::ToneDialing:
+      if (line.dialedDigits.length() == 0) {
+        lineManager_.setStatus(index, LineStatus::Timeout);
+      } else {
+        lineManager_.setStatus(index, LineStatus::ToneDialing);
+      }
 
+
+
+
+    case LineStatus::Incoming:
+      lineManager_.setStatus(index, LineStatus::Idle);
       break;
 
     case LineStatus::Ringing:
-
+      lineManager_.setStatus(index, LineStatus::Disconnected);
       break;
 
     case LineStatus::Busy:
-
+      lineManager_.setStatus(index, LineStatus::Timeout);
       break;
 
     case LineStatus::Fail:
-
+      lineManager_.setStatus(index, LineStatus::Timeout);
       break;
 
     case LineStatus::Disconnected:
-
+      lineManager_.setStatus(index, LineStatus::Timeout);
       break;
 
     case LineStatus::Timeout:
+      lineManager_.setStatus(index, LineStatus::Abandoned);
 
       break;
 
     default:
 
       break;
+  }
+}
+
+// Turn off tone generator if it is being used by the line
+void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
+  if (line.toneGenUsed != 0){
+    toneGenerators[line.toneGenUsed -1]->stop();
+    line.toneGenUsed = 0;
+  }
+}
+
+// Start tone generator for specific line status
+void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
+  if (!toneGen1_.isPlaying()){
+    toneGen1_.startToneSequence(status);
+    line.toneGenUsed = 1;
+  }
+  else if (!toneGen2_.isPlaying()){
+    toneGen2_.startToneSequence(status);
+    line.toneGenUsed = 2;
+  }
+  else if (!toneGen3_.isPlaying()){
+    toneGen3_.startToneSequence(status);
+    line.toneGenUsed = 3;
   }
 }

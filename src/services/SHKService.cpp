@@ -75,7 +75,7 @@ bool SHKService::tick(uint32_t nowMs) {
     }
 
     bool rawHigh = (rawMask >> lineIndex) & 0x1U;
-    uint32_t hookStableMs = getHookStableMs_(static_cast<int>(lineIndex));
+    uint32_t hookStableMs = settings_.hookStableMs;
     updateHookFilter_(static_cast<int>(lineIndex), rawHigh, nowMs, hookStableMs);
     updatePulseDetector_(static_cast<int>(lineIndex), rawHigh, nowMs);
 
@@ -88,12 +88,6 @@ bool SHKService::tick(uint32_t nowMs) {
 
     // Continue ticking lines that are not yet stable.
     if (hookUnstable || pdActive) nextActiveMask |= (1u << lineIndex);
-
-    if (settings_.debugSHKLevel >= 2) {
-      Serial.printf("SHKService: tick line %u rawHigh=%d hookCand=%d hookCandTime=%u hookCandConsec=%u", 
-                    lineIndex, rawHigh ? 1 : 0, s.hookCand ? 1 : 0, nowMs - s.hookCandSince, s.hookCandConsec);
-      Serial.println();
-    }
   }
   activeMask_ = nextActiveMask;
   if (activeMask_ == 0) {
@@ -217,14 +211,6 @@ uint32_t SHKService::readShkMask_() const {
     }
   }
   return mask;
-}
-
-uint32_t SHKService::getHookStableMs_(int idx) const {
-  if (ringGenerator_.lineStates_[idx].state == model::RingState::RingToggling) {
-    Serial.printf("SHKService: line %u is ringing, using longer hook stable time\n", idx);
-    return settings_.hookStableMs * 10; // Longer stable time during ringing
-  }
-  return settings_.hookStableMs;
 }
 
 // ---------------- Hook Filter ----------------

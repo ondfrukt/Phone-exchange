@@ -66,6 +66,7 @@ void Settings::resetDefaults() {
   timer_disconnected    = 60000;
   timer_timeout         = 60000;
   timer_busy            = 30000;
+  timer_incoming        = 60000;
 
   // --- Phone numbers ---
   for (auto &num : linePhoneNumbers) {
@@ -130,6 +131,8 @@ bool Settings::load() {
     timer_disconnected    = prefs.getUInt ("timerDisconnected", timer_disconnected);
     timer_timeout         = prefs.getUInt ("timerTimeout",      timer_timeout);
     timer_busy            = prefs.getUInt ("timerBusy",         timer_busy);
+    timer_incoming        = prefs.getUInt ("timerIncoming",     timer_incoming);
+    
 
     // --- Phone numbers ---
     for (int i = 0; i < 8; ++i) {
@@ -190,6 +193,7 @@ void Settings::save() const {
   prefs.putUInt ("timerDisconnected", timer_disconnected);
   prefs.putUInt ("timerTimeout",      timer_timeout);
   prefs.putUInt ("timerBusy",         timer_busy);
+  prefs.putUInt ("timerIncoming",     timer_incoming);
 
   // --- Phone numbers ---
   for (int i = 0; i < 8; ++i) {

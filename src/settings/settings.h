@@ -65,15 +65,16 @@ public:
   bool mcpMt8816Present= false;
 
   // Timers
-  unsigned long timer_Ready = 240000;
-  unsigned long timer_Dialing = 5000;
-  unsigned long timer_Ringing = 10000;
-  unsigned long timer_pulsDialing = 3000;
-  unsigned long timer_toneDialing = 3000;
-  unsigned long timer_fail = 30000;
-  unsigned long timer_disconnected = 60000;
-  unsigned long timer_timeout = 60000;
-  unsigned long timer_busy = 30000;
+  unsigned long timer_Ready;
+  unsigned long timer_Dialing;
+  unsigned long timer_Ringing;
+  unsigned long timer_pulsDialing;
+  unsigned long timer_toneDialing;
+  unsigned long timer_fail;
+  unsigned long timer_disconnected;
+  unsigned long timer_timeout;
+  unsigned long timer_busy;
+  unsigned long timer_incoming;
 
   inline uint8_t activeLinesCount() const {
     uint8_t x = activeLinesMask, c = 0;

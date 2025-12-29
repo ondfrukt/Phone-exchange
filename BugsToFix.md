@@ -10,9 +10,17 @@
     - Alla knappar utgår från samma mall i CSS-filen
     - **Möjlig lösning:** Dela upp i flera CSS-varianter
 
-
 - **Statusändringar vid ringning**
-    - När en ringsignal genereras till linje 0.
+    - När en ringsignal genereras till linje 0 får jag även in singaler in i min SHK-pin på samma linje. testat och samma beteende sker på både linje 0 och 1.
+    - kanske kan det delade jordplanen spela roll men samtidigt har jag bara problemet på den linje som jag ringer till enskilt.
+    - Problemet kvarstår sannolikt. Löst genom att inga detekteringar av SHK kan ske när en linje pulserar
 
-- **Krachar när webserverDebug ändras**
-    - När debugnivån på webserver ändras krachar espn och startar om
+- **~~Krachar när webserverDebug ändras~~ FIXED**
+    - ~~När debugnivån på webserver ändras krachar espn och startar om~~
+    - Fixed: Removed infinite recursion in console sink callback that was triggered when debugWSLevel >= 2
+
+- **Settings ändringar för ringsignaler ändras inte när man trycker på knappen**
+    - man får bara följande felmeddelanden:
+[733579][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerPulsDialing KEY_TOO_LONG
+[733587][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerToneDialing KEY_TOO_LONG
+[733596][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerDisconnected KEY_TOO_LONG
