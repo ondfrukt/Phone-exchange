@@ -11,9 +11,7 @@
     - **Möjlig lösning:** Dela upp i flera CSS-varianter
 
 - **Statusändringar vid ringning**
-    - När en ringsignal genereras till linje 0 får jag även in singaler in i min SHK-pin på samma linje. testat och samma beteende sker på både linje 0 och 1.
-    - kanske kan det delade jordplanen spela roll men samtidigt har jag bara problemet på den linje som jag ringer till enskilt.
-    - Problemet kvarstår sannolikt. Löst genom att inga detekteringar av SHK kan ske när en linje pulserar
+    - När en ringsignal genereras till linje 0.
 
 - **~~Krachar när webserverDebug ändras~~ FIXED**
     - ~~När debugnivån på webserver ändras krachar espn och startar om~~

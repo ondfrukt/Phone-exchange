@@ -109,6 +109,12 @@ void SHKService::update() {
   while (true) {
     IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC1_ADDRESS);
     if (!r.hasEvent) break;
+
+    // Ignore SHK changes during ringing due to a interference error.
+    if (ringGenerator_.lineStates_[r.line].state == model::RingState::RingToggling) {
+      continue;
+    }
+
     if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis(), r.level);
@@ -120,6 +126,12 @@ void SHKService::update() {
   while (true) {
     IntResult r = interruptManager_.pollEventByAddress(cfg::mcp::MCP_SLIC2_ADDRESS);
     if (!r.hasEvent) break;
+
+    // Ignore SHK changes during ringing due to a interference error.
+    if (ringGenerator_.lineStates_[r.line].state == model::RingState::RingToggling) {
+      continue;
+    }
+
     if (r.line < 8) {
       uint32_t mask = (1u << r.line);
       notifyLinesPossiblyChanged(mask, millis(), r.level);

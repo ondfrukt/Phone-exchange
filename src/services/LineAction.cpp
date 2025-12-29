@@ -46,6 +46,34 @@ void LineAction::update() {
   }
 }
 
+void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
+  if (line.toneGenUsed != 0){
+    toneGenerators[line.toneGenUsed -1]->stop();
+    line.toneGenUsed = 0;
+  }
+}
+
+void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
+  if (!toneGen1_.isPlaying()){
+    toneGen1_.startToneSequence(status);
+    line.toneGenUsed = 1;
+  }
+  else if (!toneGen2_.isPlaying()){
+    toneGen2_.startToneSequence(status);
+    line.toneGenUsed = 2;
+  }
+  else if (!toneGen3_.isPlaying()){
+    toneGen3_.startToneSequence(status);
+    line.toneGenUsed = 3;
+  }
+  else {
+    if (settings_.debugLALevel >= 1) {
+      Serial.println("LineAction: All tone generators are busy, cannot start tone for line " + String(line.lineNumber));
+      util::UIConsole::log("LineAction: All tone generators are busy, cannot start tone for line " + String(line.lineNumber), "LineAction");
+    }
+  }
+}
+
 // Handles actions based on new line status
 void LineAction::action(int index) {
   using namespace model;
@@ -227,17 +255,10 @@ void LineAction::timerExpired(LineHandler& line) {
       break;
 
     case LineStatus::PulseDialing:
-      if (line.dialedDigits.length() == 0) {
-        lineManager_.setStatus(index, LineStatus::Timeout);
-      } else {
-        lineManager_.setStatus(index, LineStatus::ToneDialing);
-      }
+      break;
 
+    case LineStatus::ToneDialing:
 
-
-
-    case LineStatus::Incoming:
-      lineManager_.setStatus(index, LineStatus::Idle);
       break;
 
     case LineStatus::Ringing:

@@ -91,5 +91,5 @@ private:
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 2;    // increase if layout changes
+  static constexpr uint16_t kVersion = 3;    // increase if layout changes
 };
