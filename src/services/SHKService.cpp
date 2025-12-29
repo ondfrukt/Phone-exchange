@@ -1,5 +1,12 @@
 #include "SHKService.h"
 
+// Constants for hook detection during pulse dialing
+namespace {
+  // Additional margin time (ms) added to pulseLowMaxMs when pulse detector is active.
+  // This ensures hook changes are distinguished from pulse low states.
+  constexpr uint32_t kPulseMarginMs = 50;
+}
+
 // Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
 SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, RingGenerator& ringGenerator)
 : lineManager_(lineManager), interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), ringGenerator_(ringGenerator){
@@ -244,7 +251,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
   uint32_t requiredStableMs = hookStableMs;
   if (s.pdState != PerLine::PDState::Idle) {
     // Use pulseLowMaxMs + margin to ensure pulses are not mistaken for hook changes
-    requiredStableMs = settings_.pulseLowMaxMs + 50;
+    requiredStableMs = settings_.pulseLowMaxMs + kPulseMarginMs;
   }
 
   bool timeOk   = (nowMs - s.hookCandSince) >= requiredStableMs;
