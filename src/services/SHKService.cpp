@@ -256,6 +256,11 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
       // Skip stable OnHook detection during active pulse dialing to prevent pulses from being misinterpreted as hook state changes
       if (s.pdState != PerLine::PDState::Idle) {
         // During pulse dialing, ignore OnHook signals as they are part of the pulse train
+        if (settings_.debugSHKLevel >= 2) {
+          Serial.printf("SHKService: L%d ignoring OnHook signal during pulse dialing (pdState=%d, raw=%d)\n", 
+                        idx, (int)s.pdState, rawHigh ? 1 : 0);
+          util::UIConsole::log("L" + String(idx) + " ignoring OnHook signal during pulse dialing", "SHKService");
+        }
         return;
       }
     }
