@@ -63,6 +63,12 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
     toneGen3_.startToneSequence(status);
     line.toneGenUsed = 3;
   }
+  else {
+    if (settings_.debugLALevel >= 1) {
+      Serial.println("LineAction: All tone generators are busy, cannot start tone for line " + String(line.lineNumber));
+      util::UIConsole::log("LineAction: All tone generators are busy, cannot start tone for line " + String(line.lineNumber), "LineAction");
+    }
+  }
 }
 
 // Handles actions based on new line status
@@ -247,6 +253,8 @@ void LineAction::timerExpired(LineHandler& line) {
       break;
 
     case LineStatus::PulseDialing:
+      break;
+
     case LineStatus::ToneDialing:
 
       break;
