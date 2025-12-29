@@ -239,17 +239,18 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
     s.hookCandConsec++;
   }
 
-  bool timeOk   = (nowMs - s.hookCandSince) >= hookStableMs;
+  // During pulse dialing, require longer stability time to distinguish between
+  // short pulses (which can be up to pulseLowMaxMs) and actual hook changes.
+  uint32_t requiredStableMs = hookStableMs;
+  if (s.pdState != PerLine::PDState::Idle) {
+    // Use pulseLowMaxMs + margin to ensure pulses are not mistaken for hook changes
+    requiredStableMs = settings_.pulseLowMaxMs + 50;
+  }
+
+  bool timeOk   = (nowMs - s.hookCandSince) >= requiredStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
-
-    // During pulse dialing, only allow OnHook transitions (hanging up) to avoid
-    // confusion between pulse low states and actual OffHook transitions.
-    if (s.pdState != PerLine::PDState::Idle && offHook) {
-      // Pulse detector is active and trying to transition to OffHook - ignore.
-      return;
-    }
 
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n",idx, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, nowMs - s.hookCandSince);
