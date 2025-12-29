@@ -244,15 +244,13 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
 
-    // On transition to OnHook: commit digit if between pulses.
-    if (!offHook) { // OnHook
-      if (s.pdState == PerLine::PDState::BetweenPulses && s.pulseCountWork > 0) {
-        emitDigitAndReset_(idx, rawHigh, nowMs);
-      } else if (s.pdState == PerLine::PDState::InPulse) {
-        // Interrupted pulse on OnHook → discard it.
-        resetPulseState_(idx);
-      }
+    // Skip hook state changes during active pulse dialing to avoid confusion
+    // between pulse low states and actual OnHook transitions.
+    if (s.pdState != PerLine::PDState::Idle) {
+      // Pulse detector is active, don't update hook state yet
+      return;
     }
+
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n",idx, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, nowMs - s.hookCandSince);
       util::UIConsole::log("L" + String(idx) + " stable hook " + (offHook ? "OffHook" : "OnHook") + " (raw=" + String(rawHigh ? 1 : 0) + ") at " + String(nowMs) + " ms", "SHKService");
