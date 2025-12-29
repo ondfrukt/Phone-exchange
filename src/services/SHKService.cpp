@@ -244,11 +244,10 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
 
-    // During pulse dialing, only allow OnHook transitions (hanging up).
-    // Block OffHook transitions to avoid confusion between pulse low states 
-    // and actual hook changes, but always allow hanging up the phone.
+    // During pulse dialing, only allow OnHook transitions (hanging up) to avoid
+    // confusion between pulse low states and actual OffHook transitions.
     if (s.pdState != PerLine::PDState::Idle && offHook) {
-      // Pulse detector is active and trying to transition to OffHook - ignore
+      // Pulse detector is active and trying to transition to OffHook - ignore.
       return;
     }
 
