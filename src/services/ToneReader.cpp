@@ -201,7 +201,7 @@ void ToneReader::update() {
       stdRisingEdgeTime_ = millis();
       
     } else if (fallingEdge) {
-      // If we get a falling edge before processing the rising edge, cancel it
+      // If we get a falling edge before processing the rising edge, validate duration
       // This helps filter very short glitches
       if (stdRisingEdgePending_) {
         unsigned long toneDuration = millis() - stdRisingEdgeTime_;
@@ -216,7 +216,12 @@ void ToneReader::update() {
                                 "ms < " + String(settings_.dtmfMinToneDurationMs) + "ms) - ignoring", 
                                 "ToneReader");
           }
+          // Cancel the pending tone - don't process it
+          stdRisingEdgePending_ = false;
+          // Don't set line timer or continue processing for rejected tones
+          continue;  // Skip to next iteration of event loop
         }
+        // Tone was long enough, but already processed if stability check passed
         stdRisingEdgePending_ = false;
       }
       
