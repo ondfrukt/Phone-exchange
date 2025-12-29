@@ -78,3 +78,48 @@ Monitors the physical hook (on-hook / off-hook) for each line, debounces raw sig
 4. Handset returned → `SHKService` reports on-hook → LineManager change the state and LineAction logic ends or resets call state.  
 
 Keeps the hook layer clean so higher-level logic only reacts to stable, meaningful changes.
+
+---
+
+## 🟪 ToneReader
+**Responsibility:**  
+Monitors the MT8870 DTMF decoder chip and converts detected tones into digits for the active phone line.
+
+**What it does:**
+- Detects rising/falling edges on the MT8870 STD (Steering Data) signal via interrupts
+- Reads the 4-bit DTMF code (Q1-Q4) when a valid tone is detected
+- Implements configurable filtering to reject spurious signals and noise
+- Associates detected tones with the most recently active line (`lastLineReady`)
+- Only accepts tones when the line is in `Ready` or `ToneDialing` state
+
+**Key filtering mechanisms:**
+1. **STD Signal Stability** (`dtmfStdStableMs`): Waits for the STD signal to remain high for a minimum duration before reading the tone, filtering very short glitches
+2. **Minimum Tone Duration** (`dtmfMinToneDurationMs`): Rejects tones that are shorter than the minimum valid DTMF duration (MT8870 spec: 40ms typical)
+3. **Debounce Time** (`dtmfDebounceMs`): Prevents duplicate detection of the same digit within a configurable time window
+
+**Configurable settings (in Settings class):**
+- `dtmfDebounceMs` (default: 150ms) - Time between same digit detections
+- `dtmfMinToneDurationMs` (default: 40ms) - Minimum valid tone duration
+- `dtmfStdStableMs` (default: 5ms) - STD signal stability requirement
+- `debugTRLevel` (0-2) - Debug verbosity level
+
+**Typical flow:**
+1. Phone goes off-hook → line status becomes `Ready`
+2. User presses a digit → MT8870 decodes the DTMF tones
+3. STD signal goes HIGH → ToneReader marks rising edge as pending
+4. After `dtmfStdStableMs`, STD is still HIGH → read Q1-Q4 pins
+5. Decode nibble to character (0-9, *, #)
+6. Check debounce filter (not same digit within `dtmfDebounceMs`)
+7. Append digit to line's `dialedDigits` string
+8. STD goes LOW → measure duration, reject if < `dtmfMinToneDurationMs`
+9. Set line status to `ToneDialing` and start dial timer
+
+**Error handling:**
+- Rejects tones when no valid `lastLineReady` line exists
+- Filters out invalid nibbles that don't map to valid DTMF characters
+- Only accepts tones when line is in appropriate state (Ready/ToneDialing)
+
+**Debug levels:**
+- Level 0: No debug output
+- Level 1: Basic events (edges, accepted/rejected tones, warnings)
+- Level 2: Detailed debugging (STD signal details, debounce checks, raw GPIO values)
