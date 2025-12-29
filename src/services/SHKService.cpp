@@ -1,5 +1,14 @@
 #include "SHKService.h"
 
+// Constants for hook detection during pulse dialing
+namespace {
+  // Additional margin time (ms) added to pulseLowMaxMs when pulse detector is active.
+  // This ensures hook changes are distinguished from pulse low states.
+  // With pulseLowMaxMs=150ms and kPulseMarginMs=50ms, we require 200ms stability
+  // during pulse dialing, which is well beyond the maximum pulse duration (150ms).
+  constexpr uint32_t kPulseMarginMs = 50;
+}
+
 // Constructor: Initializes SHKService with references to LineManager, InterruptManager, MCPDriver, and Settings.
 SHKService::SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, RingGenerator& ringGenerator)
 : lineManager_(lineManager), interruptManager_(interruptManager), mcpDriver_(mcpDriver), settings_(settings), ringGenerator_(ringGenerator){
@@ -239,17 +248,18 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
     s.hookCandConsec++;
   }
 
-  bool timeOk   = (nowMs - s.hookCandSince) >= hookStableMs;
+  // During pulse dialing, require longer stability time to distinguish between
+  // short pulses (which can be up to pulseLowMaxMs) and actual hook changes.
+  uint32_t requiredStableMs = hookStableMs;
+  if (s.pdState != PerLine::PDState::Idle) {
+    // Use pulseLowMaxMs + margin to ensure pulses are not mistaken for hook changes
+    requiredStableMs = settings_.pulseLowMaxMs + kPulseMarginMs;
+  }
+
+  bool timeOk   = (nowMs - s.hookCandSince) >= requiredStableMs;
   bool consecOk = (settings_.hookStableConsec == 0) || (s.hookCandConsec >= settings_.hookStableConsec);
   if (timeOk && consecOk) {
     bool offHook = rawToOffHook_(s.hookCand);
-
-    // Skip hook state changes during active pulse dialing to avoid confusion
-    // between pulse low states and actual OnHook transitions.
-    if (s.pdState != PerLine::PDState::Idle) {
-      // Pulse detector is active, don't update hook state yet
-      return;
-    }
 
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n",idx, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, nowMs - s.hookCandSince);
