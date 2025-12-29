@@ -4,6 +4,8 @@
 namespace {
   // Additional margin time (ms) added to pulseLowMaxMs when pulse detector is active.
   // This ensures hook changes are distinguished from pulse low states.
+  // With pulseLowMaxMs=150ms and kPulseMarginMs=50ms, we require 200ms stability
+  // during pulse dialing, which is well beyond the maximum pulse duration (150ms).
   constexpr uint32_t kPulseMarginMs = 50;
 }
 
