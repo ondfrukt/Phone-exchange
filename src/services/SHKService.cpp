@@ -330,11 +330,6 @@ void SHKService::updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs) {
   // Digit gap: runs every tick (not just on edge).
   if (s.pdState == PerLine::PDState::BetweenPulses) {
     uint32_t sinceRise = nowMs - s.lastEdgeMs;
-    if (settings_.debugSHKLevel >= 2) {
-      Serial.printf("SHKService: L%d gap=%u ms (thr=%u)\n",
-                    idx, (unsigned)sinceRise, (unsigned)settings_.digitGapMinMs);
-      util::UIConsole::log("SHKService: L" + String(idx) + " gap=" + String(sinceRise) + " ms (thr=" + String(settings_.digitGapMinMs) + ")", "SHKService");
-    }
     if (sinceRise >= settings_.digitGapMinMs) {
       emitDigitAndReset_(idx, rawHigh, nowMs);
       return;
