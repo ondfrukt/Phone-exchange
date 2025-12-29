@@ -218,8 +218,8 @@ void ToneReader::update() {
           }
           // Cancel the pending tone - don't process it
           stdRisingEdgePending_ = false;
-          // Don't set line timer or continue processing for rejected tones
-          continue;  // Skip to next iteration of event loop
+          // Skip line timer and logging below, continue to next event
+          continue;
         }
         // Tone was long enough, but already processed if stability check passed
         stdRisingEdgePending_ = false;
