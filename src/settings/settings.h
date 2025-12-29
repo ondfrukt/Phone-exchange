@@ -56,6 +56,11 @@ public:
   uint32_t ringPauseMs;           // Pause between rings in ms
   uint32_t ringIterations;        // Iterations of ringing signal
 
+  // ---- ToneReader (DTMF) settings ----
+  uint32_t dtmfDebounceMs;        // Minimum time between detections of the same digit (ms)
+  uint32_t dtmfMinToneDurationMs; // Minimum tone duration to accept as valid (ms)
+  uint32_t dtmfStdStableMs;       // Minimum time STD signal must be stable before reading (ms)
+
   uint8_t allowMask;
 
   // ---- MCP statuses (not saved to NVS, runtime only) ----

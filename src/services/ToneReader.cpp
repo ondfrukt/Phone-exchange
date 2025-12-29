@@ -30,47 +30,23 @@ void ToneReader::update() {
   // Note: We now rely on interrupt-driven events from InterruptManager
   // instead of direct GPIO polling for more reliable edge detection
   
-  // Hantera MAIN-interrupts (bl.a. MT8870 STD). Töm alla väntande events.
-  while (true) {
-    IntResult ir = interruptManager_.pollEvent(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD);
-    if (!ir.hasEvent) break;
-
-    if (settings_.debugTRLevel >= 2) {
-      Serial.print(F("ToneReader: STD interrupt detected - addr=0x"));
-      Serial.print(ir.i2c_addr, HEX);
-      Serial.print(F(" pin="));
-      Serial.print(ir.pin);
-      Serial.print(F(" level="));
-      Serial.println(ir.level ? F("HIGH") : F("LOW"));
-      util::UIConsole::log("ToneReader: STD INT 0x" + String(ir.i2c_addr, HEX) +
-                               " pin=" + String(ir.pin) +
-                               " level=" + String(ir.level ? "HIGH" : "LOW"),
-                           "ToneReader");
-    }
-    // Detect rising edge (LOW -> HIGH transition)
-    bool risingEdge = ir.level && !lastStdLevel_;
+  unsigned long now = millis();
+  
+  // Check if we have a pending rising edge that needs stability verification
+  if (stdRisingEdgePending_) {
+    unsigned long timeSinceRising = now - stdRisingEdgeTime_;
     
-    if (settings_.debugTRLevel >= 2) {
-      Serial.print(F("ToneReader: Edge detection - lastStdLevel_="));
-      Serial.print(lastStdLevel_ ? F("HIGH") : F("LOW"));
-      Serial.print(F(" currentLevel="));
-      Serial.print(ir.level ? F("HIGH") : F("LOW"));
-      Serial.print(F(" risingEdge="));
-      Serial.println(risingEdge ? F("YES") : F("NO"));
-    }
-    
-    lastStdLevel_ = ir.level;
-    
-    // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
-    if (risingEdge) {
-      if (settings_.debugTRLevel >= 1) {
-        Serial.println(F("ToneReader: Rising edge detected - attempting to read DTMF nibble"));
-        util::UIConsole::log("ToneReader: Rising edge detected - attempting to read DTMF nibble", "ToneReader");
+    // Check if STD signal has been stable for the required duration
+    if (timeSinceRising >= settings_.dtmfStdStableMs) {
+      if (settings_.debugTRLevel >= 2) {
+        Serial.print(F("ToneReader: STD stable for "));
+        Serial.print(timeSinceRising);
+        Serial.println(F("ms - attempting to read DTMF nibble"));
+        util::UIConsole::log("ToneReader: STD stable for " + String(timeSinceRising) + 
+                            "ms - attempting to read", "ToneReader");
       }
       
-      
-      unsigned long now = millis();
-      uint8_t nibble = 0;
+      stdRisingEdgePending_ = false;
       
       // Only process DTMF if we have a valid lastLineReady
       if (lineManager_.lastLineReady < 0) {
@@ -81,6 +57,7 @@ void ToneReader::update() {
         return;
       }
       
+      uint8_t nibble = 0;
       if (readDtmfNibble(nibble)) {
         
         lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
@@ -90,7 +67,7 @@ void ToneReader::update() {
         // Use unsigned subtraction which handles millis() rollover correctly
         unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
         bool isSameDigit = (nibble == lastDtmfNibble_);
-        bool withinDebounceWindow = (timeSinceLastDtmf < DTMF_DEBOUNCE_MS);
+        bool withinDebounceWindow = (timeSinceLastDtmf < settings_.dtmfDebounceMs);
         bool isDuplicate = isSameDigit && withinDebounceWindow;
         
         if (settings_.debugTRLevel >= 2) {
@@ -174,18 +151,86 @@ void ToneReader::update() {
           util::UIConsole::log("ERROR - Failed to read nibble", "ToneReader");
         }
       }
-      } else { // Falling edge
-        if (lineManager_.lastLineReady >= 0) {
-          lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
-        } else if (settings_.debugTRLevel >= 1) {
-          Serial.println(F("ToneReader: Falling edge - no valid lastLineReady to set timer"));
-          util::UIConsole::log("Falling edge - no valid lastLineReady to set timer", "ToneReader");
+    }
+  }
+  
+  // Hantera MAIN-interrupts (bl.a. MT8870 STD). Töm alla väntande events.
+  while (true) {
+    IntResult ir = interruptManager_.pollEvent(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD);
+    if (!ir.hasEvent) break;
+
+    if (settings_.debugTRLevel >= 2) {
+      Serial.print(F("ToneReader: STD interrupt detected - addr=0x"));
+      Serial.print(ir.i2c_addr, HEX);
+      Serial.print(F(" pin="));
+      Serial.print(ir.pin);
+      Serial.print(F(" level="));
+      Serial.println(ir.level ? F("HIGH") : F("LOW"));
+      util::UIConsole::log("ToneReader: STD INT 0x" + String(ir.i2c_addr, HEX) +
+                               " pin=" + String(ir.pin) +
+                               " level=" + String(ir.level ? "HIGH" : "LOW"),
+                           "ToneReader");
+    }
+    // Detect rising edge (LOW -> HIGH transition)
+    bool risingEdge = ir.level && !lastStdLevel_;
+    bool fallingEdge = !ir.level && lastStdLevel_;
+    
+    if (settings_.debugTRLevel >= 2) {
+      Serial.print(F("ToneReader: Edge detection - lastStdLevel_="));
+      Serial.print(lastStdLevel_ ? F("HIGH") : F("LOW"));
+      Serial.print(F(" currentLevel="));
+      Serial.print(ir.level ? F("HIGH") : F("LOW"));
+      Serial.print(F(" risingEdge="));
+      Serial.print(risingEdge ? F("YES") : F("NO"));
+      Serial.print(F(" fallingEdge="));
+      Serial.println(fallingEdge ? F("YES") : F("NO"));
+    }
+    
+    lastStdLevel_ = ir.level;
+    
+    // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
+    if (risingEdge) {
+      if (settings_.debugTRLevel >= 1) {
+        Serial.println(F("ToneReader: Rising edge detected - marking for stability check"));
+        util::UIConsole::log("ToneReader: Rising edge detected - marking for stability check", "ToneReader");
+      }
+      
+      // Mark the rising edge and record the time
+      // We'll process it after verifying STD is stable for the configured duration
+      stdRisingEdgePending_ = true;
+      stdRisingEdgeTime_ = millis();
+      
+    } else if (fallingEdge) {
+      // If we get a falling edge before processing the rising edge, cancel it
+      // This helps filter very short glitches
+      if (stdRisingEdgePending_) {
+        unsigned long toneDuration = millis() - stdRisingEdgeTime_;
+        if (toneDuration < settings_.dtmfMinToneDurationMs) {
+          if (settings_.debugTRLevel >= 1) {
+            Serial.print(F("ToneReader: Tone too short ("));
+            Serial.print(toneDuration);
+            Serial.print(F("ms < "));
+            Serial.print(settings_.dtmfMinToneDurationMs);
+            Serial.println(F("ms) - ignoring"));
+            util::UIConsole::log("Tone too short (" + String(toneDuration) + 
+                                "ms < " + String(settings_.dtmfMinToneDurationMs) + "ms) - ignoring", 
+                                "ToneReader");
+          }
         }
-        
-        if (settings_.debugTRLevel >= 1) {
-          Serial.println(F("ToneReader: Falling edge detected (STD went LOW)"));
-          util::UIConsole::log("Falling edge detected (STD LOW)", "ToneReader");
-        }
+        stdRisingEdgePending_ = false;
+      }
+      
+      if (lineManager_.lastLineReady >= 0) {
+        lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
+      } else if (settings_.debugTRLevel >= 1) {
+        Serial.println(F("ToneReader: Falling edge - no valid lastLineReady to set timer"));
+        util::UIConsole::log("Falling edge - no valid lastLineReady to set timer", "ToneReader");
+      }
+      
+      if (settings_.debugTRLevel >= 1) {
+        Serial.println(F("ToneReader: Falling edge detected (STD went LOW)"));
+        util::UIConsole::log("Falling edge detected (STD LOW)", "ToneReader");
+      }
     }
   }
 }
