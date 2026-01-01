@@ -45,6 +45,7 @@ void SHKService::notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs
 
   if (settings_.debugSHKLevel >= 2) {
     Serial.printf("SHKService: notifyLinesPossiblyChanged mask=0x%X at %u ms, value=%d\n", changedMask, nowMs, value);
+    Serial.flush();  // Ensure immediate output
     util::UIConsole::log("notifyLinesPossiblyChanged mask=0x" + String(changedMask, HEX) + " at " + String(nowMs) + " ms", "SHKService");
   }
 
@@ -103,6 +104,7 @@ bool SHKService::tick(uint32_t nowMs) {
     burstActive_ = false;
     if (settings_.debugSHKLevel >= 2) {
       Serial.println("SHKService: burst finished, going idle");
+      Serial.flush();  // Ensure immediate output
       util::UIConsole::log("burst finished, going idle", "SHKService");
     }
   } else {
@@ -263,6 +265,7 @@ void SHKService::updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32
 
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n",idx, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, nowMs - s.hookCandSince);
+      Serial.flush();  // Ensure immediate output
       util::UIConsole::log("L" + String(idx) + " stable hook " + (offHook ? "OffHook" : "OnHook") + " (raw=" + String(rawHigh ? 1 : 0) + ") at " + String(nowMs) + " ms", "SHKService");
     }
     setStableHook(idx, offHook, rawHigh, nowMs);
@@ -381,6 +384,7 @@ void SHKService::pulseFalling_(int idx, uint32_t nowMs) {
 
     if (settings_.debugSHKLevel >= 2){
       Serial.printf("SHKService: Line %d pulse falling \n", idx);
+      Serial.flush();  // Ensure immediate output
       util::UIConsole::log("Line " + String(idx) + " pulse falling", "SHKService");
     }
   }
@@ -396,6 +400,7 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
     s.lastEdgeMs = nowMs;                   // Rising edge.
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: Line %d pulse low duration %d ms\n", (int)idx, (int)lowDur);
+      Serial.flush();  // Ensure immediate output
       util::UIConsole::log("SHKService: Line " + String(idx) + " pulse low duration " + String(lowDur) + " ms", "SHKService");
     }
 
@@ -412,6 +417,7 @@ void SHKService::pulseRising_(int idx, uint32_t nowMs) {
 
       if (settings_.debugSHKLevel >= 2) {
         Serial.printf("SHKService: Line %d pulsCountWork %d \n", (int)idx, (int)s.pulseCountWork);
+        Serial.flush();  // Ensure immediate output
         util::UIConsole::log("SHKService: Line " + String(idx) + " pulseCountWork " + String(s.pulseCountWork), "SHKService");
       }
 
@@ -434,9 +440,11 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
 
     if (settings_.debugSHKLevel >= 1) {
       Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)s.pulseCountWork);
+      Serial.flush();  // Ensure immediate output
       util::UIConsole::log("Line " + String(idx) + " digit '" + String(d) + "' (pulses=" + String(s.pulseCountWork) + ")", "SHKService");
     }
     Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+    Serial.flush();  // Ensure immediate output
     util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
   }
   lineManager_.setLineTimer(idx, settings_.timer_pulsDialing);
