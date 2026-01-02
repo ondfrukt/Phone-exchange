@@ -443,13 +443,13 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
     line.lineTimerEnd = nowMs + settings_.timer_toneDialing; // Reset timer
 
     if (settings_.debugSHKLevel >= 1) {
-      Serial.print(MAGENTA);
       Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)sample.pulseCountWork);
-      Serial.print(RESET_);
       Serial.flush();  // Ensure immediate output
       util::UIConsole::log("Line " + String(idx) + " digit '" + String(d) + "' (pulses=" + String(sample.pulseCountWork) + ")", "SHKService");
     }
+    Serial.print(MAGENTA);
     Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+    Serial.print(COLOR_RESET);
     Serial.flush();  // Ensure immediate output
     util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
   }
