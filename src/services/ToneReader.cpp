@@ -60,9 +60,6 @@ void ToneReader::update() {
       uint8_t nibble = 0;
       if (readDtmfNibble(nibble)) {
         
-        lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
-        lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
-        
         // Check debouncing: ignore if same digit detected within debounce period
         // Use unsigned subtraction which handles millis() rollover correctly
         unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
@@ -99,6 +96,12 @@ void ToneReader::update() {
 
           if (ch != '\0') {
             int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
+            
+            // Only set status to ToneDialing if the line is currently in Ready state and we have a valid digit
+            if (idx >= 0 && lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready) {
+              lineManager_.setStatus(idx, model::LineStatus::ToneDialing);
+            }
+            lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
 
             // To avoid strange signals thats detected as dtomf tones, only accept tones when line is in Ready or ToneDialing state
             if (idx >= 0 && (lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready || 
