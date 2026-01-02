@@ -55,8 +55,8 @@ void Settings::resetDefaults() {
   highMeansOffHook      = true; // High signal means off-hook state
 
   // --- Ringing settings ---
-  ringLengthMs          = 500;  // Length of ringing signal in ms
-  ringPauseMs           = 2000; // Pause between rings in ms
+  ringLengthMs          = 1000;  // Length of ringing signal in ms
+  ringPauseMs           = 5000; // Pause between rings in ms
   ringIterations        = 2;    // Iterations of ringing signal
 
   // --- ToneReader (DTMF) settings ---
@@ -67,18 +67,19 @@ void Settings::resetDefaults() {
   // --- Timers ---
   timer_Ready           = 240000;
   timer_Dialing         = 5000;
-  timer_Ringing         = 10000;
+  timer_Ringing         = 12000;
+  timer_incomming       = 12000;
   timer_pulsDialing     = 3000;
   timer_toneDialing     = 3000;
   timer_fail            = 30000;
   timer_disconnected    = 60000;
   timer_timeout         = 60000;
   timer_busy            = 30000;
-  timer_incoming        = 60000;
+
 
   // --- Phone numbers ---
-  for (auto &num : linePhoneNumbers) {
-    num = "";
+  for (int i = 0; i < 8; ++i) {
+    linePhoneNumbers[i] = String(i);
   }
 
   // Runtime flags kept false here; set by MCPDriver::begin()
@@ -138,13 +139,13 @@ bool Settings::load() {
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
     timer_Dialing         = prefs.getUInt ("timerDialing",      timer_Dialing);
     timer_Ringing         = prefs.getUInt ("timerRinging",      timer_Ringing);
+    timer_incomming       = prefs.getUInt ("timerIncomming",    timer_incomming);
     timer_pulsDialing     = prefs.getUInt ("timerPulsDialing",  timer_pulsDialing);
     timer_toneDialing     = prefs.getUInt ("timerToneDialing",  timer_toneDialing);
     timer_fail            = prefs.getUInt ("timerFail",         timer_fail);
     timer_disconnected    = prefs.getUInt ("timerDisconnected", timer_disconnected);
     timer_timeout         = prefs.getUInt ("timerTimeout",      timer_timeout);
     timer_busy            = prefs.getUInt ("timerBusy",         timer_busy);
-    timer_incoming        = prefs.getUInt ("timerIncoming",     timer_incoming);
     
 
     // --- Phone numbers ---
@@ -205,13 +206,14 @@ void Settings::save() const {
   prefs.putUInt ("timerReady",            timer_Ready);
   prefs.putUInt ("timerDialing",          timer_Dialing);
   prefs.putUInt ("timerRinging",          timer_Ringing);
+  prefs.putUInt ("timerIncomming",        timer_incomming);
   prefs.putUInt ("timerPulsDialing",      timer_pulsDialing);
   prefs.putUInt ("timerToneDialing",      timer_toneDialing);
   prefs.putUInt ("timerFail",             timer_fail);
   prefs.putUInt ("timerDisconnected",     timer_disconnected);
   prefs.putUInt ("timerTimeout",          timer_timeout);
   prefs.putUInt ("timerBusy",             timer_busy);
-  prefs.putUInt ("timerIncoming",         timer_incoming);
+
   // --- Phone numbers ---
   for (int i = 0; i < 8; ++i) {
     String key = String("linePhone") + i;

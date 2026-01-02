@@ -172,3 +172,53 @@ void LineManager::setPhoneNumber(int index, const String& value) {
   lines[index].phoneNumber = sanitized;
   settings_.linePhoneNumbers[index] = sanitized;
 }
+
+int LineManager::searchPhoneNumber(const String& phoneNumber) {
+  // Trimma och förbered söksträngen
+
+
+  if (settings_.debugLmLevel >= 2){
+    Serial.print("Numbers: ");
+    for (int i = 0; i < static_cast<int>(lines.size()); ++i) {
+      Serial.print(String(lines[i].phoneNumber));
+      Serial.print(", ");
+    }
+    Serial.println();
+  }
+  
+
+  if (settings_.debugLmLevel >= 1){
+    Serial.print("LineManager: Searching for phone number '");
+    Serial.print(phoneNumber);
+    Serial.println("'");
+    util::UIConsole::log("LineManager: Searching for phone number '" + phoneNumber + "'", "LineManager");
+  }
+  String searchNumber = phoneNumber;
+  searchNumber.trim();
+
+  // Loopa genom alla linjer
+  for (size_t i = 0; i < lines.size(); ++i) {
+    // Skippa inaktiva linjer (valfritt)
+    if (!lines[i].lineActive) {
+      continue;
+    }
+    
+    // Jämför telefonnummer
+    if (lines[i].phoneNumber == searchNumber) {
+      
+      if (settings_.debugLmLevel >= 1){
+        Serial.print("LineManager: Found matching phone number on line ");
+        Serial.print(i);
+        Serial.println();
+        util::UIConsole::log("LineManager: Found matching phone number on line " + String(i), "LineManager");
+      }
+      return static_cast<int>(i);  // Returnera linjens index
+    }
+  }
+  
+  if (settings_.debugLmLevel >= 1){
+    Serial.println("LineManager: No matching phone number found");
+    util::UIConsole::log("LineManager: No matching phone number found", "LineManager");
+  }
+  return -1;  // Ingen matchning hittades
+}

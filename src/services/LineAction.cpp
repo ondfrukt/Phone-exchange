@@ -172,6 +172,7 @@ void LineAction::action(int index) {
       break;
 
     case LineStatus::Disconnected:
+      turnOffToneGenIfUsed(line);
       lineManager_.setLineTimer(index, settings_.timer_disconnected); // Set timer for Disconnected state
     //   mqttHandler.publishMQTT(line, line_disconnected);
     //   Line[line].startLineTimer(statusTimer_disconnected);
@@ -184,19 +185,22 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Timeout:
+      turnOffToneGenIfUsed(line);
       lineManager_.setLineTimer(index, settings_.timer_timeout); // Set timer for Timeout state
     //   mqttHandler.publishMQTT(line, line_timeout);
     //   Line[line].startLineTimer(statusTimer_timeout);
     //   toneGen1.setMode(ToneGenerator::TONE_OFF);
     //   break;
     case LineStatus::Abandoned:
+      turnOffToneGenIfUsed(line);
       lineManager_.setLineTimer(index, settings_.timer_timeout); // Set timer for Abandoned state
     //   Line[line].resetDialedDigits();
     // mqttHandler.publishMQTT(line, line_abandoned);
     // break;
     case LineStatus::Incoming:
       ringGenerator_.generateRingSignal(index);
-      lineManager_.setLineTimer(index, settings_.timer_incoming); // Set timer for Incoming state
+      lineManager_.setLineTimer(index, settings_.timer_incomming); // Set timer for Incoming state
+
     //   mqttHandler.publishMQTT(line, line_incoming);
     //   break;
     case LineStatus::Operator:
@@ -225,15 +229,44 @@ void LineAction::timerExpired(LineHandler& line) {
       lineManager_.setStatus(index, LineStatus::Timeout);
       break;
 
-    case LineStatus::PulseDialing:
-      break;
-
     case LineStatus::ToneDialing:
+    case LineStatus::PulseDialing: 
+      {
+          int lineIndex = lineManager_.searchPhoneNumber(line.dialedDigits);
+          Serial.print("lineIndex received: " + String(lineIndex) + "\n");
 
+      if (settings_.debugLALevel >= 1) {
+        Serial.println("LineAction: ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineIndex: " + String(lineIndex));
+        util::UIConsole::log("ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineIndex: " + String(lineIndex), "LineAction");
+      }
+      
+      if (lineIndex == index){
+        // Dialed own number
+        Serial.println(RED "LineAction: Line " + String(index) + " dialed its own number. Setting to Fail." + COLOR_RESET);
+        lineManager_.setStatus(index, LineStatus::Fail);
+      }
+      else if (lineIndex != -1){
+        // Found a matching phone number
+        lineManager_.setStatus(index, LineStatus::Ringing);
+        lineManager_.getLine(index).outgoingTo = lineIndex;
+        lineManager_.setStatus(lineIndex, LineStatus::Incoming);
+        lineManager_.getLine(lineIndex).incomingFrom = index;
+      }
+      else {
+        // No match found
+        Serial.println(RED "LineAction: No matching phone number found for line " + String(index) + " dialed digits: " + line.dialedDigits + COLOR_RESET);
+        lineManager_.setStatus(index, LineStatus::Fail);
+      }
+          
       break;
+    }
 
     case LineStatus::Ringing:
       lineManager_.setStatus(index, LineStatus::Disconnected);
+      break;
+
+    case LineStatus::Incoming:
+      lineManager_.setStatus(index, LineStatus::Idle);
       break;
 
     case LineStatus::Busy:
