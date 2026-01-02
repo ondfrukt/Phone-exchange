@@ -22,7 +22,7 @@ public:
 
   // ---- Public fields ----
   uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
-  uint16_t debounceMs;            // Debounce time for line state changes
+  uint16_t pulseDebounceMs;            // Debounce time for line state changes
   String linePhoneNumbers[8];     // Stored phone number per line
 
   // ---- Debugging ----
@@ -46,7 +46,7 @@ public:
   uint32_t burstTickMs;           // Time for a burst tick
   uint32_t hookStableMs;          // Time for stable hook state
   uint8_t hookStableConsec;       // Number of consecutive stable readings for hook state
-  uint32_t pulseGlitchMs;         // Max glitch time for pulse dialing
+  uint32_t pulsGlitchMs;              // Max glitch time for pulse dialing
   uint32_t pulseLowMaxMs;         // Max low time for pulse dialing
   uint32_t digitGapMinMs;         // Min gap time between digits for pulse dialing
   uint32_t globalPulseTimeoutMs;  // Global timeout for pulse dialing
