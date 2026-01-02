@@ -1,27 +1,36 @@
 #pragma once
 #include <Arduino.h>
 #include "config.h"
+#include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
-#include "services/LineManager.h"
 #include "settings.h"
+
+class LineManager;
 
 class ToneReader {
   public:
-    ToneReader(MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager);
+    ToneReader(InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, LineManager& lineManager);
     void update();
+    void activate();
+    void deactivate();
+    bool isActive;
 
   private:
+    InterruptManager& interruptManager_;
     MCPDriver& mcpDriver_;
     Settings& settings_;
     LineManager& lineManager_;
 
     // Debouncing state
     static constexpr uint8_t INVALID_DTMF_NIBBLE = 0xFF;
-    static constexpr unsigned long DTMF_DEBOUNCE_MS = 150; // Minimum time between detections of the same digit
     
     unsigned long lastDtmfTime_ = 0;
     uint8_t lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
     bool lastStdLevel_ = false;
+    
+    // STD signal stability tracking
+    unsigned long stdRisingEdgeTime_ = 0;  // When STD went high
+    bool stdRisingEdgePending_ = false;    // Whether we're waiting to process a rising edge
 
     // MT8870 utgångar: Q1 är LSB, Q4 är MSB
     bool readDtmfNibble(uint8_t& nibble);

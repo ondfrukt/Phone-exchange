@@ -21,10 +21,10 @@ This is a learning project and my personal introduction to programming, Arduino,
 ### Typical behaviour for all call ###
 
 A typical procedure of the system will be as shown below.
-- A hook is lifted, and the status of the line changes from "idle" to "ready."
+- A hook is lifted, the status of the line changes from "idle" to "ready" and a continuous tone can be heard in the phone hook.
 - A phone number is dialed using pulse dialing or DTMF tones, and the digits are captured by the microcontroller.
-- Ring pulses are generated for the dialed line. Once the hook is picked up, the audio lines are connected between the two lines and the conversation can begin
-- Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends
+- Ring pulses are generated to the dialed line and once the hook is picked up, the audio lines are connected between the two lines and the conversation can begin.
+- Ones one of the connected phones puts it's handset into the crank, the audio connection between the lines breaks and the call ends.
 
 ## Hardware ##
 <p align="center">
@@ -75,8 +75,9 @@ To handle the logics in the exchange system, all lines has a current status whis
 | operator      | Connected to operator                 | ➖       | ❌    | ➖    | ❌   |
 
 ### Status flow chart ###
-The flowchart below shows how the statuses change based on the behavior of the phone hooks or when status timers expire.
-
+The flowchart below shows how the statuses change based on the behavior of the phone hooks or when status timers expire. This part is largely inspired by [GadgetReboot](https://github.com/GadgetReboot)
+ and his repository “Retro Phone”. Many thanks to him!
+ 
   <a href="https://raw.githubusercontent.com/ondfrukt/phone-exchange/main/docs/StatusflowChart.drawio.svg">
     <img src="docs/StatusflowChart.drawio.svg" width="800" alt="Diagram (SVG)">
   </a>

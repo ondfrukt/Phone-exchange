@@ -1,10 +1,11 @@
 #include "WebServer.h"
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
+#include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
-WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi ,uint16_t port)
-: settings_ (settings), lm_(lineManager), wifi_(wifi), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
+: settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), server_(port) {}
 
 bool WebServer::begin() {
 
@@ -63,11 +64,13 @@ void WebServer::initSse_() {
 void WebServer::bindConsoleSink_() {
   // Register the sink that forwards Console JSON strings to SSE "console"
   util::UIConsole::setSink([this](const String& json) {
-    // Forward the ready-made JSON to SSE clients
-    events_.send(json.c_str(), "console", millis());
+    // Forward the ready-made JSON to SSE clients only if there are connected clients
+    if (events_.count() > 0) {
+      events_.send(json.c_str(), "console", millis());
+    }
     if (settings_.debugWSLevel >= 2) {
       Serial.println("WebServer: forwarded console message to SSE");
-      util::UIConsole::log("Forwarded console message to SSE", "WebServer");
+      // NOTE: Do NOT call util::UIConsole::log() here as it would cause infinite recursion
     }
   });
 }
@@ -78,29 +81,32 @@ void WebServer::setupCallbacks_() {
 }
 
 void WebServer::setupLineManagerCallback_() {
-  lm_.setStatusChangedCallback([this](int index, LineStatus status){
-    String json = "{\"line\":" + String(index) +
-                  ",\"status\":\"" + model::toString(status) + "\"}";
-    events_.send(json.c_str(), "lineStatus", millis());
+  lineManager_.setStatusChangedCallback([this](int index, LineStatus status){
+    // Only send SSE if there are connected clients
+    if (events_.count() > 0) {
+      String json = "{\"line\":" + String(index) +
+                    ",\"status\":\"" + model::toString(status) + "\"}";
+      events_.send(json.c_str(), "lineStatus", millis());
+    }
   });
 }
 
+
+// API routes. Routes which provide JSON data or accept commands.
 void WebServer::setupApiRoutes_() {
-  // Health check
+
+  // Simple health check endpoint
   server_.on("/health", HTTP_GET, [](AsyncWebServerRequest *req){
     req->send(200, "text/plain", "ok");
   });
-
   // Full status som JSON
   server_.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildStatusJson_());
   });
-
   // Aktiva linjer som JSON
   server_.on("/api/active", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
-
   // Toggle: POST /api/active/toggle  (body: line=3)
   server_.on("/api/active/toggle", HTTP_POST, [this](AsyncWebServerRequest* req){
     int line = -1;
@@ -121,7 +127,6 @@ void WebServer::setupApiRoutes_() {
     toggleLineActiveBit_(line);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
-
   // Set: POST /api/active/set  (body: line=3&active=1)
   server_.on("/api/active/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     int line = -1, active = -1;
@@ -147,7 +152,7 @@ void WebServer::setupApiRoutes_() {
     setLineActiveBit_(line, active != 0);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
-
+  // Set phone number: POST /api/line/phone  (body: line=3&phone=123456789)
   server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
     const AsyncWebParameter* lineParam = nullptr;
     const AsyncWebParameter* phoneParam = nullptr;
@@ -209,7 +214,7 @@ void WebServer::setupApiRoutes_() {
       }
     }
 
-    lm_.setPhoneNumber(line, value);
+    lineManager_.setPhoneNumber(line, value);
     settings_.save();
 
     sendFullStatusSse();
@@ -221,11 +226,11 @@ void WebServer::setupApiRoutes_() {
 
     req->send(200, "application/json", "{\"ok\":true}");
   });
-
+  // Debug nivåer: GET /api/debug , POST /api/debug/set
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
   });
-
+  // Set debug nivåer: POST /api/debug/set  (body: shk=1&lm=2&ws=0&la=1&mt=2&tr=0&tg=1&rg=2)
   server_.on("/api/debug/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getOptUChar = [req](const char* k, int& out) {
       out = -1;
@@ -234,7 +239,7 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
@@ -242,14 +247,15 @@ void WebServer::setupApiRoutes_() {
     bool hasMt  = getOptUChar("mt",  mt);
     bool hasTr  = getOptUChar("tr",  tr);
     bool hasTg  = getOptUChar("tg",  tg);
+    bool hasRg  = getOptUChar("rg",  rg);
 
-    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -262,9 +268,10 @@ void WebServer::setupApiRoutes_() {
     if (hasMt)  settings_.debugMTLevel  = (uint8_t)mt;
     if (hasTr)  settings_.debugTRLevel  = (uint8_t)tr;
     if (hasTg)  settings_.debugTonGenLevel  = (uint8_t)tg;
+    if (hasRg)  settings_.debugRGLevel  = (uint8_t)rg;
 
     // Spara till NVS
-    //settings_.save();
+    settings_.save();
 
     // Skicka live-uppdatering till andra klienter
     sendDebugSse();
@@ -272,11 +279,11 @@ void WebServer::setupApiRoutes_() {
     // Svara med aktuella nivåer
     req->send(200, "application/json", buildDebugJson_());
   });
-
+  // Tone generator: GET /api/tone-generator , POST /api/tone-generator/set
   server_.on("/api/tone-generator", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildToneGeneratorJson_());
   });
-
+  // Set tone generator: POST /api/tone-generator/set  (body: enabled=1)
   server_.on("/api/tone-generator/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     int enabled = -1;
 
@@ -294,7 +301,7 @@ void WebServer::setupApiRoutes_() {
     sendToneGeneratorSse();
     req->send(200, "application/json", buildToneGeneratorJson_());
   });
-
+  // Enhetsinfo: GET /api/info
   server_.on("/api/info", HTTP_GET, [this](AsyncWebServerRequest* req){
     String hn = wifi_.getHostname();
     if (hn.isEmpty()) hn = "phoneexchange";
@@ -310,7 +317,6 @@ void WebServer::setupApiRoutes_() {
 
     req->send(200, "application/json", json);
   });
-
   // Restart: POST /api/restart
   server_.on("/api/restart", HTTP_POST, [this](AsyncWebServerRequest* req){
     // Svara först, sedan schemalägg omstart så HTTP-svaret hinner ut
@@ -323,6 +329,212 @@ void WebServer::setupApiRoutes_() {
       self->restartDevice_();
       vTaskDelete(nullptr);
     }, "restartTask", 2048, this, 1, nullptr);
+  });
+  // Ring test: POST /api/ring/test (body: line=3)
+  server_.on("/api/ring/test", HTTP_POST, [this](AsyncWebServerRequest* req){
+
+    int line = -1;
+    if (req->hasParam("line")) {
+      line = req->getParam("line")->value().toInt();
+    } else if (req->hasParam("line", true)) {
+      line = req->getParam("line", true)->value().toInt();
+    }
+
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    if (!settings_.isLineActive(line)) {
+      req->send(400, "application/json", "{\"error\":\"line not active\"}");
+      return;
+    }
+
+    lineManager_.setStatus(line, LineStatus::Incoming);
+    req->send(200, "application/json", "{\"ok\":true}");
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Ring test started on line %d\n", line);
+      util::UIConsole::log("Ring test started on line " + String(line), "WebServer");
+    }
+  });
+  // Stop ring: POST /api/ring/stop
+  server_.on("/api/ring/stop", HTTP_POST, [this](AsyncWebServerRequest* req){
+
+    int line = -1;
+    if (req->hasParam("line")) {
+      line = req->getParam("line")->value().toInt();
+    } else if (req->hasParam("line", true)) {
+      line = req->getParam("line", true)->value().toInt();
+    }
+
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    if (!settings_.isLineActive(line)) {
+      req->send(400, "application/json", "{\"error\":\"line not active\"}");
+      return;
+    }
+
+    lineManager_.setStatus(line, LineStatus::Idle);
+    req->send(200, "application/json", "{\"ok\":true}");
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Ring stopped");
+      util::UIConsole::log("Ring stopped", "WebServer");
+    }
+  });
+  // Get ring settings: GET /api/settings/ring
+  server_.on("/api/settings/ring", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"ringLengthMs\":" + String(settings_.ringLengthMs) + ",";
+    json += "\"ringPauseMs\":" + String(settings_.ringPauseMs) + ",";
+    json += "\"ringIterations\":" + String(settings_.ringIterations);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+  // Set ring settings: POST /api/settings/ring
+  server_.on("/api/settings/ring", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    int ringLength = getParam("ringLengthMs");
+    int ringPause = getParam("ringPauseMs");
+    int ringIter = getParam("ringIterations");
+
+    bool updated = false;
+    if (ringLength >= 100 && ringLength <= 10000) {
+      settings_.ringLengthMs = ringLength;
+      updated = true;
+    }
+    if (ringPause >= 100 && ringPause <= 10000) {
+      settings_.ringPauseMs = ringPause;
+      updated = true;
+    }
+    if (ringIter >= 1 && ringIter <= 10) {
+      settings_.ringIterations = ringIter;
+      updated = true;
+    }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: Ring settings updated");
+        util::UIConsole::log("Ring settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
+  });
+  // Get SHK/ring-detection settings: GET /api/settings/shk
+  server_.on("/api/settings/shk", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"burstTickMs\":" + String(settings_.burstTickMs) + ",";
+    json += "\"hookStableMs\":" + String(settings_.hookStableMs) + ",";
+    json += "\"hookStableConsec\":" + String(settings_.hookStableConsec);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+  // Set SHK/ring-detection settings: POST /api/settings/shk
+  server_.on("/api/settings/shk", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    bool updated = false;
+    int val;
+
+    val = getParam("burstTickMs");
+    if (val >= 1 && val <= 100) { settings_.burstTickMs = (uint32_t)val; updated = true; }
+
+    val = getParam("hookStableMs");
+    if (val >= 10 && val <= 2000) { settings_.hookStableMs = (uint32_t)val; updated = true; }
+
+    val = getParam("hookStableConsec");
+    if (val >= 0 && val <= 100) { settings_.hookStableConsec = (uint8_t)val; updated = true; }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: SHK settings updated");
+        util::UIConsole::log("SHK settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
+  });
+  // Get timer settings: GET /api/settings/timers
+  server_.on("/api/settings/timers", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"timer_Ready\":" + String(settings_.timer_Ready) + ",";
+    json += "\"timer_Dialing\":" + String(settings_.timer_Dialing) + ",";
+    json += "\"timer_Ringing\":" + String(settings_.timer_Ringing) + ",";
+    json += "\"timer_pulsDialing\":" + String(settings_.timer_pulsDialing) + ",";
+    json += "\"timer_toneDialing\":" + String(settings_.timer_toneDialing) + ",";
+    json += "\"timer_fail\":" + String(settings_.timer_fail) + ",";
+    json += "\"timer_disconnected\":" + String(settings_.timer_disconnected) + ",";
+    json += "\"timer_timeout\":" + String(settings_.timer_timeout) + ",";
+    json += "\"timer_busy\":" + String(settings_.timer_busy);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+  // Set timer settings: POST /api/settings/timers
+  server_.on("/api/settings/timers", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    bool updated = false;
+    int val;
+
+    val = getParam("timer_Ready");
+    if (val >= 1000 && val <= 600000) { settings_.timer_Ready = val; updated = true; }
+
+    val = getParam("timer_Dialing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_Dialing = val; updated = true; }
+
+    val = getParam("timer_Ringing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_Ringing = val; updated = true; }
+
+    val = getParam("timer_pulsDialing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_pulsDialing = val; updated = true; }
+
+    val = getParam("timer_toneDialing");
+    if (val >= 1000 && val <= 60000) { settings_.timer_toneDialing = val; updated = true; }
+
+    val = getParam("timer_fail");
+    if (val >= 1000 && val <= 120000) { settings_.timer_fail = val; updated = true; }
+
+    val = getParam("timer_disconnected");
+    if (val >= 1000 && val <= 120000) { settings_.timer_disconnected = val; updated = true; }
+
+    val = getParam("timer_timeout");
+    if (val >= 1000 && val <= 120000) { settings_.timer_timeout = val; updated = true; }
+
+    val = getParam("timer_busy");
+    if (val >= 1000 && val <= 120000) { settings_.timer_busy = val; updated = true; }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: Timer settings updated");
+        util::UIConsole::log("Timer settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
   });
 
   // Statisk filserver
@@ -356,7 +568,7 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   //settings_.save();
 
   // Spegla in masken i LineManager direkt (så UI och logik följer med)
-  lm_.syncLineActive(line);
+  lineManager_.syncLineActive(line);
 
   // Skicka ut ny mask till alla via SSE
   sendActiveMaskSse();
@@ -399,7 +611,7 @@ void WebServer::restartDevice_() {
 // --- Help functions ---
 
 String WebServer::buildStatusJson_() const {
-  return net::buildLinesStatusJson(lm_);
+  return net::buildLinesStatusJson(lineManager_);
 }
 
 String WebServer::buildActiveJson_(uint8_t mask) {
@@ -425,16 +637,20 @@ String WebServer::buildDebugJson_() const {
   json += ",\"mt\":" + String(settings_.debugMTLevel);
   json += ",\"tr\":" + String(settings_.debugTRLevel);
   json += ",\"tg\":" + String(settings_.debugTonGenLevel);
+  json += ",\"rg\":" + String(settings_.debugRGLevel);
   json += "}";
   return json;
 }
 
 void WebServer::sendDebugSse() {
-  const String json = buildDebugJson_();
-  events_.send(json.c_str(), "debug", millis());
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Debug levels skickade via SSE");
-    util::UIConsole::log("Debug levels sent via SSE", "WebServer");
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildDebugJson_();
+    events_.send(json.c_str(), "debug", millis());
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Debug levels skickade via SSE");
+      util::UIConsole::log("Debug levels sent via SSE", "WebServer");
+    }
   }
 }
 
@@ -447,30 +663,38 @@ String WebServer::buildToneGeneratorJson_() const {
 }
 
 void WebServer::sendToneGeneratorSse() {
-  const String json = buildToneGeneratorJson_();
-  events_.send(json.c_str(), "toneGen", millis());
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Tone generator state skickad via SSE");
-    util::UIConsole::log("Tone generator state sent via SSE", "WebServer");
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildToneGeneratorJson_();
+    events_.send(json.c_str(), "toneGen", millis());
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Tone generator state skickad via SSE");
+      util::UIConsole::log("Tone generator state sent via SSE", "WebServer");
+    }
   }
 }
 
 void WebServer::sendFullStatusSse() {
-  const String json = buildStatusJson_();
-  events_.send(json.c_str(), nullptr, millis());
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildStatusJson_();
+    events_.send(json.c_str(), nullptr, millis());
 
-  Serial.println(settings_.debugWSLevel);
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Full status skickad via SSE");
-    util::UIConsole::log("Full status sent via SSE", "WebServer");
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Full status skickad via SSE");
+      util::UIConsole::log("Full status sent via SSE", "WebServer");
+    }
   }
 }
 
 void WebServer::sendActiveMaskSse() {
-  const String json = buildActiveJson_(settings_.activeLinesMask);
-  events_.send(json.c_str(), "activeMask", millis());
-  if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Active mask skickad via SSE");
-    util::UIConsole::log("Active mask sent via SSE", "WebServer");
+  // Only send SSE if there are connected clients
+  if (events_.count() > 0) {
+    const String json = buildActiveJson_(settings_.activeLinesMask);
+    events_.send(json.c_str(), "activeMask", millis());
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: Active mask skickad via SSE");
+      util::UIConsole::log("Active mask sent via SSE", "WebServer");
+    }
   }
 }

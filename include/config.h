@@ -5,6 +5,19 @@
 #include <cstdint>
 #include <Arduino.h>
 
+// Definiera färgkoder
+#define RESET_   "\x1b[0m"
+#define RED      "\x1b[31m"
+#define GREEN    "\x1b[32m"
+#define YELLOW   "\x1b[33m"
+#define BLUE     "\x1b[34m"
+#define MAGENTA  "\x1b[35m"
+#define CYAN     "\x1b[36m"
+#define WHITE    "\x1b[37m"
+
+// Fet text
+#define BOLD    "\033[1m"
+
 
 namespace cfg {
 
@@ -173,27 +186,27 @@ namespace cfg {
     inline constexpr std::size_t SHK_LINE_COUNT = 8;
 
     constexpr uint8_t FR_PINS[8] = {
-      2,   // Line 0 MCP_SLIC1, GPA2
-      0,   // Line 1 MCP_SLIC1, GPA0
-      9,   // Line 2 MCP_SLIC1, GPB1
-      12,  // Line 3 MCP_SLIC1, GPB4
-      2,   // Line 4 MCP_SLIC2, GPA2
-      0,   // Line 5 MCP_SLIC2, GPA0
-      9,   // Line 6 MCP_SLIC2, GPB1
-      12  // Line 7 MCP_SLIC2, GPB4
+      7,   // Line 0 MCP_SLIC1, GPA7 (FR_04)
+      2,   // Line 1 MCP_SLIC1, GPA2 (FR_15)
+      10,  // Line 2 MCP_SLIC1, GPB2 (FR_26)
+      13,  // Line 3 MCP_SLIC1, GPB5 (FR_37)
+      7,   // Line 4 MCP_SLIC2, GPA7 (FR_04)
+      2,   // Line 5 MCP_SLIC2, GPA2 (FR_15)
+      10,  // Line 6 MCP_SLIC2, GPB2 (FR_26)
+      13   // Line 7 MCP_SLIC2, GPB5 (FR_37)
     };
 
     inline constexpr std::size_t FR_LINE_COUNT = 8;
 
     constexpr uint8_t RM_PINS[8] = {
-      3,   // Line 0 MCP_SLIC1, GPA3
-      1,   // Line 1 MCP_SLIC1, GPA1
-      10,  // Line 2 MCP_SLIC1, GPB2
-      13,  // Line 3 MCP_SLIC1, GPB5
-      3,   // Line 4 MCP_SLIC2, GPA3
-      1,   // Line 5 MCP_SLIC2, GPA1
-      10,  // Line 6 MCP_SLIC2, GPB2
-      13   // Line 7 MCP_SLIC2, GPB5
+      6,   // Line 0 MCP_SLIC1, GPA6 (RM_04)
+      3,   // Line 1 MCP_SLIC1, GPA3 (RM_15)
+      9,   // Line 2 MCP_SLIC1, GPB1 (RM_26)
+      12,  // Line 3 MCP_SLIC1, GPB4 (RM_37)
+      6,   // Line 4 MCP_SLIC2, GPA6 (RM_04)
+      3,   // Line 5 MCP_SLIC2, GPA3 (RM_15)
+      9,   // Line 6 MCP_SLIC2, GPB1 (RM_26)
+      12   // Line 7 MCP_SLIC2, GPB4 (RM_37)
     };
 
     inline constexpr std::size_t RM_LINE_COUNT = 8;

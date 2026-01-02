@@ -22,7 +22,7 @@ public:
 
   // ---- Public fields ----
   uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
-  uint16_t debounceMs;            // Debounce time for line state changes
+  uint16_t pulseDebounceMs;            // Debounce time for line state changes
   String linePhoneNumbers[8];     // Stored phone number per line
 
   // ---- Debugging ----
@@ -34,6 +34,8 @@ public:
   uint8_t debugTRLevel;           // 0=none, 1=low, 2=high Debug level for TonReader service
   uint8_t debugMCPLevel;          // 0=none, 1=low, 2=high Debug level for MCP service
   uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high Debug level for ToneGenerator
+  uint8_t debugRGLevel;           // 0=none, 1=low, 2=high Debug level for RingGenerator
+  uint8_t debugIMLevel;           // 0=none, 1=low, 2=high Debug level for InterruptManager
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 
@@ -44,11 +46,20 @@ public:
   uint32_t burstTickMs;           // Time for a burst tick
   uint32_t hookStableMs;          // Time for stable hook state
   uint8_t hookStableConsec;       // Number of consecutive stable readings for hook state
-  uint32_t pulseGlitchMs;         // Max glitch time for pulse dialing
+  uint32_t pulsGlitchMs;              // Max glitch time for pulse dialing
   uint32_t pulseLowMaxMs;         // Max low time for pulse dialing
   uint32_t digitGapMinMs;         // Min gap time between digits for pulse dialing
   uint32_t globalPulseTimeoutMs;  // Global timeout for pulse dialing
   bool highMeansOffHook;          // True if high signal means off-hook
+
+  uint32_t ringLengthMs;          // Length of ringing signal in ms
+  uint32_t ringPauseMs;           // Pause between rings in ms
+  uint32_t ringIterations;        // Iterations of ringing signal
+
+  // ---- ToneReader (DTMF) settings ----
+  uint32_t dtmfDebounceMs;        // Minimum time between detections of the same digit (ms)
+  uint32_t dtmfMinToneDurationMs; // Minimum tone duration to accept as valid (ms)
+  uint32_t dtmfStdStableMs;       // Minimum time STD signal must be stable before reading (ms)
 
   uint8_t allowMask;
 
@@ -59,15 +70,16 @@ public:
   bool mcpMt8816Present= false;
 
   // Timers
-  unsigned long timer_Ready = 240000;
-  unsigned long timer_Dialing = 5000;
-  unsigned long timer_Ringing = 10000;
-  unsigned long timer_pulsDialing = 3000;
-  unsigned long timer_toneDialing = 3000;
-  unsigned long timer_fail = 30000;
-  unsigned long timer_disconnected = 60000;
-  unsigned long timer_timeout = 60000;
-  unsigned long timer_busy = 30000;
+  unsigned long timer_Ready;
+  unsigned long timer_Dialing;
+  unsigned long timer_Ringing;
+  unsigned long timer_pulsDialing;
+  unsigned long timer_toneDialing;
+  unsigned long timer_fail;
+  unsigned long timer_disconnected;
+  unsigned long timer_timeout;
+  unsigned long timer_busy;
+  unsigned long timer_incoming;
 
   inline uint8_t activeLinesCount() const {
     uint8_t x = activeLinesMask, c = 0;
@@ -84,5 +96,5 @@ private:
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 2;    // increase if layout changes
+  static constexpr uint16_t kVersion = 3;    // increase if layout changes
 };

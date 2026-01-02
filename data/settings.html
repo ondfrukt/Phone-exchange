@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PhoneExchange - Settings & Debug</title>
+
+  <!-- Länk till extern CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Länk till extern JS -->
+  <script src="settings.js" defer></script>
+</head>
+<body>
+  <main class="wrap">
+    <div class="page-header">
+      <h1>Settings & Debug</h1>
+      <nav class="page-nav">
+        <a href="index.html" class="nav-link">← Back to Dashboard</a>
+      </nav>
+    </div>
+
+    <!-- Ring Test Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Ring Test</h2>
+      <p class="description">Test the ring function on a specific phone line</p>
+      <div class="ring-test-controls">
+        <label for="ring-line-select">Select Line:</label>
+        <select id="ring-line-select" class="form-select">
+          <option value="">-- No active lines --</option>
+        </select>
+        <button id="ring-test-btn" class="badge clickable" disabled>Test Ring</button>
+        <button id="ring-stop-btn" class="badge clickable" disabled>Stop Ring</button>
+      </div>
+      <div id="ring-status" class="status"></div>
+    </section>
+
+    <!-- Debug Levels Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Debug Levels</h2>
+      
+      <div class="row">
+        <span class="k">SHKService</span>
+        <span class="v">
+          <select id="dbg-shk" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">LineManager</span>
+        <span class="v">
+          <select id="dbg-lm" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">WebServer</span>
+        <span class="v">
+          <select id="dbg-ws" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">LineAction</span>
+        <span class="v">
+          <select id="dbg-la" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">MT8816Driver</span>
+        <span class="v">
+          <select id="dbg-mt" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">ToneReader</span>
+        <span class="v">
+          <select id="dbg-tr" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">ToneGenerator</span>
+        <span class="v">
+          <select id="dbg-tg" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">RingGenerator</span>
+        <span class="v">
+          <select id="dbg-rg" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Tone generator enabled</span>
+        <span class="v">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="tone-enabled" />
+            <span id="tone-enabled-label">Unknown</span>
+          </label>
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update Debug Settings
+        </button>
+        <div id="dbg-status" class="status"></div>
+      </div>
+    </section>
+
+    <!-- Ring Settings Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Ring Settings</h2>
+      
+      <div class="row">
+        <span class="k">Ring Length (ms)</span>
+        <span class="v">
+          <input type="number" id="ring-length" class="form-input" min="100" max="10000" step="100" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Ring Pause (ms)</span>
+        <span class="v">
+          <input type="number" id="ring-pause" class="form-input" min="100" max="10000" step="100" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Ring Iterations</span>
+        <span class="v">
+          <input type="number" id="ring-iterations" class="form-input" min="1" max="10" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="ring-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update Ring Settings
+        </button>
+        <div id="ring-settings-status" class="status"></div>
+      </div>
+    </section>
+
+    <!-- SHK/Ring Detection Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Hook Detection & Burst</h2>
+      <p class="description">Tune SHK sampling during ringing/off-hook detection</p>
+
+      <div class="row">
+        <span class="k">Burst Tick (ms)</span>
+        <span class="v">
+          <input type="number" id="burst-tick-ms" class="form-input" min="1" max="100" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Hook Stable Time (ms)</span>
+        <span class="v">
+          <input type="number" id="hook-stable-ms" class="form-input" min="10" max="2000" step="10" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Hook Stable Consec</span>
+        <span class="v">
+          <input type="number" id="hook-stable-consec" class="form-input" min="0" max="100" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="shk-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update SHK Settings
+        </button>
+        <div id="shk-settings-status" class="status"></div>
+      </div>
+    </section>
+
+    <!-- Timer Settings Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Timer Settings</h2>
+      
+      <div class="row">
+        <span class="k">Ready Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-ready" class="form-input" min="1000" max="600000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Dialing Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-dialing" class="form-input" min="1000" max="60000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Ringing Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-ringing" class="form-input" min="1000" max="60000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Pulse Dialing Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-pulse-dialing" class="form-input" min="1000" max="60000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Tone Dialing Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-tone-dialing" class="form-input" min="1000" max="60000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Fail Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-fail" class="form-input" min="1000" max="120000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Disconnected Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-disconnected" class="form-input" min="1000" max="120000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Timeout Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-timeout" class="form-input" min="1000" max="120000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Busy Timer (ms)</span>
+        <span class="v">
+          <input type="number" id="timer-busy" class="form-input" min="1000" max="120000" step="1000" />
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="timer-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update Timer Settings
+        </button>
+        <div id="timer-status" class="status"></div>
+      </div>
+    </section>
+
+    <!-- Device Control Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Device Control</h2>
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="dbg-restart" class="badge clickable" style="border:1px solid var(--no)">
+          Restart Device
+        </button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

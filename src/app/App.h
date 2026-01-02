@@ -2,7 +2,7 @@
 #include "config.h"
 #include <Wire.h>
 #include "drivers/MCPDriver.h"
-#include "drivers/MCPDriver.h"
+#include "drivers/InterruptManager.h"
 #include "drivers/MT8816Driver.h"
 
 #include "services/LineHandler.h"
@@ -11,6 +11,7 @@
 #include "services/LineAction.h"
 #include "services/ToneGenerator.h"
 #include "services/ToneReader.h"
+#include "services/RingGenerator.h"
 
 #include "settings/settings.h"
 
@@ -32,17 +33,20 @@ public:
     void loop();
 
     MCPDriver mcpDriver_;
+    InterruptManager interruptManager_;
     MT8816Driver mt8816Driver_;
 
 private:
-    
-    LineManager lineManager_;
-    SHKService SHKService_;
-    LineAction lineAction_;
+
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;
     ToneGenerator toneGenerator3_;
+
+    LineManager lineManager_;
     ToneReader toneReader_;
+    RingGenerator ringGenerator_;
+    SHKService SHKService_;
+    LineAction lineAction_;
 
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;

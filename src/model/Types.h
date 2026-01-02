@@ -36,6 +36,13 @@ namespace model {
     Fail    // Fail tone played
   };
 
+  // Ringing state machine
+  enum class RingState {
+    RingIdle,
+    RingToggling,  // Generating ring signal (FR toggling)
+    RingPause      // Pause between rings
+  };
+
   // Function to convert line status enum to string
   inline const char* toString(LineStatus st) {
     switch (st) {

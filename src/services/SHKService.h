@@ -4,16 +4,18 @@
 #include <vector>
 #include "config.h"
 #include "LineManager.h"
+#include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
+#include "services/RingGenerator.h"
 #include "settings.h"
 #include "model/Types.h"
 
 class SHKService {
 public:
-  SHKService(LineManager& lineManager, MCPDriver& mcpDriver, Settings& settings);
+  SHKService(LineManager& lineManager, InterruptManager& interruptManager, MCPDriver& mcpDriver, Settings& settings, RingGenerator& ringGenerator);
 
   // Kallas när appen sett att MCP rapporterat ändringar (bitmask per linje)
-  void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs);
+  void notifyLinesPossiblyChanged(uint32_t changedMask, uint32_t nowMs, bool value);
 
   // Anropa från app.loop()
   bool needsTick(uint32_t nowMs) const;
@@ -50,8 +52,8 @@ private:
   uint32_t readShkMask_() const;
 
   // Logik
-  void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs);
-  void setStableHook_(int index, bool offHook, bool rawHigh, uint32_t nowMs);
+  void updateHookFilter_(int idx, bool rawHigh, uint32_t nowMs, uint32_t hookStableMs);
+  void setStableHook(int index, bool offHook, bool rawHigh, uint32_t nowMs);
   void updatePulseDetector_(int idx, bool rawHigh, uint32_t nowMs);
   bool pulseModeAllowed_(const LineHandler& line) const;
   void pulseFalling_(int idx, uint32_t nowMs);
@@ -62,8 +64,10 @@ private:
 
 private:
   LineManager& lineManager_;
+  InterruptManager& interruptManager_;
   MCPDriver&   mcpDriver_;
   Settings&    settings_;
+  RingGenerator& ringGenerator_;
 
   std::vector<PerLine> lineState_;
 

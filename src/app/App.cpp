@@ -3,19 +3,24 @@ using namespace cfg;
 
 App::App()
   : mcpDriver_(),
+    interruptManager_(mcpDriver_, Settings::instance()),
     mt8816Driver_(mcpDriver_, Settings::instance()),
-    lineManager_(Settings::instance()),
 
     toneGenerator1_(cfg::ad9833::CS1_PIN),
-    toneGenerator2_(cfg::ad9833::CS2_PIN),  
+    toneGenerator2_(cfg::ad9833::CS2_PIN),
     toneGenerator3_(cfg::ad9833::CS3_PIN),
-    toneReader_(mcpDriver_, Settings::instance(), lineManager_),
 
-    SHKService_(lineManager_, mcpDriver_, Settings::instance()),
-    lineAction_(lineManager_, Settings::instance(), mt8816Driver_,
+    lineManager_(Settings::instance()),
+    toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
+    ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
+    SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance(), ringGenerator_),
+    lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_, toneReader_,
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
-    webServer_(Settings::instance(), lineManager_, wifiClient_, 80),
-    functionButton_(mcpDriver_) {}
+
+    webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
+    functionButton_(interruptManager_, mcpDriver_) {
+    lineManager_.setToneReader(&toneReader_);
+}
 
 void App::begin() {
     Serial.begin(115200);
@@ -64,10 +69,14 @@ void App::loop() {
   static unsigned long lastLoopDebug = 0;
   unsigned long now = millis();
   
-	wifiClient_.loop();   // Handle WiFi events and connection
-	lineAction_.update(); // Check for line status changes and timers
-	SHKService_.update(); // Check for SHK changes and process pulses
+  // Collect all interrupts from MCP devices into InterruptManager queue
+  interruptManager_.collectInterrupts();
+  
+  wifiClient_.loop();   // Handle WiFi events and connection
+  lineAction_.update(); // Check for line status changes and timers
+  SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones
+  ringGenerator_.update(); // Update ring signal generation
 
   if (toneGenerator1_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator1_.update();
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();

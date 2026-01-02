@@ -35,20 +35,34 @@ void Settings::resetDefaults() {
   debugMCPLevel         = 0;
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
+  debugRGLevel          = 0;
+  debugIMLevel          = 0;
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
 
-  // --- Other settings ---
-  burstTickMs           = 2;
-  hookStableMs          = 50;
-  hookStableConsec      = 2;
-  pulseGlitchMs         = 2;
-  debounceMs            = 25;
-  pulseLowMaxMs         = 150;
-  digitGapMinMs         = 600;
-  globalPulseTimeoutMs  = 500;
-  highMeansOffHook      = true;
+  // SHK detection settings
+  burstTickMs           = 2;    // Time for a burst tick
+  hookStableMs          = 50;   // Time for stable hook state
+  hookStableConsec      = 10;   // Number of consecutive stable readings for hook state
+  pulsGlitchMs          = 2;    // Max glitch time for pulse dialing
+  pulseDebounceMs       = 25;   // Debounce time for line state changes
+  pulseLowMaxMs         = 75;   // Maximum pulse low duration
+
+  // --- Pulse dialing settings ---
+  digitGapMinMs         = 600;  // Minimum gap between digits
+  globalPulseTimeoutMs  = 500;  // Global pulse timeout
+  highMeansOffHook      = true; // High signal means off-hook state
+
+  // --- Ringing settings ---
+  ringLengthMs          = 500;  // Length of ringing signal in ms
+  ringPauseMs           = 2000; // Pause between rings in ms
+  ringIterations        = 2;    // Iterations of ringing signal
+
+  // --- ToneReader (DTMF) settings ---
+  dtmfDebounceMs        = 150;   // 150ms debounce between same digit detections
+  dtmfMinToneDurationMs = 40;    // Minimum 40ms tone duration (MT8870 spec: 40ms typical)
+  dtmfStdStableMs       = 5;     // STD signal must be stable for 5ms before reading
 
   // --- Timers ---
   timer_Ready           = 240000;
@@ -60,6 +74,7 @@ void Settings::resetDefaults() {
   timer_disconnected    = 60000;
   timer_timeout         = 60000;
   timer_busy            = 30000;
+  timer_incoming        = 60000;
 
   // --- Phone numbers ---
   for (auto &num : linePhoneNumbers) {
@@ -83,7 +98,7 @@ bool Settings::load() {
   bool ok = (v == kVersion);
   if (ok) {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
-    debounceMs            = prefs.getUShort("debounceMs", debounceMs);
+    pulseDebounceMs        = prefs.getUShort("pulseDebounceMs", pulseDebounceMs);
 
     // --- Debug levels ---
     debugSHKLevel         = prefs.getUChar ("debugLevel", debugSHKLevel);
@@ -95,17 +110,29 @@ bool Settings::load() {
     debugMCPLevel         = prefs.getUChar ("debugMCP",   debugMCPLevel);
     debugI2CLevel         = prefs.getUChar ("debugI2C",   debugI2CLevel);
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
+    debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
+    debugIMLevel          = prefs.getUChar ("debugIM",     debugIMLevel);
+  
 
     // --- Other settings ---    
-    burstTickMs           = prefs.getUInt ("burstTickMs",          burstTickMs);
-    hookStableMs          = prefs.getUInt ("hookStableMs",         hookStableMs);
-    hookStableConsec      = prefs.getUChar("hookStbCnt",           hookStableConsec);
-    pulseGlitchMs         = prefs.getUInt ("pulseGlitchMs",        pulseGlitchMs);
-    pulseLowMaxMs         = prefs.getUInt ("pulseLowMaxMs",        pulseLowMaxMs);
-    digitGapMinMs         = prefs.getUInt ("digitGapMinMs",        digitGapMinMs);
-    globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",        globalPulseTimeoutMs);
-    highMeansOffHook      = prefs.getBool ("hiOffHook",            highMeansOffHook);
-    toneGeneratorEnabled  = prefs.getBool ("toneGenEn",            toneGeneratorEnabled);
+    burstTickMs           = prefs.getUInt ("burstTickMs",       burstTickMs);
+    hookStableMs          = prefs.getUInt ("hookStableMs",      hookStableMs);
+    hookStableConsec      = prefs.getUChar("hookStbCnt",        hookStableConsec);
+    pulsGlitchMs          = prefs.getUInt ("pulsGlitchMs",      pulsGlitchMs);
+    pulseLowMaxMs         = prefs.getUInt ("pulseLowMaxMs",     pulseLowMaxMs);
+    digitGapMinMs         = prefs.getUInt ("digitGapMinMs",     digitGapMinMs);
+    globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",     globalPulseTimeoutMs);
+    highMeansOffHook      = prefs.getBool ("hiOffHook",         highMeansOffHook);
+    toneGeneratorEnabled  = prefs.getBool ("toneGenEn",         toneGeneratorEnabled);
+
+    ringLengthMs          = prefs.getUInt ("ringLengthMs",      ringLengthMs);
+    ringPauseMs           = prefs.getUInt ("ringPauseMs",       ringPauseMs);
+    ringIterations        = prefs.getUInt ("ringIterations",    ringIterations);
+
+    // --- ToneReader (DTMF) settings ---
+    dtmfDebounceMs        = prefs.getUInt ("dtmfDebounce",      dtmfDebounceMs);
+    dtmfMinToneDurationMs = prefs.getUInt ("dtmfMinTone",       dtmfMinToneDurationMs);
+    dtmfStdStableMs       = prefs.getUInt ("dtmfStdStable",     dtmfStdStableMs);
 
     // --- Timers ---
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
@@ -117,6 +144,8 @@ bool Settings::load() {
     timer_disconnected    = prefs.getUInt ("timerDisconnected", timer_disconnected);
     timer_timeout         = prefs.getUInt ("timerTimeout",      timer_timeout);
     timer_busy            = prefs.getUInt ("timerBusy",         timer_busy);
+    timer_incoming        = prefs.getUInt ("timerIncoming",     timer_incoming);
+    
 
     // --- Phone numbers ---
     for (int i = 0; i < 8; ++i) {
@@ -136,41 +165,53 @@ void Settings::save() const {
 
   // --- General settings ---
   prefs.putUChar ("activeMask", activeLinesMask);
-  prefs.putUShort("debounceMs", debounceMs);
+  prefs.putUShort("pulseDebounceMs", pulseDebounceMs);
 
   // --- Debug levels ---
-  prefs.putUChar ("debugLevel", debugSHKLevel);
-  prefs.putUChar ("debugLm",    debugLmLevel);
-  prefs.putUChar ("debugWs",    debugWSLevel);
-  prefs.putUChar ("debugLa",    debugLALevel);
-  prefs.putUChar ("debugMt",    debugMTLevel);
-  prefs.putUChar ("debugTr",    debugTRLevel);
-  prefs.putUChar ("debugMCP",   debugMCPLevel);
-  prefs.putUChar ("debugI2C",   debugI2CLevel);
-  prefs.putUChar ("debugTonGen", debugTonGenLevel);
+  prefs.putUChar ("debugLevel",           debugSHKLevel);
+  prefs.putUChar ("debugLm",              debugLmLevel);
+  prefs.putUChar ("debugWs",              debugWSLevel);
+  prefs.putUChar ("debugLa",              debugLALevel);
+  prefs.putUChar ("debugMt",              debugMTLevel);
+  prefs.putUChar ("debugTr",              debugTRLevel);
+  prefs.putUChar ("debugMCP",             debugMCPLevel);
+  prefs.putUChar ("debugI2C",             debugI2CLevel);
+  prefs.putUChar ("debugTonGen",          debugTonGenLevel);
+  prefs.putUChar ("debugRG",              debugRGLevel);
+  prefs.putUChar ("debugIM",              debugIMLevel);
 
   // --- Other settings ---
-  prefs.putUInt ("burstTickMs",          burstTickMs);
-  prefs.putUInt ("hookStableMs",         hookStableMs);
-  prefs.putUChar("hookStbCnt",           hookStableConsec);
-  prefs.putUInt ("pulseGlitchMs",        pulseGlitchMs);
-  prefs.putUInt ("pulseLowMaxMs",        pulseLowMaxMs);
-  prefs.putUInt ("digitGapMinMs",        digitGapMinMs);
-  prefs.putUInt ("globalPulseTO",        globalPulseTimeoutMs);
-  prefs.putBool ("hiOffHook",            highMeansOffHook);
-  prefs.putBool ("toneGenEn",            toneGeneratorEnabled);
+  prefs.putUInt ("burstTickMs",           burstTickMs);
+  prefs.putUInt ("hookStableMs",          hookStableMs);
+  prefs.putUChar("hookStbCnt",            hookStableConsec);
+  prefs.putUInt ("pulsGlitchMs",          pulsGlitchMs);
+  prefs.putUInt ("pulseLowMaxMs",         pulseLowMaxMs);
+  prefs.putUInt ("digitGapMinMs",         digitGapMinMs);
+  prefs.putUInt ("globalPulseTO",         globalPulseTimeoutMs);
+  prefs.putBool ("hiOffHook",             highMeansOffHook);
+  prefs.putBool ("toneGenEn",             toneGeneratorEnabled);
+
+  prefs.putUInt ("ringLengthMs",          ringLengthMs);
+  prefs.putUInt ("ringPauseMs",           ringPauseMs);
+  prefs.putUInt ("ringIterations",        ringIterations);
+
+  // --- ToneReader (DTMF) settings ---
+  prefs.putUInt ("dtmfDebounce",          dtmfDebounceMs);
+  prefs.putUInt ("dtmfMinTone",           dtmfMinToneDurationMs);
+  prefs.putUInt ("dtmfStdStable",         dtmfStdStableMs);
+
 
   // --- Timers ---
-  prefs.putUInt ("timerReady",        timer_Ready);
-  prefs.putUInt ("timerDialing",      timer_Dialing);
-  prefs.putUInt ("timerRinging",      timer_Ringing);
-  prefs.putUInt ("timerPulsDialing",  timer_pulsDialing);
-  prefs.putUInt ("timerToneDialing",  timer_toneDialing);
-  prefs.putUInt ("timerFail",         timer_fail);
-  prefs.putUInt ("timerDisconnected", timer_disconnected);
-  prefs.putUInt ("timerTimeout",      timer_timeout);
-  prefs.putUInt ("timerBusy",         timer_busy);
-
+  prefs.putUInt ("timerReady",            timer_Ready);
+  prefs.putUInt ("timerDialing",          timer_Dialing);
+  prefs.putUInt ("timerRinging",          timer_Ringing);
+  prefs.putUInt ("timerPulsDialing",      timer_pulsDialing);
+  prefs.putUInt ("timerToneDialing",      timer_toneDialing);
+  prefs.putUInt ("timerFail",             timer_fail);
+  prefs.putUInt ("timerDisconnected",     timer_disconnected);
+  prefs.putUInt ("timerTimeout",          timer_timeout);
+  prefs.putUInt ("timerBusy",             timer_busy);
+  prefs.putUInt ("timerIncoming",         timer_incoming);
   // --- Phone numbers ---
   for (int i = 0; i < 8; ++i) {
     String key = String("linePhone") + i;

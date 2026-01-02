@@ -1,12 +1,17 @@
 #pragma once
+#include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
 #include "config.h"
 
 class FunctionButton {
 
 public:
-    FunctionButton(MCPDriver& mcpDriver) : mcpDriver_(mcpDriver) {};
+    FunctionButton(InterruptManager& interruptManager, MCPDriver& mcp_ks083f) : interruptManager_(interruptManager), mcp_ks083f(mcp_ks083f) {};
     void update();
 private:
-    MCPDriver& mcpDriver_;
+    InterruptManager& interruptManager_;
+    MCPDriver& mcp_ks083f;
+    void testRing();
+    void restartDevice(uint32_t held);
+
 };
