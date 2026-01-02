@@ -105,7 +105,7 @@ void ToneReader::update() {
                      lineManager_.getLine(idx).currentLineStatus == model::LineStatus::ToneDialing)) {
               auto& line = lineManager_.getLine(idx);
               line.dialedDigits += ch;
-              
+              Serial.print(MAGENTA);
               Serial.print(F("ToneReader: Added to line "));
               Serial.print(idx);
               Serial.print(F(" digit='"));
@@ -113,6 +113,7 @@ void ToneReader::update() {
               Serial.print(F("' dialedDigits=\""));
               Serial.print(line.dialedDigits);
               Serial.println('"');
+              Serial.print(COLOR_RESET);
               util::UIConsole::log("ToneReader: line " + String(idx) + " +=" + String(ch) + 
                   " dialedDigits=\"" + line.dialedDigits + "\"", "ToneReader");
             } else if (idx >= 0) {

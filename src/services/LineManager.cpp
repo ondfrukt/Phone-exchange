@@ -95,7 +95,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     Serial.print(index);
     Serial.print(" status changed to ");
     Serial.print(model::toString(newStatus));
-    Serial.println(RESET_);
+    Serial.println(COLOR_RESET);
     util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
   }
 }
