@@ -26,10 +26,10 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 0;
-  debugLmLevel          = 0;
+  debugSHKLevel         = 2;
+  debugLmLevel          = 2;
   debugWSLevel          = 0;
-  debugLALevel          = 0;
+  debugLALevel          = 2;
   debugMTLevel          = 0;
   debugTRLevel          = 0;
   debugMCPLevel         = 0;

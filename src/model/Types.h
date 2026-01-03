@@ -48,8 +48,8 @@ namespace model {
     switch (st) {
       case LineStatus::Idle:          return "Idle";
       case LineStatus::Ready:         return "Ready";
-      case LineStatus::PulseDialing:  return "Pulse_dialing";
-      case LineStatus::ToneDialing:   return "Tone_dialing";
+      case LineStatus::PulseDialing:  return "PulseDialing";
+      case LineStatus::ToneDialing:   return "ToneDialing";
       case LineStatus::Busy:          return "Busy";
       case LineStatus::Fail:          return "Fail";
       case LineStatus::Ringing:       return "Ringing";

@@ -17,6 +17,8 @@ public:
   void begin();
   void update();
   void action(int index);
+  void connectLines(int index);
+  void disconnectLines(int index);
 
 private:
   LineManager& lineManager_;
