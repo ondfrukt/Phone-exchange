@@ -15,7 +15,8 @@ LineManager::LineManager(Settings& settings)
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
-  lineChangeFlag = 0;     // Intiate to zero (no changes)
+  lineStatusChangeFlag = 0;     // Intiate to zero (no changes)
+  lineHookChangeFlag = 0; // Intiate to zero (no hook changes)
   activeTimersMask = 0;   // Intiate to zero (no active timers)
   linesNotIdle = 0;       // Intiate to zero (all lines idle)
   lastLineReady = -1;     // No line is ready at start
@@ -56,17 +57,23 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   // Uppdating the status and changing previous status
   lines[index].previousLineStatus = lines[index].currentLineStatus;
   lines[index].currentLineStatus = newStatus;
+  resetLineTimer(index); // Reset any existing timer for this line
 
 
   // Handle specific actions based on new status
   if (newStatus == LineStatus::Idle) {
+    
+    // Reset line variables when setting to Idle
     lines[index].lineIdle();
 
-    linesNotIdle &= ~(1 << index);          // Clear the bit for this line
+    // Clear the bit for this line
+    linesNotIdle &= ~(1 << index);
+    
     // Reset lastLineReady if this was the line that was last ready
     if (lastLineReady == index) {
       lastLineReady = -1;
     }
+    // Deactivate MT8870 if no lines are active
     if (linesNotIdle == 0) {
       toneReader_->deactivate();
     }
@@ -86,7 +93,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     linesNotIdle |= (1 << index);           // Set the bit for this line
   } 
 
-  lineChangeFlag |= (1 << index);           // Set the change flag for the specified line
+  lineStatusChangeFlag |= (1 << index);           // Set the change flag for the specified line
 
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
@@ -108,7 +115,7 @@ void LineManager::clearChangeFlag(int index) {
     return;
   }
   // Clear the change flag for the specified line
-  lineChangeFlag &= ~(1 << index); 
+  lineStatusChangeFlag &= ~(1 << index); 
 }
 
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {

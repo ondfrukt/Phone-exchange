@@ -22,3 +22,6 @@
 [733579][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerPulsDialing KEY_TOO_LONG
 [733587][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerToneDialing KEY_TOO_LONG
 [733596][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerDisconnected KEY_TOO_LONG
+
+
+- **När man ringer en linje där SLIC inte är inkopplad så panikar ESPn efter det att ringsignalerna är klara och status ska återställas**8

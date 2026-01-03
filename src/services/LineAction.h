@@ -17,8 +17,8 @@ public:
   void begin();
   void update();
   void action(int index);
-  void connectLines(int index);
-  void disconnectLines(int index);
+  void connectLines(int lineA, int lineB);
+  void disconnectLines(int lineA, int lineB);
 
 private:
   LineManager& lineManager_;
