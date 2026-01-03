@@ -3,10 +3,10 @@
 #include "drivers/MCPDriver.h"
 #include "config.h"
 
-class FunctionButton {
+class Functions {
 
 public:
-    FunctionButton(InterruptManager& interruptManager, MCPDriver& mcp_ks083f) : interruptManager_(interruptManager), mcp_ks083f(mcp_ks083f) {};
+    Functions(InterruptManager& interruptManager, MCPDriver& mcp_ks083f) : interruptManager_(interruptManager), mcp_ks083f(mcp_ks083f) {};
     void update();
 private:
     InterruptManager& interruptManager_;

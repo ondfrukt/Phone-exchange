@@ -1,7 +1,7 @@
-#include "util/FunctionButton.h"
+#include "util/Functions.h"
 
 
-void FunctionButton::update() {
+void Functions::update() {
     // Static variables for debouncing and tracking button state:
     // btnDown: tracks if the button is currently pressed
     // pressedAtMs: timestamp when the button was pressed
@@ -25,7 +25,7 @@ void FunctionButton::update() {
   }
 }
 
-void FunctionButton::restartDevice(uint32_t held) {
+void Functions::restartDevice(uint32_t held) {
     if (held >= 5000) {
         Serial.println("Long press (>5s): running special method");
         // myLongPressAction();
@@ -37,8 +37,8 @@ void FunctionButton::restartDevice(uint32_t held) {
 
 }
 
-void FunctionButton::testRing() {
-    Serial.println("FunctionButton: testRing()");
+void Functions::testRing() {
+    Serial.println("Functions: testRing()");
     
     int RM = cfg::mcp::RM_PINS[0];
     int FR = cfg::mcp::FR_PINS[0];

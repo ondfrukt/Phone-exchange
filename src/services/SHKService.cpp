@@ -275,7 +275,10 @@ void SHKService::setStableHook(int index, bool offHook, bool rawHigh, uint32_t n
   if (newHook != line.currentHookStatus) {
     line.currentHookStatus = newHook;
     line.SHK = offHook;
-    lineManager_.setStatus(index, offHook ? model::LineStatus::Ready : model::LineStatus::Idle);
+
+    lineManager_.lineHookChangeFlag |= (1u << index);
+
+    //lineManager_.setStatus(index, offHook ? model::LineStatus::Ready : model::LineStatus::Idle);
 
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n", index, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, millis() - sample.hookCandSince);
@@ -463,6 +466,7 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
   resyncFast_(idx, rawHigh, nowMs);
 }
 
+// Resets pulse detector state for line 'idx'.
 void SHKService::resetPulseState_(int idx) {
   auto& sample = lineState_[idx];
   auto& line = lineManager_.getLine(idx);

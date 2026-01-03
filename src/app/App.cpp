@@ -18,9 +18,10 @@ App::App()
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
 
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
-    functionButton_(interruptManager_, mcpDriver_) {
+    functions_(interruptManager_, mcpDriver_) {
     lineManager_.setToneReader(&toneReader_);
 }
+
 
 void App::begin() {
     Serial.begin(115200);
@@ -82,5 +83,5 @@ void App::loop() {
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
-  functionButton_.update();
+  functions_.update(); // Check function button states
 }

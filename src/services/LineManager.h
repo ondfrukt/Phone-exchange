@@ -2,6 +2,7 @@
 #include <functional>
 #include "settings/settings.h"
 #include "model/Types.h"
+#include "ConnectionMatrix.h"
 #include "util/UIConsole.h"
 #include "LineHandler.h"
 
@@ -20,6 +21,9 @@ public:
   void setPhoneNumber(int index, const String& value);
   int searchPhoneNumber(const String& phoneNumber);
 
+  // Connection management
+  ConnectionMatrix connectionMatrix;
+
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
   using ActiveLinesChangedCallback = std::function<void(uint8_t)>;
 
@@ -29,9 +33,10 @@ public:
 
   LineHandler& getLine(int index);
 
-  uint8_t lineChangeFlag;
-  uint8_t activeTimersMask; // Bitmask for active line timers
-  uint8_t linesNotIdle;     // Bitmask for lines that are not Idle
+  uint8_t lineStatusChangeFlag; // Bitmask for lines with status changes
+  uint8_t lineHookChangeFlag;   // Bitmask for lines with hook status changes
+  uint8_t activeTimersMask;     // Bitmask for active line timers
+  uint8_t linesNotIdle;         // Bitmask for lines that are not Idle
 
   int lastLineReady;   // Most recent line that became Ready (for toneReader)
 

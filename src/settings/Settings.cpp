@@ -55,14 +55,17 @@ void Settings::resetDefaults() {
   highMeansOffHook      = true; // High signal means off-hook state
 
   // --- Ringing settings ---
-  ringLengthMs          = 1000;  // Length of ringing signal in ms
-  ringPauseMs           = 5000; // Pause between rings in ms
-  ringIterations        = 2;    // Iterations of ringing signal
+  // ringLengthMs          = 1000;  // Length of ringing signal in ms
+  // ringPauseMs           = 5000; // Pause between rings in ms
+  ringLengthMs          = 200;  // Length of ringing signal in ms
+  ringPauseMs           = 1000; // Pause between rings in ms
+
+  ringIterations        = 1;    // Iterations of ringing signal
 
   // --- ToneReader (DTMF) settings ---
   dtmfDebounceMs        = 150;   // 150ms debounce between same digit detections
   dtmfMinToneDurationMs = 40;    // Minimum 40ms tone duration (MT8870 spec: 40ms typical)
-  dtmfStdStableMs       = 5;     // STD signal must be stable for 5ms before reading
+  dtmfStdStableMs       = 15;    // STD signal must be stable for 15ms before reading Q pins
 
   // --- Timers ---
   timer_Ready           = 240000;
@@ -72,8 +75,8 @@ void Settings::resetDefaults() {
   timer_pulsDialing     = 3000;
   timer_toneDialing     = 3000;
   timer_fail            = 30000;
-  timer_disconnected    = 60000;
-  timer_timeout         = 60000;
+  timer_disconnected    = 20000;
+  timer_timeout         = 20000;
   timer_busy            = 30000;
 
 
