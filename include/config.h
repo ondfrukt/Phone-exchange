@@ -18,15 +18,20 @@
 // Fet text
 #define BOLD    "\033[1m"
 
-
 namespace cfg {
-
+  
   namespace ESP_LED_PINS {
+    
+    // Correct PIN numbers
     constexpr int StatusLED_PIN = 21;
     constexpr int WiFiLED_PIN = 24;
     constexpr int MQTTLED_PIN= 25;
-  }
 
+    // Old PIN numbers
+    // constexpr int StatusLED_PIN = 27;
+    // constexpr int WiFiLED_PIN = 8;
+    // constexpr int MQTTLED_PIN= 9;
+  }
   namespace i2c {
     constexpr int SDA_PIN= 9;
     constexpr int SCL_PIN= 10;
@@ -41,7 +46,6 @@ namespace cfg {
   }
 
   namespace mcp {
-
     inline constexpr int MCP_MAIN_INT_PIN = 18;
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
@@ -50,11 +54,6 @@ namespace cfg {
     inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
     inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=GND, A1=VCC, A2=VCC
     inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21;  //BEHÖVER ÄNDRAS!
-
-    struct PinModeEntry {
-    uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP
-    bool    initial; // gäller bara om OUTPUT
-    };
 
     // MCP MAIN
     constexpr uint8_t Q1 = 15;
@@ -72,6 +71,11 @@ namespace cfg {
     constexpr uint8_t LED_5 = 2;
     constexpr uint8_t LED_6 = 1;
     constexpr uint8_t LED_7 = 0;
+
+    struct PinModeEntry {
+    uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP
+    bool    initial; // gäller bara om OUTPUT
+    };
 
     constexpr PinModeEntry MCP_MAIN[16] = {
       /*0*/  {OUTPUT, LOW},   // GPA0  LED_L7
@@ -91,7 +95,6 @@ namespace cfg {
       /*14*/ {INPUT, 0},      // GPB6  Q2 (MT8870) (pin 7)
       /*15*/ {INPUT, 0},      // GPB7  Q1 (MT8870) (pin 8)
     };
-
 
     // MCP MT8816
     constexpr uint8_t RESET = 0;

@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 #include "config.h"
 #include <Wire.h>
 #include "drivers/MCPDriver.h"
@@ -21,9 +22,10 @@
 
 #include "esp_system.h"
 
-#include "util/FunctionButton.h"
+#include "util/Functions.h"
 #include "util/I2CScanner.h"
 #include "util/UIConsole.h"
+#include "util/FlashLED.h"
 
 
 class App {
@@ -52,8 +54,9 @@ private:
     net::Provisioning provisioning_;
     WebServer webServer_;
 
-    FunctionButton functionButton_;
+    Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
+    FlashLED flashLED_;
     
 };
