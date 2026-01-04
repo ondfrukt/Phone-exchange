@@ -4,13 +4,13 @@
   --ok:#16a34a; --no:#ef4444;
 
   /* Badge width används för att räkna ut telefonfältets maxbredd */
-  --badge-w: 150px;
+  --badge-w: 100px;
 
   /* --- PHONE INPUT WIDTH --- 
      Justera värdet nedan om du vill ändra den fasta bredden på telefon-inputen.
      EXEMPEL: ändra till 120px för större fält.
   */
-  --phone-input-w: 200px; /* <-- Ändra bredden för telefonfältet här */
+  --phone-input-w: 150px; /* <-- Ändra bredden för telefonfältet här */
 }
 
 *{ box-sizing:border-box }
@@ -205,6 +205,199 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 .badge.no{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.12) }
 .badge.clickable{ cursor:pointer }
 .badge.working{ opacity:.6; pointer-events:none }
+
+/* ============ BUTTON SYSTEM (new) ============ */
+/* Base button styling */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Default: button sizes to content */
+  width: auto;
+  min-width: fit-content;
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Button Variants ---- */
+
+/* Primary - för huvudaktioner */
+.btn-primary {
+  border-color: var(--accent);
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: rgba(96, 165, 250, 0.25);
+  border-color: var(--accent);
+}
+
+/* Success - för bekräftelser och positiva aktioner */
+.btn-success {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.15);
+  color: rgb(74, 222, 128);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: rgba(22, 163, 74, 0.25);
+  border-color: rgba(22, 163, 74, 0.6);
+}
+
+/* Danger - för destruktiva aktioner */
+.btn-danger {
+  border-color: var(--no);
+  background: rgba(239, 68, 68, 0.15);
+  color: rgb(248, 113, 113);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: var(--no);
+}
+
+/* Secondary - för sekundära aktioner */
+.btn-secondary {
+  border-color: rgba(156, 163, 175, 0.3);
+  background: rgba(156, 163, 175, 0.08);
+  color: var(--muted);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(156, 163, 175, 0.15);
+  border-color: rgba(156, 163, 175, 0.5);
+  color: var(--fg);
+}
+
+/* Ghost - minimal styling */
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ---- Button Sizes ---- */
+
+/* Small */
+.btn-sm {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* Medium (default) - already defined in .btn */
+
+/* Large */
+.btn-lg {
+  font-size: 1rem;
+  padding: 12px 24px;
+  border-radius: 10px;
+}
+
+/* ---- Width Modifiers ---- */
+
+/* Auto width - anpassar sig efter innehåll (default) */
+.btn-auto {
+  width: auto;
+  min-width: fit-content;
+  max-width: none;
+}
+
+/* Full width - tar upp hela bredden */
+.btn-full {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Compact - minimal bredd */
+.btn-compact {
+  min-width: 60px;
+  max-width: 120px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* Wide - bred knapp */
+.btn-wide {
+  min-width: 150px;
+  max-width: 300px;
+}
+
+/* Extra wide - extra bred knapp */
+.btn-x-wide {
+  min-width: 200px;
+  max-width: 400px;
+}
+
+/* Custom width utility classes */
+.btn-min-80 { min-width: 80px; }
+.btn-min-100 { min-width: 100px; }
+.btn-min-120 { min-width: 120px; }
+.btn-min-150 { min-width: 150px; }
+
+.btn-max-120 { max-width: 120px; }
+.btn-max-150 { max-width: 150px; }
+.btn-max-200 { max-width: 200px; }
+.btn-max-250 { max-width: 250px; }
+
+/* ---- Button States ---- */
+
+/* Working state (för loading/processing) */
+.btn.working {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: wait;
+}
+
+.btn.working::after {
+  content: '...';
+  animation: working 1.5s infinite;
+}
+
+@keyframes working {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
 
 #dbg-save {
   border-color: var(--accent);
