@@ -46,8 +46,7 @@ void WebServer::setupFilesystem_() {
 }
 
 void WebServer::initSse_() {
-  // Set a reasonable max clients and increase queue size to prevent overflow
-  events_.setMaxClients(8);  // Allow up to 8 simultaneous SSE connections
+  // AsyncEventSource handles client management internally
   
   events_.onConnect([this](AsyncEventSourceClient* client){
     Serial.println("WebServer: SSE-klient ansluten 📡");

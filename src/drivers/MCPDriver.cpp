@@ -296,7 +296,6 @@ IntResult MCPDriver::handleSlic1Interrupt()  {
   IntResult r = handleInterrupt_(slic1IntFlag_,  mcpSlic1_,  mcp::MCP_SLIC1_ADDRESS);
   return r;
 }
-
 // Handle interrupts for MCP_SLIC2
 IntResult MCPDriver::handleSlic2Interrupt()  {
   if (!haveSlic2_) return {};
@@ -448,7 +447,7 @@ int8_t MCPDriver::mapSlicPinToLine_(uint8_t addr, uint8_t pin) const {
   return -1;
 }
 
-
+// Control power to the MT8816 device via MCP_MAIN
 void MCPDriver::mt8816PowerControl(bool set) {
   mt8816Powered_ = set;
   digitalWriteMCP(cfg::mcp::MCP_MT8816_ADDRESS, cfg::mcp::PWDN_MT8870, set);
@@ -513,8 +512,10 @@ void MCPDriver::enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp
 void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   auto& settings = Settings::instance();
   
-  Serial.println(F("MCPDriver: Configuring MCP_MAIN interrupts..."));
-  util::UIConsole::log("Configuring MCP_MAIN interrupts...", "MCPDriver");
+  if (settings.debugMCPLevel >= 1){
+    Serial.println(F("MCPDriver: Configuring MCP_MAIN interrupts..."));
+    util::UIConsole::log("Configuring MCP_MAIN interrupts...", "MCPDriver");
+  }
   
   uint8_t gpintena=0, gpintenb=0;
   uint8_t intcona=0, intconb=0;
@@ -551,11 +552,13 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
    // ---- MT8870 STD: CHANGE mode (INTCON=0). Edge detection done in ToneReader ----
   {
     uint8_t p = cfg::mcp::STD; // GPB3 according to config
-    Serial.print(F("Configuring MT8870 STD on pin "));
-    Serial.print(p);
-    Serial.println(F(" (CHANGE mode)"));
-    util::UIConsole::log("Configuring MT8870 STD on pin " + String(p) + 
-                         " (CHANGE mode)", "MCPDriver");
+    if (settings.debugMCPLevel >= 1) {
+      Serial.print(F("Configuring MT8870 STD on pin "));
+      Serial.print(p);
+      Serial.println(F(" (CHANGE mode)"));
+      util::UIConsole::log("Configuring MT8870 STD on pin " + String(p) + 
+                          " (CHANGE mode)", "MCPDriver");
+    }
     if (p < 8) {
       gpintena |= (1u << p);
       gppua    |= (1u << p);  // håll linjen stabilt hög när MT8870 släpper STD
@@ -581,17 +584,20 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
   writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
   
-  Serial.print(F("MCPDriver: GPINTENA=0b"));
-  Serial.print(gpintena, BIN);
-  Serial.print(F(" GPINTENB=0b"));
-  Serial.println(gpintenb, BIN);
-  Serial.print(F("MCPDriver: INTCONA=0b"));
-  Serial.print(intcona, BIN);
-  Serial.print(F(" INTCONB=0b"));
-  Serial.println(intconb, BIN);
-  util::UIConsole::log("INTCONA=0b" + String(intcona, BIN) + 
-                       " INTCONB=0b" + String(intconb, BIN), "MCPDriver");
-
+  if (settings.debugMCPLevel >= 2) {
+    Serial.println(F("MCPDriver: MCP_MAIN interrupt configuration:"));
+    util::UIConsole::log("MCP_MAIN interrupt configuration:", "MCPDriver");
+    Serial.print(F("MCPDriver: GPINTENA=0b"));
+    Serial.print(gpintena, BIN);
+    Serial.print(F(" GPINTENB=0b"));
+    Serial.println(gpintenb, BIN);
+    Serial.print(F("MCPDriver: INTCONA=0b"));
+    Serial.print(intcona, BIN);
+    Serial.print(F(" INTCONB=0b"));
+    Serial.println(intconb, BIN);
+    util::UIConsole::log("INTCONA=0b" + String(intcona, BIN) + 
+                        " INTCONB=0b" + String(intconb, BIN), "MCPDriver");
+  }
   // Acknowledge any pending flags (read INTCAP followed by GPIO)
   uint16_t dummy=0;
   (void)readRegPair16_OK_(i2cAddr, REG_INTCAPA, dummy);

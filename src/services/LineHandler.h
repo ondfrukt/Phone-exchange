@@ -12,7 +12,8 @@ public:
     // Line variables
     int lineNumber;                     // Identifier for the line (0-7)
     bool lineActive;                    // Is the line active or not
-    String phoneNumber;                 // Phone number for the line    
+    String phoneNumber;                 // Phone number for the line
+    String placement;    
     LineStatus currentLineStatus;       // Current status of the line
     LineStatus previousLineStatus;      // Previous status for the line
 
