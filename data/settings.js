@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Console: format timestamp and append a new console line to the client buffer.
   // We keep the DOM updates limited by maintaining consoleLines and writing the
-  // combined textNode. This reduces reflow when många messages arrive.
+  // combined textNode. This reduces reflow when many messages arrive.
   function formatTime(ts) {
     try {
       const dt = new Date(ts);
