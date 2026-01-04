@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgTr  = document.getElementById('dbg-tr');
   const $dbgTg  = document.getElementById('dbg-tg');
   const $dbgRg  = document.getElementById('dbg-rg');
+  const $dbgMcp = document.getElementById('dbg-mcp');
+  const $dbgI2c = document.getElementById('dbg-i2c');
+  const $dbgIm  = document.getElementById('dbg-im');
 
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
@@ -17,6 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const $toneEnabled = document.getElementById('tone-enabled');
   const $toneEnabledLabel = document.getElementById('tone-enabled-label');
+
+  // --- Console UI (receive-only) ---
+  const $consoleLog = document.getElementById('console-log');
+
+  // Client-side console buffer to limit DOM updates and keep scroll performant
+  const consoleMaxLines = 500;
+  const consoleLines = [];
+
+  let autoScrollConsole = true;
 
   // --- Ring Test UI ---
   const $ringLineSelect = document.getElementById('ring-line-select');
@@ -112,6 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
       if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
       if (typeof d.rg  === 'number') $dbgRg.value  = String(d.rg|0);
+      if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
+      if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
+      if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -131,7 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
         mt: $dbgMt.value,
         tr: $dbgTr.value,
         tg: $dbgTg.value,
-        rg: $dbgRg.value
+        rg: $dbgRg.value,
+        mcp: $dbgMcp.value,
+        i2c: $dbgI2c.value,
+        im: $dbgIm.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -398,6 +416,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Console: format timestamp and append a new console line to the client buffer.
+  // We keep the DOM updates limited by maintaining consoleLines and writing the
+  // combined textNode. This reduces reflow when many messages arrive.
+  function formatTime(ts) {
+    try {
+      const dt = new Date(ts);
+      return dt.toLocaleTimeString();
+    } catch {
+      return '';
+    }
+  }
+
+  function appendConsoleLine(obj) {
+    const time = obj.ts ? formatTime(obj.ts) : '';
+    const src = obj.source ? `[${obj.source}] ` : '';
+    const text = obj.text || '';
+    const line = `${time} ${src}${text}`;
+
+    consoleLines.push(line);
+    if (consoleLines.length > consoleMaxLines) consoleLines.shift();
+
+    // Single DOM write for the whole buffer
+    if ($consoleLog) {
+      $consoleLog.textContent = consoleLines.join('\n');
+
+      if (autoScrollConsole) {
+        // Keep console scrolled to bottom when user hasn't manually scrolled up
+        $consoleLog.scrollTop = $consoleLog.scrollHeight;
+      }
+    }
+  }
+
+  // Track manual scroll to disable auto-scroll when user scrolls up.
+  $consoleLog?.addEventListener('scroll', () => {
+    if (!$consoleLog) return;
+    const nearBottom = ($consoleLog.scrollTop + $consoleLog.clientHeight) >= ($consoleLog.scrollHeight - 20);
+    autoScrollConsole = nearBottom;
+  });
+
   // Event listeners
   $dbgBtn?.addEventListener('click', saveDebug);
   $restartBtn?.addEventListener('click', restartDevice);
@@ -453,6 +510,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
       if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
       if (typeof d.rg  === 'number') $dbgRg.value  = String(d.rg|0);
+      if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
+      if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
+      if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
+    } catch {}
+  });
+
+  // Console messages via SSE
+  es.addEventListener('console', ev => {
+    try {
+      const d = JSON.parse(ev.data);
+      appendConsoleLine(d);
     } catch {}
   });
 
