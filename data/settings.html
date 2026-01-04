@@ -136,6 +136,42 @@
       </div>
 
       <div class="row">
+        <span class="k">MCPDriver</span>
+        <span class="v">
+          <select id="dbg-mcp" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">I2C</span>
+        <span class="v">
+          <select id="dbg-i2c" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">InterruptManager</span>
+        <span class="v">
+          <select id="dbg-im" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
         <span class="k">Tone generator enabled</span>
         <span class="v">
           <label style="display:flex; align-items:center; gap:6px;">
@@ -319,6 +355,13 @@
           Restart Device
         </button>
       </div>
+    </section>
+
+    <!-- Console Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Console</h2>
+      <p class="description">System log messages</p>
+      <pre id="console-log" class="console-log" aria-live="polite" role="log"></pre>
     </section>
   </main>
 </body>
