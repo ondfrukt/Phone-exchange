@@ -62,7 +62,7 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   padding: 4px 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.04);
+  background: #0b1220;
   color: var(--fg);
   font-size: 0.9rem;
 }

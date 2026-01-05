@@ -604,15 +604,16 @@ void WebServer::pushInitialSnapshot_() {
   sendActiveMaskSse();
 
   if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Initial snapshot skickad via SSE");
+    Serial.println("WebServer: Initial snapshot sent via SSE");
     util::UIConsole::log("Initial snapshot sent via SSE", "WebServer");
   }
 }
 
 void WebServer::restartDevice_() {
-  Serial.println("WebServer: Startar om enheten");
+  Serial.println("WebServer: Restarting device...");
+  delay(50);
   util::UIConsole::log("Restarting device...", "WebServer");
-  delay(3000);
+  delay(1500);
   ESP.restart();
 }
 

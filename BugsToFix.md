@@ -2,11 +2,6 @@
 
 ## Webserver
 - [ ] Knapparna är ibland för stora och ibland för små - behöver ses över
-- [ ] Åtgärda felmeddelande: `Event message queue overflow: discard message`
-  ```
-  [2055072][E][AsyncEventSource.cpp:237] _queueMessage(): Event message queue overflow: discard message
-  ```
-- [ ] Consollen behöver flyttas och fås igång igen.
 - [ ] Lägg till fler settings-inställningar
 
 ## SHKHandler
