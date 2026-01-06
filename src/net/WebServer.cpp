@@ -338,6 +338,22 @@ void WebServer::setupApiRoutes_() {
       vTaskDelete(nullptr);
     }, "restartTask", 2048, this, 1, nullptr);
   });
+  // WiFi Reset: POST /api/wifi/reset
+  server_.on("/api/wifi/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    req->send(200, "application/json", "{\"ok\":true,\"message\":\"WiFi settings will be erased and device will restart\"}");
+    
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: WiFi factory reset requested");
+      util::UIConsole::log("WiFi factory reset requested - erasing credentials", "WebServer");
+    }
+
+    // Schemalägg WiFi-reset i separat task så HTTP-svaret hinner ut
+    xTaskCreate([](void* arg){
+      vTaskDelay(pdMS_TO_TICKS(1000)); // 1s grace för att låta svaret skickas
+      net::Provisioning::factoryReset(); // Raderar WiFi-creds och startar om
+      vTaskDelete(nullptr);
+    }, "wifiResetTask", 2048, nullptr, 1, nullptr);
+  });
   // Ring test: POST /api/ring/test (body: line=3)
   server_.on("/api/ring/test", HTTP_POST, [this](AsyncWebServerRequest* req){
 

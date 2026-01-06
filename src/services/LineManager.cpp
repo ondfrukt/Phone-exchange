@@ -74,7 +74,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
       lastLineReady = -1;
     }
     // Deactivate MT8870 if no lines are active
-    if (linesNotIdle == 0) {
+    if (linesNotIdle == 0 && toneReader_ != nullptr) {
       toneReader_->deactivate();
     }
 
@@ -84,7 +84,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     linesNotIdle |= (1 << index);            // Set the bit for this line
     
     // Activate MT8870 if not already active
-    if (!toneReader_->isActive) {
+    if (toneReader_ != nullptr && !toneReader_->isActive) {
       toneReader_->activate();
     }
 

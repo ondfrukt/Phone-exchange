@@ -8,6 +8,9 @@
 
 ## ToneDialing
 
+## ToneReader
+- [ ] Allt för ofta reagerar inte koden vid en knapptryckning via DTMF, oavsett hur lång tid knappen trycks in.
+
 ## LineAction
 
 ## MCPDriver
@@ -26,5 +29,6 @@
   ```
 
 ## Övrigt
-- [ ] ESP panikerar när man ringer linje där SLIC inte är inkopplad
+- [ ] ESP Panikar när man:
+  - Ringer 
   - Sker efter att ringsignalerna är klara och status ska återställas

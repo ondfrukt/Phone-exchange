@@ -46,6 +46,7 @@ namespace cfg {
   }
 
   namespace mcp {
+    inline constexpr int MCP_MT8816_INT_PIN = 17;
     inline constexpr int MCP_MAIN_INT_PIN = 18;
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
