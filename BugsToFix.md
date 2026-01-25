@@ -1,27 +1,34 @@
 # Buggar att fixa
 
-- **Event message queue overflow**
-    - Får många felmeddelanden: `[2055072][E][AsyncEventSource.cpp:237] _queueMessage(): Event message queue overflow: discard message`
-    - Justera köns storlek för att avhjälpa problemet
-    - Skicka även bara event om det finns klienter anslutna
+## Webserver
+- [ ] Knapparna är ibland för stora och ibland för små - behöver ses över
+- [ ] Lägg till fler settings-inställningar
 
-- **UI-problem med knappar**
-    - Knapparna är ibland för stora och ibland för små
-    - Alla knappar utgår från samma mall i CSS-filen
-    - **Möjlig lösning:** Dela upp i flera CSS-varianter
+## SHKHandler
 
-- **Statusändringar vid ringning**
-    - När en ringsignal genereras till linje 0.
+## ToneDialing
 
-- **~~Krachar när webserverDebug ändras~~ FIXED**
-    - ~~När debugnivån på webserver ändras krachar espn och startar om~~
-    - Fixed: Removed infinite recursion in console sink callback that was triggered when debugWSLevel >= 2
+## ToneReader
+- [ ] Allt för ofta reagerar inte koden vid en knapptryckning via DTMF, oavsett hur lång tid knappen trycks in.
 
-- **Settings ändringar för ringsignaler ändras inte när man trycker på knappen**
-    - man får bara följande felmeddelanden:
-[733579][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerPulsDialing KEY_TOO_LONG
-[733587][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerToneDialing KEY_TOO_LONG
-[733596][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerDisconnected KEY_TOO_LONG
+## LineAction
 
+## MCPDriver
 
-- **När man ringer en linje där SLIC inte är inkopplad så panikar ESPn efter det att ringsignalerna är klara och status ska återställas**8
+## RingGenerator
+- [ ] Störningar i SHK-linje vid ringsignal (workaround implementerad)
+  - Kan inte lyfta luren exakt när en ringning togglar
+  - Behöver eventuellt permanent lösning på sikt
+
+## Settings
+- [ ] Felmeddelande vid ändring av settings i WebUI
+  ```
+  [733579][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerPulsDialing KEY_TOO_LONG
+  [733587][E][Preferences. cpp:202] putUInt(): nvs_set_u32 fail: timerToneDialing KEY_TOO_LONG
+  [733596][E][Preferences.cpp:202] putUInt(): nvs_set_u32 fail: timerDisconnected KEY_TOO_LONG
+  ```
+
+## Övrigt
+- [ ] ESP Panikar när man:
+  - Ringer 
+  - Sker efter att ringsignalerna är klara och status ska återställas

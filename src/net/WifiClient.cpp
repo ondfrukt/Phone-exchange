@@ -1,4 +1,5 @@
 #include "WifiClient.h"
+#include <time.h>
 using namespace net;
 
 WifiClient::WifiClient() : connecting_(false) {}
@@ -90,6 +91,9 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
       Serial.println(WiFi.localIP());
       connecting_ = false;
 
+      // Synkronisera klockan med NTP
+      syncTime_();
+
       // Starta mDNS när IP är klart
       if (!mdnsStarted_) {
         if (MDNS.begin(hostname_.c_str())) {
@@ -127,4 +131,33 @@ String WifiClient::makeDefaultHostname_() {
   char buf[32];
   snprintf(buf, sizeof(buf), "phoneexchange-%02X%02X", mac[4], mac[5]);
   return String(buf);
+}
+
+void WifiClient::syncTime_() {
+  // Konfigurera tidszon för svensk tid (CET/CEST med automatisk sommartid)
+  // CET-1CEST,M3.5.0,M10.5.0/3 = CET är UTC+1, CEST börjar sista söndagen i mars, slutar sista söndagen i oktober
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+  tzset();
+  
+  Serial.println("WifiClient: Syncing time with NTP...");
+  util::UIConsole::log("Syncing time with NTP...", "WifiClient");
+  
+  // Vänta lite för att NTP ska hinna synka
+  struct tm timeinfo;
+  int retries = 0;
+  while (!getLocalTime(&timeinfo) && retries < 10) {
+    delay(500);
+    retries++;
+  }
+  
+  if (retries < 10) {
+    char timeStr[64];
+    strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    Serial.printf("WifiClient: Time synced: %s\n", timeStr);
+    util::UIConsole::log("Time synced: " + String(timeStr), "WifiClient");
+  } else {
+    Serial.println("WifiClient: Failed to sync time");
+    util::UIConsole::log("Failed to sync time", "WifiClient");
+  }
 }

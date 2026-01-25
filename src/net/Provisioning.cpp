@@ -47,7 +47,16 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
 void Provisioning::factoryReset() {
   Serial.println("Provisioning: Factory reset: erasing Wi-Fi creds (NVS) and restarting...");
   util::UIConsole::log("Factory reset: erasing Wi-Fi creds (NVS) and restarting...", "Provisioning");
+  
+  // Rensa WifiClient credentials (Preferences)
+  Preferences prefs;
+  prefs.begin("wifi", false);
+  prefs.clear();  // Radera alla nycklar i "wifi" namnutrymmet
+  prefs.end();
+  
+  // Rensa WiFi-credentials från NVS
   WiFi.disconnect(true /*wifioff*/, true /*erase NVS*/);
+  
   delay(250);
   ESP.restart();
 }

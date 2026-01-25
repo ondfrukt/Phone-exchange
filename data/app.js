@@ -4,19 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const $lines  = document.getElementById('lines');
   const $status = document.getElementById('status');
 
-  // --- Console UI (receive-only) ---
-  const $consoleLog = document.getElementById('console-log');
-
   // Bitmask representing active/inactive lines (0..255)
   let activeMask = 0;
   // Cache of line objects for quick lookup and rendering: [{id, status, phone}, ...]
   let linesCache = [];
-
-  // Client-side console buffer to limit DOM updates and keep scroll performant
-  const consoleMaxLines = 500;
-  const consoleLines = [];
-
-  let autoScrollConsole = true;
 
   // Helpers
   const isActive  = (id) => ((activeMask >> id) & 1) === 1;
@@ -261,43 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
       updatePhoneInput(entry);
     }
   }
-
-  // Console: format timestamp and append a new console line to the client buffer.
-  // We keep the DOM updates limited by maintaining consoleLines and writing the
-  // combined textNode. This reduces reflow when många messages arrive.
-  function formatTime(ts) {
-    try {
-      const dt = new Date(ts);
-      return dt.toLocaleTimeString();
-    } catch {
-      return '';
-    }
-  }
-
-  function appendConsoleLine(obj) {
-    const time = obj.ts ? formatTime(obj.ts) : '';
-    const src = obj.source ? `[${obj.source}] ` : '';
-    const text = obj.text || '';
-    const line = `${time} ${src}${text}`;
-
-    consoleLines.push(line);
-    if (consoleLines.length > consoleMaxLines) consoleLines.shift();
-
-    // Single DOM write for the whole buffer
-    $consoleLog.textContent = consoleLines.join('\n');
-
-    if (autoScrollConsole) {
-      // Keep console scrolled to bottom when user hasn't manually scrolled up
-      $consoleLog.scrollTop = $consoleLog.scrollHeight;
-    }
-  }
-
-  // Track manual scroll to disable auto-scroll when user scrolls up.
-  $consoleLog?.addEventListener('scroll', () => {
-    if (!$consoleLog) return;
-    const nearBottom = ($consoleLog.scrollTop + $consoleLog.clientHeight) >= ($consoleLog.scrollHeight - 20);
-    autoScrollConsole = nearBottom;
-  });
 
   // ---- Initial load ----
   // 1) Full status list (snapshot)

@@ -1,11 +1,8 @@
-// Här inkluderas gemensamma hårdvaru-konstatner som ska användas lite överallt.
-// config.h inkuderas sedan i varje fil som behöver det.
-// Här läggs inte stora bibliotek in
 #pragma once
 #include <cstdint>
 #include <Arduino.h>
 
-// Definiera färgkoder
+// Console color codes
 #define COLOR_RESET "\x1b[0m"
 #define RED         "\x1b[31m"
 #define GREEN       "\x1b[32m"
@@ -15,7 +12,7 @@
 #define CYAN        "\x1b[36m"
 #define WHITE       "\x1b[37m"
 
-// Fet text
+// Bold text
 #define BOLD    "\033[1m"
 
 namespace cfg {
@@ -46,12 +43,13 @@ namespace cfg {
   }
 
   namespace mcp {
+    inline constexpr int MCP_MT8816_INT_PIN = 17;
     inline constexpr int MCP_MAIN_INT_PIN = 18;
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x27;   //A0=GND, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x20;   //A0=GND, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x24; //A0=VCC, A1=GND, A2=GND
     inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=GND, A1=VCC, A2=VCC
     inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21;  //BEHÖVER ÄNDRAS!
 

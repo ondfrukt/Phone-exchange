@@ -53,14 +53,15 @@ void App::begin() {
     toneGenerator1_.begin();
     toneGenerator2_.begin();
     toneGenerator3_.begin();
+    Serial.println("----- App setup complete -----");
+    Serial.println();
+    util::UIConsole::log("----- App setup complete -----", "App");
+    util::UIConsole::log("", "App");
 
-		// --- Net and webserver ---
+    // --- Net and webserver ---
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
     webServer_.begin();
-
-    Serial.println("----- App setup complete -----");
-    util::UIConsole::log("----- App setup complete -----", "App");
 }
 
 void App::loop() {
