@@ -115,6 +115,11 @@ namespace cfg {
       /*2*/  {OUTPUT, LOW},  // GPA2 -> STROBE
       /*3*/  {OUTPUT, LOW},  // GPA3 -> CS
 
+      /*4*/  {OUTPUT, LOW},  // GPB0 -> Not in use
+      /*5*/  {OUTPUT, LOW},  // GPB1 -> Not in use
+      /*6*/  {OUTPUT, LOW},  // GPB2 -> Not in use
+      /*7*/  {OUTPUT, LOW},  // GPB3 -> Not in use
+      
       /*8*/  {OUTPUT, LOW},  // GPB0 -> AX0
       /*9*/  {OUTPUT, LOW},  // GPB1 -> AX1
       /*10*/ {OUTPUT, LOW},  // GPB2 -> AX2
@@ -122,6 +127,8 @@ namespace cfg {
       /*12*/ {OUTPUT, LOW},  // GPB4 -> AY0
       /*13*/ {OUTPUT, LOW},  // GPB5 -> AY1
       /*14*/ {OUTPUT, LOW},  // GPB6 -> AY2
+
+      /*15*/ {OUTPUT, LOW},  // GPB7 -> Not in use
     };
 
     // MCP SLIC
@@ -147,22 +154,22 @@ namespace cfg {
     constexpr uint8_t PD_37 = 15;   // GPB7
 
     constexpr PinModeEntry MCP_SLIC[16] = {
-      /*0*/ {OUTPUT, LOW},     // GPA0 PD_0/4
-      /*1*/ {INPUT, LOW},     // GPA1 PD_1/5
-      /*2*/ {OUTPUT, LOW},     // GPA2 FR_1/5
-      /*3*/ {OUTPUT, LOW},     // GPA3 RM 1/5
-      /*4*/ {INPUT, LOW},      // GPA4 SHK 1/5 
-      /*5*/ {INPUT, LOW},      // GPA5 SHK 0/4
-      /*6*/ {OUTPUT, LOW},     // GPA6 RM 0/4
-      /*7*/ {OUTPUT, LOW},     // GPA7 FR 0/4 
-      /*8*/ {INPUT, LOW},      // GPB0 SHK 2/6
-      /*9*/ {OUTPUT, LOW},     // GPB1 RM 2/6
-      /*10*/{OUTPUT, LOW},     // GPB2 FR 2/6
-      /*11*/{INPUT, LOW},      // GPB3 SHK 3/7 
-      /*12*/{OUTPUT, LOW},     // GPB4 RM 3/7
-      /*13*/{OUTPUT, LOW},     // GPB5 FR 3/7  
-      /*14*/{INPUT, LOW},     // GPB6 PD_2/6
-      /*15*/{INPUT, LOW},     // GPB7 PD_3/7
+      /*0*/ {OUTPUT,  LOW},     // GPA0 PD_0/4
+      /*1*/ {INPUT,   LOW},     // GPA1 PD_1/5
+      /*2*/ {OUTPUT,  LOW},     // GPA2 FR_1/5
+      /*3*/ {OUTPUT,  LOW},     // GPA3 RM 1/5
+      /*4*/ {INPUT,   LOW},     // GPA4 SHK 1/5 
+      /*5*/ {INPUT,   LOW},     // GPA5 SHK 0/4
+      /*6*/ {OUTPUT,  LOW},     // GPA6 RM 0/4
+      /*7*/ {OUTPUT,  LOW},     // GPA7 FR 0/4 
+      /*8*/ {INPUT,   LOW},     // GPB0 SHK 2/6
+      /*9*/ {OUTPUT,  LOW},     // GPB1 RM 2/6
+      /*10*/{OUTPUT,  LOW},     // GPB2 FR 2/6
+      /*11*/{INPUT,   LOW},     // GPB3 SHK 3/7 
+      /*12*/{OUTPUT,  LOW},     // GPB4 RM 3/7
+      /*13*/{OUTPUT,  LOW},     // GPB5 FR 3/7  
+      /*14*/{INPUT,   LOW},     // GPB6 PD_2/6
+      /*15*/{INPUT,   LOW},     // GPB7 PD_3/7
     };
 
     inline constexpr uint8_t SHK_LINE_ADDR[8] = {
@@ -170,45 +177,40 @@ namespace cfg {
       MCP_SLIC2_ADDRESS, MCP_SLIC2_ADDRESS, MCP_SLIC2_ADDRESS, MCP_SLIC2_ADDRESS
     };
 
-    constexpr uint8_t SHK_PINS[8] = {
-      5,   // Line 0 MCP_SLIC1, GPA5
-      4,   // Line 1 MCP_SLIC1, GPA4
-      8,   // Line 2 MCP_SLIC1, GPB0
-      11,  // Line 3 MCP_SLIC1, GPB3
-      5,   // Line 4 MCP_SLIC2, GPA5
-      4,   // Line 5 MCP_SLIC2, GPA4
-      8,   // Line 6 MCP_SLIC2, GPB0
-      11   // Line 7 MCP_SLIC2, GPB3
-    };
-
     inline constexpr std::size_t SHK_LINE_COUNT = 8;
-
-    constexpr uint8_t FR_PINS[8] = {
-      7,   // Line 0 MCP_SLIC1, GPA7 (FR_04)
-      2,   // Line 1 MCP_SLIC1, GPA2 (FR_15)
-      10,  // Line 2 MCP_SLIC1, GPB2 (FR_26)
-      13,  // Line 3 MCP_SLIC1, GPB5 (FR_37)
-      7,   // Line 4 MCP_SLIC2, GPA7 (FR_04)
-      2,   // Line 5 MCP_SLIC2, GPA2 (FR_15)
-      10,  // Line 6 MCP_SLIC2, GPB2 (FR_26)
-      13   // Line 7 MCP_SLIC2, GPB5 (FR_37)
-    };
-
     inline constexpr std::size_t FR_LINE_COUNT = 8;
-
-    constexpr uint8_t RM_PINS[8] = {
-      6,   // Line 0 MCP_SLIC1, GPA6 (RM_04)
-      3,   // Line 1 MCP_SLIC1, GPA3 (RM_15)
-      9,   // Line 2 MCP_SLIC1, GPB1 (RM_26)
-      12,  // Line 3 MCP_SLIC1, GPB4 (RM_37)
-      6,   // Line 4 MCP_SLIC2, GPA6 (RM_04)
-      3,   // Line 5 MCP_SLIC2, GPA3 (RM_15)
-      9,   // Line 6 MCP_SLIC2, GPB1 (RM_26)
-      12   // Line 7 MCP_SLIC2, GPB4 (RM_37)
-    };
-
     inline constexpr std::size_t RM_LINE_COUNT = 8;
 
+    constexpr uint8_t SHK_PINS[8] = {
+      SHK_04,   // Line 0 MCP_SLIC1, GPA5
+      SHK_15,   // Line 1 MCP_SLIC1, GPA4
+      SHK_26,   // Line 2 MCP_SLIC1, GPB0
+      SHK_37,   // Line 3 MCP_SLIC1, GPB3
+      SHK_04,   // Line 4 MCP_SLIC2, GPA5
+      SHK_15,   // Line 5 MCP_SLIC2, GPA4
+      SHK_26,   // Line 6 MCP_SLIC2, GPB0
+      SHK_37,   // Line 7 MCP_SLIC2, GPB3
+    };
+    constexpr uint8_t FR_PINS[8] = {
+      FR_04,   // Line 0 MCP_SLIC1, GPA7
+      FR_15,   // Line 1 MCP_SLIC1, GPA2
+      FR_26,   // Line 2 MCP_SLIC1, GPB2
+      FR_37,   // Line 3 MCP_SLIC1, GPB5
+      FR_04,   // Line 4 MCP_SLIC2, GPA7
+      FR_15,   // Line 5 MCP_SLIC2, GPA2
+      FR_26,   // Line 6 MCP_SLIC2, GPB2
+      FR_37,   // Line 7 MCP_SLIC2, GPB5
+    };
+    constexpr uint8_t RM_PINS[8] = {
+      RM_04,   // Line 0 MCP_SLIC1, GPA6
+      RM_15,   // Line 1 MCP_SLIC1, GPA3
+      RM_26,   // Line 2 MCP_SLIC1, GPB1
+      RM_37,   // Line 3 MCP_SLIC1, GPB4
+      RM_04,   // Line 4 MCP_SLIC2, GPA6
+      RM_15,   // Line 5 MCP_SLIC2, GPA3
+      RM_26,   // Line 6 MCP_SLIC2, GPB1
+      RM_37,   // Line 7 MCP_SLIC2, GPB4
+    };
   }
 
   namespace externalGPIO {

@@ -85,7 +85,7 @@ void App::loop() {
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
-  GPIOTest(cfg::mcp::MCP_SLIC1_ADDRESS, cfg::mcp::SHK_04);
+  //GPIOTest(cfg::mcp::MCP_SLIC1_ADDRESS, cfg::mcp::SHK_04);
   GPIOTest(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::FUNCTION_BUTTON);
 
 }

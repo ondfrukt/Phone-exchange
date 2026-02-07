@@ -32,7 +32,7 @@ void Settings::resetDefaults() {
   debugLALevel          = 2;
   debugMTLevel          = 0;
   debugTRLevel          = 0;
-  debugMCPLevel         = 0;
+  debugMCPLevel         = 3;
   debugI2CLevel         = 0;
   debugTonGenLevel      = 0;
   debugRGLevel          = 0;
