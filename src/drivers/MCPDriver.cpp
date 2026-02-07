@@ -476,34 +476,64 @@ bool MCPDriver::applyPinModes_(Adafruit_MCP23X17& mcp, const uint8_t (&modes)[16
 
 // Enable interrupts for SLIC shake pins and configure pull-ups
 void MCPDriver::enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
-  uint8_t gpintena=0, gpintenb=0;
-  uint8_t intcona=0, intconb=0;
+  auto& settings = Settings::instance();
 
-  uint8_t gppua=0, gppub=0;
-  (void)readReg8_OK_(i2cAddr, REG_GPPUA, gppua);
-  (void)readReg8_OK_(i2cAddr, REG_GPPUB, gppub);
+  // Build SHK bitmasks for this specific SLIC expander.
+  // Desired behaviour: any SHK edge should assert INT (CHANGE mode).
+  uint8_t shkMaskA = 0;
+  uint8_t shkMaskB = 0;
+  for (uint8_t i=0; i<sizeof(cfg::mcp::SHK_PINS)/sizeof(cfg::mcp::SHK_PINS[0]); ++i) {
+    if (cfg::mcp::SHK_LINE_ADDR[i] != i2cAddr) continue;
 
-  // Set interrupt and pull-up bits for shake pins
-  for (uint8_t i=0; i<sizeof(mcp::SHK_PINS)/sizeof(mcp::SHK_PINS[0]); ++i) {
-    uint8_t p = mcp::SHK_PINS[i];
-    if (p<8) gpintena |= (1u<<p);
-    else     gpintenb |= (1u<<(p-8));
-    if (p<8) gppua |= (1u<<p); else gppub |= (1u<<(p-8));
+    const uint8_t p = cfg::mcp::SHK_PINS[i];
+    if (p < 8) shkMaskA |= (1u << p);
+    else       shkMaskB |= (1u << (p - 8));
   }
 
-  writeReg8_(i2cAddr, REG_INTCONA, intcona);
-  writeReg8_(i2cAddr, REG_INTCONB, intconb);
+  uint8_t gpintena = 0, gpintenb = 0;
+  uint8_t intcona  = 0, intconb  = 0;
+  uint8_t gppua    = 0, gppub    = 0;
+  (void)readReg8_OK_(i2cAddr, REG_GPINTENA, gpintena);
+  (void)readReg8_OK_(i2cAddr, REG_GPINTENB, gpintenb);
+  (void)readReg8_OK_(i2cAddr, REG_INTCONA,  intcona);
+  (void)readReg8_OK_(i2cAddr, REG_INTCONB,  intconb);
+  (void)readReg8_OK_(i2cAddr, REG_GPPUA,    gppua);
+  (void)readReg8_OK_(i2cAddr, REG_GPPUB,    gppub);
 
-  writeReg8_(i2cAddr, REG_DEFVALA, 0x00);
-  writeReg8_(i2cAddr, REG_DEFVALB, 0x00);
+  // SHK pins in CHANGE mode: INTCON bit = 0
+  intcona &= static_cast<uint8_t>(~shkMaskA);
+  intconb &= static_cast<uint8_t>(~shkMaskB);
 
-  writeReg8_(i2cAddr, REG_GPPUA, gppua);
-  writeReg8_(i2cAddr, REG_GPPUB, gppub);
+  // Enable pull-ups + interrupt-on-change on SHK pins.
+  gppua    |= shkMaskA;
+  gppub    |= shkMaskB;
+  gpintena |= shkMaskA;
+  gpintenb |= shkMaskB;
 
-  writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
-  writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
+  (void)writeReg8_(i2cAddr, REG_INTCONA, intcona);
+  (void)writeReg8_(i2cAddr, REG_INTCONB, intconb);
 
+  // DEFVAL is not used in CHANGE mode (INTCON=0), but keep deterministic values.
+  (void)writeReg8_(i2cAddr, REG_DEFVALA, 0x00);
+  (void)writeReg8_(i2cAddr, REG_DEFVALB, 0x00);
+
+  (void)writeReg8_(i2cAddr, REG_GPPUA, gppua);
+  (void)writeReg8_(i2cAddr, REG_GPPUB, gppub);
+
+  (void)writeReg8_(i2cAddr, REG_GPINTENA, gpintena);
+  (void)writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
+
+  // Clear any pending capture before runtime.
   (void)mcp.readGPIOAB();
+
+  if (settings.debugMCPLevel >= 1) {
+    Serial.printf("MCPDriver: SLIC 0x%02X SHK INT cfg GPINTEN(A/B)=0x%02X/0x%02X, GPPU(A/B)=0x%02X/0x%02X\n",
+                  i2cAddr, gpintena, gpintenb, gppua, gppub);
+    util::UIConsole::log("SLIC 0x" + String(i2cAddr, HEX) +
+                         " SHK INT cfg GPINTEN(A/B)=0x" + String(gpintena, HEX) + "/0x" + String(gpintenb, HEX) +
+                         ", GPPU(A/B)=0x" + String(gppua, HEX) + "/0x" + String(gppub, HEX),
+                         "MCPDriver");
+  }
 }
 
 // Enable interrupts for MCP_MAIN (e.g. function button and MT8870 STD)
