@@ -37,6 +37,7 @@ public:
     MT8816Driver mt8816Driver_;
 
 private:
+    void GPIOTest(uint8_t addr, int pin);
 
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;

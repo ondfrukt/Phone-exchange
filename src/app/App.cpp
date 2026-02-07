@@ -84,4 +84,63 @@ void App::loop() {
   if (toneGenerator1_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator1_.update();
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
+
+  if (settings.debugMCPLevel >= 1) {
+    GPIOTest(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::FUNCTION_BUTTON);
+  }
+}
+
+void App::GPIOTest(uint8_t addr, int pin) {
+  struct PinWatch {
+    bool used = false;
+    uint8_t addr = 0;
+    int pin = -1;
+    bool value = false;
+    bool initialized = false;
+  };
+
+  static PinWatch watched[8];
+
+  PinWatch* slot = nullptr;
+  for (auto& entry : watched) {
+    if (entry.used && entry.addr == addr && entry.pin == pin) {
+      slot = &entry;
+      break;
+    }
+  }
+
+  if (!slot) {
+    for (auto& entry : watched) {
+      if (!entry.used) {
+        entry.used = true;
+        entry.addr = addr;
+        entry.pin = pin;
+        slot = &entry;
+        break;
+      }
+    }
+  }
+
+  if (!slot) return;
+
+  bool currentValue = false;
+  if (!mcpDriver_.digitalReadMCP(addr, static_cast<uint8_t>(pin), currentValue)) {
+    return;
+  }
+
+  if (!slot->initialized) {
+    slot->value = currentValue;
+    slot->initialized = true;
+    return;
+  }
+
+  if (slot->value != currentValue) {
+    slot->value = currentValue;
+    Serial.print(F("GPIOTest addr=0x"));
+    Serial.print(addr, HEX);
+    Serial.print(F(" pin="));
+    Serial.print(pin);
+    Serial.print(F(" state="));
+    Serial.println(currentValue ? F("HIGH") : F("LOW"));
+  }
 }
