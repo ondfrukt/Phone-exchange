@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiProv.h>
+#include <Preferences.h>
 #include "net/WifiClient.h"
 #include "net/WebServer.h"
 #include "util/UIConsole.h"

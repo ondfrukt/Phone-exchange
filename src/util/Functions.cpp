@@ -1,6 +1,7 @@
 #include "util/Functions.h"
 
 
+
 void Functions::update() {
     // Static variables for debouncing and tracking button state:
     // btnDown: tracks if the button is currently pressed
@@ -27,15 +28,33 @@ void Functions::update() {
 
 void Functions::restartDevice(uint32_t held) {
     if (held >= 5000) {
-        Serial.println("Long press (>5s): running special method");
-        // myLongPressAction();
+        Serial.println("Resetting settings and WiFi credentials...");
+        
+        // Clear all settings stored in Preferences under "myapp" namespace
+        Preferences prefs;
+        prefs.begin("myapp", false);  // Settings namespace
+        prefs.clear();
+        prefs.end();
+        delay(1000);
+        
+        // Clear WiFi credentials from NVS
+        WiFi.disconnect(true, true);
+        prefs.begin("wifi", false);
+        prefs.clear();
+        prefs.end();
+        delay(1000);
+        
+        Serial.println("Settings and WiFi reset complete. Restarting...");
+        delay(1000);
+        ESP.restart();
     } else {
-        Serial.println("Short press: restart om 2s...");
-        delay(2000);
+        Serial.println("Restarting...");
+        delay(1000);
         ESP.restart();
     }
 
 }
+
 
 void Functions::testRing() {
     Serial.println("Functions: testRing()");

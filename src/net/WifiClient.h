@@ -32,7 +32,8 @@ public:
 private:
     void connect_();
     void onWiFiEvent_(WiFiEvent_t event);
-    String makeDefaultHostname_(); 
+    String makeDefaultHostname_();
+    void syncTime_(); 
 
     Preferences prefs_;
     String ssid_;

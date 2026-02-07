@@ -143,10 +143,10 @@ bool Settings::load() {
     timer_Dialing         = prefs.getUInt ("timerDialing",      timer_Dialing);
     timer_Ringing         = prefs.getUInt ("timerRinging",      timer_Ringing);
     timer_incomming       = prefs.getUInt ("timerIncomming",    timer_incomming);
-    timer_pulsDialing     = prefs.getUInt ("timerPulsDialing",  timer_pulsDialing);
-    timer_toneDialing     = prefs.getUInt ("timerToneDialing",  timer_toneDialing);
+    timer_pulsDialing     = prefs.getUInt ("tmrPulsDial",       timer_pulsDialing);
+    timer_toneDialing     = prefs.getUInt ("tmrToneDial",       timer_toneDialing);
     timer_fail            = prefs.getUInt ("timerFail",         timer_fail);
-    timer_disconnected    = prefs.getUInt ("timerDisconnected", timer_disconnected);
+    timer_disconnected    = prefs.getUInt ("tmrDisconn",        timer_disconnected);
     timer_timeout         = prefs.getUInt ("timerTimeout",      timer_timeout);
     timer_busy            = prefs.getUInt ("timerBusy",         timer_busy);
     
@@ -210,10 +210,10 @@ void Settings::save() const {
   prefs.putUInt ("timerDialing",          timer_Dialing);
   prefs.putUInt ("timerRinging",          timer_Ringing);
   prefs.putUInt ("timerIncomming",        timer_incomming);
-  prefs.putUInt ("timerPulsDialing",      timer_pulsDialing);
-  prefs.putUInt ("timerToneDialing",      timer_toneDialing);
+  prefs.putUInt ("tmrPulsDial",           timer_pulsDialing);
+  prefs.putUInt ("tmrToneDial",           timer_toneDialing);
   prefs.putUInt ("timerFail",             timer_fail);
-  prefs.putUInt ("timerDisconnected",     timer_disconnected);
+  prefs.putUInt ("tmrDisconn",            timer_disconnected);
   prefs.putUInt ("timerTimeout",          timer_timeout);
   prefs.putUInt ("timerBusy",             timer_busy);
 

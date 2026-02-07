@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Button System Demo</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .demo-section {
+      margin-bottom: 32px;
+    }
+    .demo-section h3 {
+      font-size: 1rem;
+      margin: 0 0 12px;
+      color: var(--accent);
+    }
+    .demo-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .demo-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-width: 120px;
+    }
+    .demo-full {
+      margin-bottom: 16px;
+    }
+    code {
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="page-header">
+      <h1>Button System Demo</h1>
+      <nav class="page-nav">
+        <a href="index.html" class="nav-link">← Dashboard</a>
+        <a href="settings.html" class="nav-link">Settings →</a>
+      </nav>
+    </div>
+
+    <!-- Variants -->
+    <section class="card">
+      <h2 style="margin:0 0 16px; font-size:1.2rem">Button Variants</h2>
+      
+      <div class="demo-section">
+        <h3>Default (Base)</h3>
+        <div class="demo-row">
+          <span class="demo-label">Normal:</span>
+          <button class="btn">Default Button</button>
+          <code>btn</code>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Disabled:</span>
+          <button class="btn" disabled>Disabled Button</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Primary</h3>
+        <div class="demo-row">
+          <span class="demo-label">Normal:</span>
+          <button class="btn btn-primary">Save Settings</button>
+          <code>btn btn-primary</code>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Disabled:</span>
+          <button class="btn btn-primary" disabled>Save Settings</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Success</h3>
+        <div class="demo-row">
+          <span class="demo-label">Normal:</span>
+          <button class="btn btn-success">Activate</button>
+          <code>btn btn-success</code>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Disabled:</span>
+          <button class="btn btn-success" disabled>Activate</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Danger</h3>
+        <div class="demo-row">
+          <span class="demo-label">Normal:</span>
+          <button class="btn btn-danger">Delete</button>
+          <code>btn btn-danger</code>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Disabled:</span>
+          <button class="btn btn-danger" disabled>Delete</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Secondary</h3>
+        <div class="demo-row">
+          <span class="demo-label">Normal:</span>
+          <button class="btn btn-secondary">Cancel</button>
+          <code>btn btn-secondary</code>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Disabled:</span>
+          <button class="btn btn-secondary" disabled>Cancel</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Ghost</h3>
+        <div class="demo-row">
+          <span class="demo-label">Normal:</span>
+          <button class="btn btn-ghost">Learn More</button>
+          <code>btn btn-ghost</code>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Disabled:</span>
+          <button class="btn btn-ghost" disabled>Learn More</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sizes -->
+    <section class="card">
+      <h2 style="margin:0 0 16px; font-size:1.2rem">Button Sizes</h2>
+      
+      <div class="demo-row">
+        <span class="demo-label">Small:</span>
+        <button class="btn btn-primary btn-sm">Small Button</button>
+        <code>btn-sm</code>
+      </div>
+      
+      <div class="demo-row">
+        <span class="demo-label">Medium (default):</span>
+        <button class="btn btn-primary">Medium Button</button>
+        <code>(no class needed)</code>
+      </div>
+      
+      <div class="demo-row">
+        <span class="demo-label">Large:</span>
+        <button class="btn btn-primary btn-lg">Large Button</button>
+        <code>btn-lg</code>
+      </div>
+    </section>
+
+    <!-- Width Modifiers -->
+    <section class="card">
+      <h2 style="margin:0 0 16px; font-size:1.2rem">Width Modifiers</h2>
+      
+      <div class="demo-section">
+        <h3>Predefined Widths</h3>
+        
+        <div class="demo-full">
+          <span class="demo-label">Auto (default):</span>
+          <div style="margin-top:8px">
+            <button class="btn btn-primary">Short</button>
+            <button class="btn btn-primary">Medium Length Text</button>
+            <button class="btn btn-primary">This is a longer button text example</button>
+          </div>
+          <code>btn-auto</code> or no width class
+        </div>
+
+        <div class="demo-full">
+          <span class="demo-label">Compact (60-120px):</span>
+          <div style="margin-top:8px">
+            <button class="btn btn-primary btn-compact">OK</button>
+            <button class="btn btn-success btn-compact">Yes</button>
+            <button class="btn btn-danger btn-compact">Delete</button>
+          </div>
+          <code>btn-compact</code>
+        </div>
+
+        <div class="demo-full">
+          <span class="demo-label">Wide (150-300px):</span>
+          <div style="margin-top:8px">
+            <button class="btn btn-primary btn-wide">Save Settings</button>
+            <button class="btn btn-success btn-wide">Update Configuration</button>
+          </div>
+          <code>btn-wide</code>
+        </div>
+
+        <div class="demo-full">
+          <span class="demo-label">Extra Wide (200-400px):</span>
+          <div style="margin-top:8px">
+            <button class="btn btn-primary btn-x-wide">Update All Configuration Settings</button>
+          </div>
+          <code>btn-x-wide</code>
+        </div>
+
+        <div class="demo-full">
+          <span class="demo-label">Full Width:</span>
+          <div style="margin-top:8px">
+            <button class="btn btn-primary btn-full">Full Width Button</button>
+          </div>
+          <code>btn-full</code>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Min-Width Utilities</h3>
+        <div class="demo-row">
+          <button class="btn btn-primary btn-min-80">80px</button>
+          <button class="btn btn-primary btn-min-100">100px min</button>
+          <button class="btn btn-primary btn-min-120">120px minimum</button>
+          <button class="btn btn-primary btn-min-150">150px min width</button>
+        </div>
+        <code>btn-min-80, btn-min-100, btn-min-120, btn-min-150</code>
+      </div>
+
+      <div class="demo-section">
+        <h3>Max-Width Utilities</h3>
+        <div class="demo-row">
+          <button class="btn btn-primary btn-max-120">This text will be truncated at 120px</button>
+          <button class="btn btn-primary btn-max-150">This text will be truncated at 150px</button>
+          <button class="btn btn-primary btn-max-200">This text will be truncated at 200 pixels max</button>
+          <button class="btn btn-primary btn-max-250">This is a longer text that will be truncated at 250 pixels maximum</button>
+        </div>
+        <code>btn-max-120, btn-max-150, btn-max-200, btn-max-250</code>
+      </div>
+
+      <div class="demo-section">
+        <h3>Combined Min & Max</h3>
+        <div class="demo-full">
+          <div style="margin-bottom:8px">
+            <button class="btn btn-primary btn-min-100 btn-max-200">Short</button>
+          </div>
+          <div style="margin-bottom:8px">
+            <button class="btn btn-primary btn-min-100 btn-max-200">Medium Length Button</button>
+          </div>
+          <div>
+            <button class="btn btn-primary btn-min-100 btn-max-200">This is a very long text that will be truncated</button>
+          </div>
+        </div>
+        <code>btn-min-100 btn-max-200</code> (kombinera fritt)
+      </div>
+    </section>
+
+    <!-- States -->
+    <section class="card">
+      <h2 style="margin:0 0 16px; font-size:1.2rem">Button States</h2>
+      
+      <div class="demo-section">
+        <h3>Working State</h3>
+        <div class="demo-row">
+          <button class="btn btn-primary working">Saving</button>
+          <button class="btn btn-success working">Processing</button>
+          <button class="btn btn-danger working">Deleting</button>
+        </div>
+        <code>working</code> class (lägg till/ta bort med JS)
+      </div>
+    </section>
+
+    <!-- Combinations -->
+    <section class="card">
+      <h2 style="margin:0 0 16px; font-size:1.2rem">Real-World Examples</h2>
+      
+      <div class="demo-section">
+        <h3>Form Actions</h3>
+        <div class="demo-row">
+          <button class="btn btn-primary btn-wide">Save Changes</button>
+          <button class="btn btn-secondary btn-min-100">Cancel</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Confirmation Dialog</h3>
+        <div class="demo-row">
+          <button class="btn btn-danger btn-min-120">Yes, Delete</button>
+          <button class="btn btn-secondary btn-min-120">No, Keep</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Quick Actions</h3>
+        <div class="demo-row">
+          <button class="btn btn-sm btn-primary btn-compact">Edit</button>
+          <button class="btn btn-sm btn-danger btn-compact">Delete</button>
+          <button class="btn btn-sm btn-secondary btn-compact">View</button>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h3>Settings Page Actions</h3>
+        <div class="demo-full">
+          <div style="margin-bottom:10px">
+            <button class="btn btn-primary btn-wide">Update Debug Settings</button>
+          </div>
+          <div style="margin-bottom:10px">
+            <button class="btn btn-primary btn-wide">Update Ring Settings</button>
+          </div>
+          <div>
+            <button class="btn btn-danger btn-min-150">Restart Device</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Badge System (Legacy) -->
+    <section class="card">
+      <h2 style="margin:0 0 16px; font-size:1.2rem">Badge System (Legacy)</h2>
+      <p class="description">Det gamla badge-systemet finns kvar för kompatibilitet</p>
+      
+      <div class="demo-row">
+        <button class="badge clickable">Default</button>
+        <button class="badge clickable ok">Success</button>
+        <button class="badge clickable no">Error</button>
+        <button class="badge">Inactive</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">JavaScript Example</h2>
+      <p class="description">Test working state toggling</p>
+      <div style="margin-top:16px">
+        <button id="test-working-btn" class="btn btn-primary btn-wide">Click to Test Working State</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Demo of working state
+    document.getElementById('test-working-btn').addEventListener('click', function() {
+      this.classList.add('working');
+      setTimeout(() => {
+        this.classList.remove('working');
+      }, 2000);
+    });
+  </script>
+</body>
+</html>

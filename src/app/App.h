@@ -25,8 +25,6 @@
 #include "util/Functions.h"
 #include "util/I2CScanner.h"
 #include "util/UIConsole.h"
-#include "util/FlashLED.h"
-
 
 class App {
 public:
@@ -57,6 +55,5 @@ private:
     Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
-    FlashLED flashLED_;
     
 };

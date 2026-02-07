@@ -46,6 +46,8 @@ void WebServer::setupFilesystem_() {
 }
 
 void WebServer::initSse_() {
+  // AsyncEventSource handles client management internally
+  
   events_.onConnect([this](AsyncEventSourceClient* client){
     Serial.println("WebServer: SSE-klient ansluten 📡");
     util::UIConsole::log("SSE client connected.", "WebServer");
@@ -230,7 +232,7 @@ void WebServer::setupApiRoutes_() {
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
   });
-  // Set debug nivåer: POST /api/debug/set  (body: shk=1&lm=2&ws=0&la=1&mt=2&tr=0&tg=1&rg=2)
+  // Set debug nivåer: POST /api/debug/set  (body: shk=1&lm=2&ws=0&la=1&mt=2&tr=0&tg=1&rg=2&mcp=1&i2c=0&im=1)
   server_.on("/api/debug/set", HTTP_POST, [this](AsyncWebServerRequest* req){
     auto getOptUChar = [req](const char* k, int& out) {
       out = -1;
@@ -239,7 +241,7 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1, mcp=-1, i2c=-1, im=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
@@ -248,14 +250,17 @@ void WebServer::setupApiRoutes_() {
     bool hasTr  = getOptUChar("tr",  tr);
     bool hasTg  = getOptUChar("tg",  tg);
     bool hasRg  = getOptUChar("rg",  rg);
+    bool hasMcp = getOptUChar("mcp", mcp);
+    bool hasI2c = getOptUChar("i2c", i2c);
+    bool hasIm  = getOptUChar("im",  im);
 
-    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg && !hasMcp && !hasI2c && !hasIm) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg|mcp|i2c|im\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg)) || (hasMcp && !inRange(mcp)) || (hasI2c && !inRange(i2c)) || (hasIm && !inRange(im))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -269,6 +274,9 @@ void WebServer::setupApiRoutes_() {
     if (hasTr)  settings_.debugTRLevel  = (uint8_t)tr;
     if (hasTg)  settings_.debugTonGenLevel  = (uint8_t)tg;
     if (hasRg)  settings_.debugRGLevel  = (uint8_t)rg;
+    if (hasMcp) settings_.debugMCPLevel = (uint8_t)mcp;
+    if (hasI2c) settings_.debugI2CLevel = (uint8_t)i2c;
+    if (hasIm)  settings_.debugIMLevel  = (uint8_t)im;
 
     // Spara till NVS
     settings_.save();
@@ -329,6 +337,22 @@ void WebServer::setupApiRoutes_() {
       self->restartDevice_();
       vTaskDelete(nullptr);
     }, "restartTask", 2048, this, 1, nullptr);
+  });
+  // WiFi Reset: POST /api/wifi/reset
+  server_.on("/api/wifi/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    req->send(200, "application/json", "{\"ok\":true,\"message\":\"WiFi settings will be erased and device will restart\"}");
+    
+    if (settings_.debugWSLevel >= 1) {
+      Serial.println("WebServer: WiFi factory reset requested");
+      util::UIConsole::log("WiFi factory reset requested - erasing credentials", "WebServer");
+    }
+
+    // Schemalägg WiFi-reset i separat task så HTTP-svaret hinner ut
+    xTaskCreate([](void* arg){
+      vTaskDelay(pdMS_TO_TICKS(1000)); // 1s grace för att låta svaret skickas
+      net::Provisioning::factoryReset(); // Raderar WiFi-creds och startar om
+      vTaskDelete(nullptr);
+    }, "wifiResetTask", 2048, nullptr, 1, nullptr);
   });
   // Ring test: POST /api/ring/test (body: line=3)
   server_.on("/api/ring/test", HTTP_POST, [this](AsyncWebServerRequest* req){
@@ -596,15 +620,16 @@ void WebServer::pushInitialSnapshot_() {
   sendActiveMaskSse();
 
   if (settings_.debugWSLevel >= 1) {
-    Serial.println("WebServer: Initial snapshot skickad via SSE");
+    Serial.println("WebServer: Initial snapshot sent via SSE");
     util::UIConsole::log("Initial snapshot sent via SSE", "WebServer");
   }
 }
 
 void WebServer::restartDevice_() {
-  Serial.println("WebServer: Startar om enheten");
+  Serial.println("WebServer: Restarting device...");
+  delay(50);
   util::UIConsole::log("Restarting device...", "WebServer");
-  delay(3000);
+  delay(1500);
   ESP.restart();
 }
 
@@ -638,6 +663,9 @@ String WebServer::buildDebugJson_() const {
   json += ",\"tr\":" + String(settings_.debugTRLevel);
   json += ",\"tg\":" + String(settings_.debugTonGenLevel);
   json += ",\"rg\":" + String(settings_.debugRGLevel);
+  json += ",\"mcp\":" + String(settings_.debugMCPLevel);
+  json += ",\"i2c\":" + String(settings_.debugI2CLevel);
+  json += ",\"im\":" + String(settings_.debugIMLevel);
   json += "}";
   return json;
 }

@@ -3,6 +3,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include "net/WifiClient.h"
+#include "net/Provisioning.h"
 #include "settings/settings.h"
 #include "services/LineAction.h"
 
