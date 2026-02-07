@@ -97,6 +97,7 @@ void App::GPIOTest(uint8_t addr, int pin) {
     int pin = -1;
     bool value = false;
     bool initialized = false;
+    uint32_t lastSampleMs = 0;
   };
 
   static PinWatch watched[8];
@@ -122,6 +123,16 @@ void App::GPIOTest(uint8_t addr, int pin) {
   }
 
   if (!slot) return;
+
+  // Important for MCP interrupt debugging:
+  // reading GPIO acknowledges/clears pending interrupts on MCP23x17.
+  // Keep sampling rate low so INT remains asserted long enough to observe.
+  constexpr uint32_t kSampleIntervalMs = 150;
+  uint32_t nowMs = millis();
+  if ((nowMs - slot->lastSampleMs) < kSampleIntervalMs) {
+    return;
+  }
+  slot->lastSampleMs = nowMs;
 
   bool currentValue = false;
   if (!mcpDriver_.digitalReadMCP(addr, static_cast<uint8_t>(pin), currentValue)) {
