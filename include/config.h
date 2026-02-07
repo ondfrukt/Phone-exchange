@@ -50,8 +50,8 @@ namespace cfg {
 
     inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x20;   //A0=GND, A1=GND, A2=GND
     inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x21; //A0=VCC, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x23;  //A0=GND, A1=VCC, A2=GND
-    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x22;  //A0=GND, A1=VCC, A2=VCC
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x22;  //A0=GND, A1=VCC, A2=VCC??
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x23;  //A0=GND, A1=VCC, A2=VCC??
 
     // MCP MAIN
     constexpr uint8_t Q1 = 15;
@@ -126,22 +126,29 @@ namespace cfg {
 
     // MCP SLIC
 
-    constexpr uint8_t FR_15 = 2;
-    constexpr uint8_t RM_15 = 3;
-    constexpr uint8_t SHK_15 = 4;
-    constexpr uint8_t SHK_04 = 5;
-    constexpr uint8_t RM_04 = 6;
-    constexpr uint8_t FR_04 = 7;
-    constexpr uint8_t SHK_26 = 8;
-    constexpr uint8_t RM_26 = 9;
-    constexpr uint8_t FR_26 = 10;
-    constexpr uint8_t SHK_37 = 11;
-    constexpr uint8_t RM_37 = 12;
-    constexpr uint8_t FR_37 = 13;
+    constexpr uint8_t SHK_04 = 5;   // GPA5
+    constexpr uint8_t SHK_15 = 4;   // GPA4
+    constexpr uint8_t SHK_26 = 8;   // GPB0
+    constexpr uint8_t SHK_37 = 11;  // GPB3
+
+    constexpr uint8_t RM_04 = 6;    // GPA6
+    constexpr uint8_t RM_15 = 3;    // GPA3
+    constexpr uint8_t RM_26 = 9;    // GPB1
+    constexpr uint8_t RM_37 = 12;   // GPB4
+
+    constexpr uint8_t FR_04 = 7;    // GPA7
+    constexpr uint8_t FR_15 = 2;    // GPA2
+    constexpr uint8_t FR_26 = 10;   // GPB2    
+    constexpr uint8_t FR_37 = 13;   // GPB5
+
+    constexpr uint8_t PD_04 = 0;    // GPA0
+    constexpr uint8_t PD_15 = 1;    // GPA1
+    constexpr uint8_t PD_26 = 14;   // GPB6
+    constexpr uint8_t PD_37 = 15;   // GPB7
 
     constexpr PinModeEntry MCP_SLIC[16] = {
-      /*0*/ {OUTPUT, LOW},     // GPA0 Not in use
-      /*1*/ {OUTPUT, LOW},     // GPA1 Not in use
+      /*0*/ {OUTPUT, LOW},     // GPA0 PD_0/4
+      /*1*/ {INPUT, LOW},     // GPA1 PD_1/5
       /*2*/ {OUTPUT, LOW},     // GPA2 FR_1/5
       /*3*/ {OUTPUT, LOW},     // GPA3 RM 1/5
       /*4*/ {INPUT, LOW},      // GPA4 SHK 1/5 
@@ -154,8 +161,8 @@ namespace cfg {
       /*11*/{INPUT, LOW},      // GPB3 SHK 3/7 
       /*12*/{OUTPUT, LOW},     // GPB4 RM 3/7
       /*13*/{OUTPUT, LOW},     // GPB5 FR 3/7  
-      /*14*/{OUTPUT, LOW},     // GPB6 Not in use
-      /*15*/{OUTPUT, LOW},     // GPB7 Not in use
+      /*14*/{INPUT, LOW},     // GPB6 PD_2/6
+      /*15*/{INPUT, LOW},     // GPB7 PD_3/7
     };
 
     inline constexpr uint8_t SHK_LINE_ADDR[8] = {
