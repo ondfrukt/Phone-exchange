@@ -15,7 +15,7 @@ void ToneGenerator::begin() {
   digitalWrite(csPin_, HIGH);
 
 #ifdef ARDUINO_ARCH_ESP32
-  spi_.begin(cfg::ad9833::SCLK_PIN, -1, cfg::ad9833::MOSI_PIN, csPin_);
+  spi_.begin(cfg::ESP_PINS::SCLK_PIN, -1, cfg::ESP_PINS::MOSI_PIN, csPin_);
 #else
   spi_.begin();
 #endif

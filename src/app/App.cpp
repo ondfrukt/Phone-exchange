@@ -6,9 +6,9 @@ App::App()
     interruptManager_(mcpDriver_, Settings::instance()),
     mt8816Driver_(mcpDriver_, Settings::instance()),
 
-    toneGenerator1_(cfg::ad9833::CS1_PIN),
-    toneGenerator2_(cfg::ad9833::CS2_PIN),
-    toneGenerator3_(cfg::ad9833::CS3_PIN),
+    toneGenerator1_(cfg::ESP_PINS::CS1_PIN),
+    toneGenerator2_(cfg::ESP_PINS::CS2_PIN),
+    toneGenerator3_(cfg::ESP_PINS::CS3_PIN),
 
     lineManager_(Settings::instance()),
     toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
@@ -36,8 +36,8 @@ void App::begin() {
     settings.resetDefaults(); 
     //settings.load();
 
-		// ---- I2C och I2C-scanner ----
-		Wire.begin(i2c::SDA_PIN, i2c::SCL_PIN);
+		// ---- I2C ----
+		Wire.begin(ESP_PINS::SDA_PIN, ESP_PINS::SCL_PIN);
 
     // I2C-scanner if debug is enabled
     if (settings.debugI2CLevel >= 1) i2cScanner.scan();

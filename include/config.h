@@ -17,29 +17,29 @@
 
 namespace cfg {
   
-  namespace ESP_LED_PINS {
+  namespace ESP_PINS {
     
-    // Correct PIN numbers
-    constexpr int StatusLED_PIN = 21;
-    constexpr int WiFiLED_PIN = 24;
-    constexpr int MQTTLED_PIN= 25;
+    // LED pins on the ESP32
+    constexpr int Status_LED_PIN = 13;
+    constexpr int WiFi_LED_PIN = 47;
+    constexpr int MQTT_LED_PIN= 48;
 
-    // Old PIN numbers
-    // constexpr int StatusLED_PIN = 27;
-    // constexpr int WiFiLED_PIN = 8;
-    // constexpr int MQTTLED_PIN= 9;
-  }
-  namespace i2c {
-    constexpr int SDA_PIN= 9;
-    constexpr int SCL_PIN= 10;
-  }
-
-  namespace ad9833 {
+    // AD9833 pins (SPI)
     constexpr int CS1_PIN= 5;
     constexpr int CS2_PIN = 4;
     constexpr int CS3_PIN = 2;
     constexpr int SCLK_PIN = 12;
     constexpr int MOSI_PIN = 1;
+
+    // I2C pins
+    constexpr int SDA_PIN= 9;
+    constexpr int SCL_PIN= 10;
+
+    // I2S pins for audio output (PCM5102APW)
+    inline constexpr int LRCK = 35;
+    inline constexpr int DIN = 36;
+    inline constexpr int BCK = 37;
+
   }
 
   namespace mcp {
@@ -48,10 +48,10 @@ namespace cfg {
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x27;   //A0=GND, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x20;   //A0=GND, A1=GND, A2=GND
     inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=GND, A1=VCC, A2=VCC
-    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21;  //BEHÖVER ÄNDRAS!
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x21;  //A0=GND, A1=VCC, A2=VCC
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x22;  //A0=GND, A1=VCC, A2=GND
 
     // MCP MAIN
     constexpr uint8_t Q1 = 15;
@@ -130,9 +130,6 @@ namespace cfg {
       /*14*/ {OUTPUT, LOW},  // GPB6 -> AY2
       /*15*/ {OUTPUT, LOW},  // GPB7 -> EX5
     };
-
-    
-
 
     // MCP SLIC
 
