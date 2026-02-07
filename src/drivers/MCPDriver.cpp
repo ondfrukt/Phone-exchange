@@ -303,12 +303,10 @@ IntResult MCPDriver::handleSlic2Interrupt()  {
   return r;
 }
 // Handle interrupts for MCP_MT8816
-
 IntResult MCPDriver::handleMT8816Interrupt() {
   if (!haveMT8816_) return {};
   return handleInterrupt_(mt8816IntFlag_, mcpMT8816_, mcp::MCP_MT8816_ADDRESS);
 }
-
 // Handle an interrupt for a specific MCP device and return the result
 IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mcp, uint8_t addr) {
   bool fired=false;
@@ -535,8 +533,6 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   // ---- FUNCTION_BUTTON: CHANGE mode with pull-up ----
   {
     uint8_t p = cfg::mcp::FUNCTION_BUTTON;
-    Serial.print(F("Configuring FUNCTION_BUTTON on pin "));
-    Serial.println(p);
     if (p < 8) {
       gpintena |= (1u << p);   // enable INT
       gppua    |= (1u << p);   // pull-up

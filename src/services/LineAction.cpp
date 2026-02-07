@@ -154,7 +154,7 @@ void LineAction::action(int index) {
       
       // mqttHandler.publishMQTT(line, line_ready);
       startToneGenForStatus(line, model::ToneId::Ready);
-      //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
+      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
       // lastLineReady = line;
       break;
     

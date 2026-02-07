@@ -49,9 +49,9 @@ namespace cfg {
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
     inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x20;   //A0=GND, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x21;  //A0=GND, A1=VCC, A2=VCC
-    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x22;  //A0=GND, A1=VCC, A2=GND
+    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x21; //A0=VCC, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x23;  //A0=GND, A1=VCC, A2=GND
+    inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x22;  //A0=GND, A1=VCC, A2=VCC
 
     // MCP MAIN
     constexpr uint8_t Q1 = 15;
@@ -95,32 +95,26 @@ namespace cfg {
     };
 
     // MCP MT8816
-    constexpr uint8_t RESET = 0;
-    constexpr uint8_t DATA = 1;
-    constexpr uint8_t STROBE = 2;
-    constexpr uint8_t CS = 3;
-    constexpr uint8_t EX1 = 4;
-    constexpr uint8_t EX2 = 5;
-    constexpr uint8_t EX3 = 6;
-    constexpr uint8_t EX4 = 7;
-    constexpr uint8_t AX0 = 8;
-    constexpr uint8_t AX1 = 9;
-    constexpr uint8_t AX2 = 10;
-    constexpr uint8_t AX3 = 11;
-    constexpr uint8_t AY0 = 12;
-    constexpr uint8_t AY1 = 13;
-    constexpr uint8_t AY2 = 14;
-    constexpr uint8_t EX5 = 15;
+    constexpr uint8_t RESET = 0;    // GPA0
+    constexpr uint8_t DATA = 1;     // GPA1
+    constexpr uint8_t STROBE = 2;   // GPA2
+    constexpr uint8_t CS = 3;       // GPA3
+
+    constexpr uint8_t AX0 = 8;      // GPB0
+    constexpr uint8_t AX1 = 9;      // GPB1
+    constexpr uint8_t AX2 = 10;     // GPB2
+    constexpr uint8_t AX3 = 11;     // GPB3
+    constexpr uint8_t AY0 = 12;     // GPB4
+    constexpr uint8_t AY1 = 13;     // GPB5
+    constexpr uint8_t AY2 = 14;     // GPB6
+
 
     constexpr PinModeEntry MCP_MT8816[16] = {
       /*0*/  {OUTPUT, LOW},  // GPA0 -> RESET (MT8816)
       /*1*/  {OUTPUT, LOW},  // GPA1 -> DATA
       /*2*/  {OUTPUT, LOW},  // GPA2 -> STROBE
       /*3*/  {OUTPUT, LOW},  // GPA3 -> CS
-      /*4*/  {OUTPUT, LOW},  // GPA4 -> EX1
-      /*5*/  {OUTPUT, LOW},  // GPA5 -> EX2
-      /*6*/  {OUTPUT, LOW},  // GPA6 -> EX3
-      /*7*/  {OUTPUT, LOW},  // GPA7 -> EX4
+
       /*8*/  {OUTPUT, LOW},  // GPB0 -> AX0
       /*9*/  {OUTPUT, LOW},  // GPB1 -> AX1
       /*10*/ {OUTPUT, LOW},  // GPB2 -> AX2
@@ -128,7 +122,6 @@ namespace cfg {
       /*12*/ {OUTPUT, LOW},  // GPB4 -> AY0
       /*13*/ {OUTPUT, LOW},  // GPB5 -> AY1
       /*14*/ {OUTPUT, LOW},  // GPB6 -> AY2
-      /*15*/ {OUTPUT, LOW},  // GPB7 -> EX5
     };
 
     // MCP SLIC
@@ -212,11 +205,11 @@ namespace cfg {
   }
 
   namespace externalGPIO {
-    constexpr int EX1 = 4; // GPA4
-    constexpr int EX2 = 5; // GPA5
-    constexpr int EX3 = 6; // GPA6
-    constexpr int EX4 = 7; // GPA7
-    constexpr int EX5 = 15;// GPB7
+    constexpr int EX1 = 6; // GPA6
+    constexpr int EX2 = 7; // GPA7
+    constexpr int EX3 = 4; // GPA4
+    constexpr int EX4 = 5; // GPA5
+    constexpr int EX5 = 3; // GPA3
   } 
 
   namespace statusLED {

@@ -55,7 +55,6 @@ void Functions::restartDevice(uint32_t held) {
 
 }
 
-
 void Functions::testRing() {
     Serial.println("Functions: testRing()");
     
