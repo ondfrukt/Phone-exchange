@@ -50,9 +50,9 @@ namespace cfg {
     inline constexpr int MCP_SLIC_INT_1_PIN = 11;
     inline constexpr int MCP_SLIC_INT_2_PIN = 14;
 
-    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x27;   //A0=GND, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x23; //A0=VCC, A1=GND, A2=GND
-    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=GND, A1=VCC, A2=VCC
+    inline constexpr uint8_t MCP_MAIN_ADDRESS = 0x20;   //A0=GND, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_MT8816_ADDRESS = 0x21; //A0=VCC, A1=GND, A2=GND
+    inline constexpr uint8_t MCP_SLIC1_ADDRESS = 0x26;  //A0=VCC, A1=VCC, A2=VCC
     inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x21;  //BEHÖVER ÄNDRAS!
 
     // MCP MAIN

@@ -20,7 +20,7 @@ void Functions::update() {
         btnDown     = true;
         pressedAtMs = now;
     } else {
-      testRing();
+      restartDevice(now - pressedAtMs);
     }
   }
 }

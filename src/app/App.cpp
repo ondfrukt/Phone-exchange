@@ -44,6 +44,7 @@ void App::begin() {
 		
 
 		// ---- Drivrutiner och tjänster ----
+    i2cScanner.scan();
     mcpDriver_.begin();
 		mt8816Driver_.begin();
     lineAction_.begin();
