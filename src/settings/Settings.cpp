@@ -37,6 +37,7 @@ void Settings::resetDefaults() {
   debugTonGenLevel      = 0;
   debugRGLevel          = 0;
   debugIMLevel          = 0;
+  debugLAC              = 0;
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
@@ -116,6 +117,7 @@ bool Settings::load() {
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
     debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
     debugIMLevel          = prefs.getUChar ("debugIM",     debugIMLevel);
+    debugLAC              = prefs.getUChar ("debugLAC",    debugLAC);
   
 
     // --- Other settings ---    
@@ -183,6 +185,7 @@ void Settings::save() const {
   prefs.putUChar ("debugTonGen",          debugTonGenLevel);
   prefs.putUChar ("debugRG",              debugRGLevel);
   prefs.putUChar ("debugIM",              debugIMLevel);
+  prefs.putUChar ("debugLAC",             debugLAC);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",           burstTickMs);
