@@ -1,10 +1,15 @@
 #include "services/LineAudioConnections.h"
 
-LineAudioConnections::LineAudioConnections(MT8816Driver& mt8816Driver, Settings& settings) : mt8816Driver_(mt8816Driver), settings(settings) {}
 
 void LineAudioConnections::connectLines(uint8_t lineA, uint8_t lineB) {
 
+  // Check if already connected
+  if (isConnected(lineA, lineB)) {
+    return;
+  }
+
   mt8816Driver_.setConnection(lineA, lineB, true);
+  mt8816Driver_.setConnection(lineB, lineA, true);
   addConnection(lineA, lineB);
 
   if (settings.debugLAC <= 1) {
@@ -16,10 +21,10 @@ void LineAudioConnections::connectLines(uint8_t lineA, uint8_t lineB) {
   }
   util::UIConsole::log("Connected line " + String(lineA) + " to line " + String(lineB), "LineAudioConnections");
 }
-
 void LineAudioConnections::disconnectLines(uint8_t lineA, uint8_t lineB) {
 
   mt8816Driver_.setConnection(lineA, lineB, false);
+  mt8816Driver_.setConnection(lineB, lineA, false);
   removeConnection(lineA, lineB);
 
   if (settings.debugLAC <= 1) {
@@ -32,6 +37,12 @@ void LineAudioConnections::disconnectLines(uint8_t lineA, uint8_t lineB) {
   util::UIConsole::log("Connected line " + String(lineA) + " to line " + String(lineB), "LineAudioConnections");
 }
 
+void LineAudioConnections::connectAudioToLine(uint8_t line, uint8_t audioSource) {
+  connectLines(audioSource, line);
+}
+void LineAudioConnections::disconnectAudioToLine(uint8_t line, uint8_t audioSource) {
+  disconnectLines(audioSource, line);
+}
 
 
 

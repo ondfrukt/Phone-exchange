@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <vector>
 #include <stdint.h>
+#include "settings/Settings.h"
 #include "drivers/MT8816Driver.h"
 #include "util/UIConsole.h"
 
@@ -12,6 +13,9 @@ public:
 
   void connectLines(uint8_t lineA, uint8_t lineB);
   void disconnectLines(uint8_t lineA, uint8_t lineB);
+
+  void connectAudioToLine(uint8_t line, uint8_t audioSource);
+  void disconnectAudioToLine(uint8_t line, uint8_t audioSource);
 
   void printConnections() const;
   bool isConnected(uint8_t lineA, uint8_t lineB) const;

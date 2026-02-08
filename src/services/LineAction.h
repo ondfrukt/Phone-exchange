@@ -1,24 +1,23 @@
 #pragma once
 #include <Arduino.h>
+#include "drivers/MT8816Driver.h"
 #include "model/Types.h"
 #include "settings/Settings.h"   // dubbelkolla filnamn/versaler
 #include "LineManager.h"
 #include "services/RingGenerator.h"
 #include "services/ToneReader.h"
-#include "drivers/MT8816Driver.h"
+#include "services/LineAudioConnections.h"
 #include "services/ToneGenerator.h"
 
 class LineAction {
 public:
   LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator,
              ToneReader& toneReader,
-             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3);
+             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3, LineAudioConnections& lineAudioConnections);
   
   void begin();
   void update();
   void action(int index);
-  void connectLines(int lineA, int lineB);
-  void disconnectLines(int lineA, int lineB);
 
 private:
   LineManager& lineManager_;
@@ -30,6 +29,7 @@ private:
   ToneGenerator& toneGen2_;
   ToneGenerator& toneGen3_;
   ToneGenerator* toneGenerators[3];
+  LineAudioConnections& lineAudioConnections_;
 
   void turnOffToneGenIfUsed(LineHandler& line);
   void startToneGenForStatus(LineHandler& line, model::ToneId status);

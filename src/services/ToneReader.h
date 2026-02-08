@@ -3,7 +3,7 @@
 #include "config.h"
 #include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
-#include "settings.h"
+#include "settings/Settings.h"
 
 class LineManager;
 
