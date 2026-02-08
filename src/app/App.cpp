@@ -90,4 +90,6 @@ void App::loop() {
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
+  functions_.update(); // Run any utility functions
+
 }

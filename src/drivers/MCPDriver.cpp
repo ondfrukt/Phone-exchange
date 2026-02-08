@@ -94,24 +94,22 @@ bool MCPDriver::begin() {
   if (settings.debugMCPLevel >= 1) {
     Serial.println(F("MCP init:"));
     util::UIConsole::log("MCP init:", "MCPDriver");
-
     Serial.println(haveMain_   ? F(" - MCP_MAIN   hittad") : F(" - MCP_MAIN   saknas"));
     util::UIConsole::log(String(haveMain_ ? " - MCP_MAIN   hittad" : " - MCP_MAIN   saknas"), "MCPDriver");
-
     Serial.println(haveSlic1_  ? F(" - MCP_SLIC1  hittad") : F(" - MCP_SLIC1  saknas"));
     util::UIConsole::log(String(haveSlic1_ ? " - MCP_SLIC1  hittad" : " - MCP_SLIC1  saknas"), "MCPDriver");
-
     Serial.println(haveSlic2_  ? F(" - MCP_SLIC2  hittad") : F(" - MCP_SLIC2  saknas"));
     util::UIConsole::log(String(haveSlic2_ ? " - MCP_SLIC2  hittad" : " - MCP_SLIC2  saknas"), "MCPDriver");
-
     Serial.println(haveMT8816_ ? F(" - MCP_MT8816 hittad") : F(" - MCP_MT8816 saknas"));
     util::UIConsole::log(String(haveMT8816_ ? " - MCP_MT8816 hittad" : " - MCP_MT8816 saknas"), "MCPDriver");
   }
 
   // Abort if no MCP found
   if (!(haveMain_ || haveSlic1_ || haveSlic2_ || haveMT8816_ )) {
-    Serial.println(F("Ingen MCP hittades, avbryter."));
-    util::UIConsole::log("Ingen MCP hittades, avbryter.", "MCPDriver");
+    if (settings.debugMCPLevel >= 1) {
+      Serial.println(F("Ingen MCP hittades, avbryter."));
+      util::UIConsole::log("Ingen MCP hittades, avbryter.", "MCPDriver");
+    }
     return false;
   }
 
@@ -164,38 +162,38 @@ bool MCPDriver::begin() {
     enableMainInterrupts_(cfg::mcp::MCP_MAIN_ADDRESS, mcpMain_);
     if (settings.debugMCPLevel >= 3) dumpIntRegs("MAIN AFTER", cfg::mcp::MCP_MAIN_ADDRESS);
   }
-  Serial.printf("DEBUG: haveSlic1_=%d, addr=0x%02X\n", haveSlic1_, cfg::mcp::MCP_SLIC1_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveSlic1_=%d, addr=0x%02X\n", haveSlic1_, cfg::mcp::MCP_SLIC1_ADDRESS);
   // Configure MCP_SLIC1 pins
   if (haveSlic1_) {
-    Serial.println("DEBUG: configuring SLIC1 pins");
+    if (settings.debugMCPLevel >= 2) Serial.println("DEBUG: configuring SLIC1 pins");
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_SLIC, modes, initial);
     if (!applyPinModes_(mcpSlic1_, modes, initial)) {
-      Serial.println(F("Fel vid konfiguration av SLIC1 pinlägen"));
+      if (settings.debugMCPLevel >= 1) Serial.println(F("Fel vid konfiguration av SLIC1 pinlägen"));
       return false;
     }
   }
 
   // Configure MCP_SLIC2 pins
-  Serial.printf("DEBUG: haveSlic2_=%d, addr=0x%02X\n", haveSlic2_, cfg::mcp::MCP_SLIC2_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveSlic2_=%d, addr=0x%02X\n", haveSlic2_, cfg::mcp::MCP_SLIC2_ADDRESS);
   if (haveSlic2_) {
-    Serial.println("DEBUG: configuring SLIC2 pins");
+    if (settings.debugMCPLevel >= 2) Serial.println("DEBUG: configuring SLIC2 pins");
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_SLIC, modes, initial);
     if (!applyPinModes_(mcpSlic2_, modes, initial)) {
-      Serial.println(F("Fel vid konfiguration av SLIC2 pinlägen"));
+      if (settings.debugMCPLevel >= 1) Serial.println(F("Fel vid konfiguration av SLIC2 pinlägen"));
       return false;
     }
   }
 
   // Configure MCP_MT8816 pins
-  Serial.printf("DEBUG: haveMT8816_=%d, addr=0x%02X\n", haveMT8816_, cfg::mcp::MCP_MT8816_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveMT8816_=%d, addr=0x%02X\n", haveMT8816_, cfg::mcp::MCP_MT8816_ADDRESS);
   if (haveMT8816_) {
-    Serial.println("DEBUG: configuring MT8816 pins");
+    if (settings.debugMCPLevel >= 2) Serial.println("DEBUG: configuring MT8816 pins");
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_MT8816, modes, initial);
     if (!applyPinModes_(mcpMT8816_, modes, initial)) {
-      Serial.println(F("Fel vid konfiguration av MT8816 pinlägen"));
+      if (settings.debugMCPLevel >= 1) Serial.println(F("Fel vid konfiguration av MT8816 pinlägen"));
       return false;
     }
     programIOCON(cfg::mcp::MCP_MT8816_ADDRESS, 0x4A);
@@ -206,7 +204,7 @@ bool MCPDriver::begin() {
   // Configure interrupts
   // ------------------------------------------------------------
 
-  Serial.printf("DEBUG: haveSlic1_=%d, addr=0x%02X\n", haveSlic1_, cfg::mcp::MCP_SLIC1_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveSlic1_=%d, addr=0x%02X\n", haveSlic1_, cfg::mcp::MCP_SLIC1_ADDRESS);
   // SLIC1 interrupt configuration
   if (haveSlic1_) {
     Serial.println("DEBUG: entering SLIC1 interrupt config");
@@ -223,7 +221,7 @@ bool MCPDriver::begin() {
     (void)readRegPair16_OK_(cfg::mcp::MCP_SLIC1_ADDRESS, REG_GPIOA,   dummy);
   }
 
-  Serial.printf("DEBUG: haveSlic2_=%d, addr=0x%02X\n", haveSlic2_, cfg::mcp::MCP_SLIC2_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveSlic2_=%d, addr=0x%02X\n", haveSlic2_, cfg::mcp::MCP_SLIC2_ADDRESS);
   // SLIC2 interrupt configuration
   if (haveSlic2_) {
     programIOCON(cfg::mcp::MCP_SLIC2_ADDRESS, 0x44);
@@ -240,7 +238,7 @@ bool MCPDriver::begin() {
   // ------------------------------------------------------------
   // Attach ESP32 interrupts (only if INT lines are wired)
   // ------------------------------------------------------------
-  Serial.printf("DEBUG: haveMain_=%d, addr=0x%02X\n", haveMain_, cfg::mcp::MCP_MAIN_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveMain_=%d, addr=0x%02X\n", haveMain_, cfg::mcp::MCP_MAIN_ADDRESS);
   if (haveMain_) {
     pinMode(mcp::MCP_MAIN_INT_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_MAIN_INT_PIN),
@@ -253,7 +251,7 @@ bool MCPDriver::begin() {
     }
   }
 
-  Serial.printf("DEBUG: haveSlic1_=%d, addr=0x%02X\n", haveSlic1_, cfg::mcp::MCP_SLIC1_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveSlic1_=%d, addr=0x%02X\n", haveSlic1_, cfg::mcp::MCP_SLIC1_ADDRESS);
   if (haveSlic1_) {
     pinMode(mcp::MCP_SLIC_INT_1_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_1_PIN),
@@ -266,7 +264,7 @@ bool MCPDriver::begin() {
     }
   }
   
-  Serial.printf("DEBUG: haveSlic2_=%d, addr=0x%02X\n", haveSlic2_, cfg::mcp::MCP_SLIC2_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveSlic2_=%d, addr=0x%02X\n", haveSlic2_, cfg::mcp::MCP_SLIC2_ADDRESS);
   if (haveSlic2_) {
     pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
@@ -279,7 +277,7 @@ bool MCPDriver::begin() {
     }
   }
 
-  Serial.printf("DEBUG: haveMT8816_=%d, addr=0x%02X\n", haveMT8816_, cfg::mcp::MCP_MT8816_ADDRESS);
+  if (settings.debugMCPLevel >= 2) Serial.printf("DEBUG: haveMT8816_=%d, addr=0x%02X\n", haveMT8816_, cfg::mcp::MCP_MT8816_ADDRESS);
   if (settings.debugMCPLevel >= 1) {
     Serial.println(F("MCP init: All interrupts configured successfully"));
     util::UIConsole::log("MCP init: All interrupts configured successfully", "MCPDriver");
