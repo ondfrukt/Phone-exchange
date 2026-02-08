@@ -54,21 +54,21 @@ namespace cfg {
     inline constexpr uint8_t MCP_SLIC2_ADDRESS = 0x23;  //A0=GND, A1=VCC, A2=VCC??
 
     // MCP MAIN
-    constexpr uint8_t Q1 = 15;
-    constexpr uint8_t Q2 = 14;
-    constexpr uint8_t Q3 = 13;
-    constexpr uint8_t Q4 = 12;
-    constexpr uint8_t STD = 11;
-    constexpr uint8_t PWDN_MT8870 = 10;
+    constexpr uint8_t Q1    = 15;
+    constexpr uint8_t Q2    = 14;
+    constexpr uint8_t Q3    = 13;
+    constexpr uint8_t Q4    = 12;
+    constexpr uint8_t STD   = 11;
+    constexpr uint8_t PWDN_MT8870     = 10;
     constexpr uint8_t FUNCTION_BUTTON = 9;
-    constexpr uint8_t LED_0 = 7;
-    constexpr uint8_t LED_1 = 6;
-    constexpr uint8_t LED_2 = 5;
-    constexpr uint8_t LED_3 = 4;
-    constexpr uint8_t LED_4 = 3;
-    constexpr uint8_t LED_5 = 2;
-    constexpr uint8_t LED_6 = 1;
-    constexpr uint8_t LED_7 = 0;
+    constexpr uint8_t EX2   = 7;
+    constexpr uint8_t EX1   = 6;
+    constexpr uint8_t EX4   = 5;
+    constexpr uint8_t EX3   = 4;
+    constexpr uint8_t EX5   = 3;
+    constexpr uint8_t TM_A2 = 2;
+    constexpr uint8_t TM_A1 = 1;
+    constexpr uint8_t TM_A0 = 0;
 
     struct PinModeEntry {
     uint8_t mode;   // INPUT, OUTPUT, INPUT_PULLUP
@@ -76,22 +76,22 @@ namespace cfg {
     };
 
     constexpr PinModeEntry MCP_MAIN[16] = {
-      /*0*/  {OUTPUT, LOW},   // GPA0  LED_L7
-      /*1*/  {OUTPUT, LOW},   // GPA1  LED_L6
-      /*2*/  {OUTPUT, LOW},   // GPA2  LED_L5
-      /*3*/  {OUTPUT, LOW},   // GPA3  LED_L4
-      /*4*/  {OUTPUT, LOW},   // GPA4  LED_L3
-      /*5*/  {OUTPUT, LOW},   // GPA5  LED_L2
-      /*6*/  {OUTPUT, LOW},   // GPA6  LED_L1
+      /*0*/  {OUTPUT, LOW},   // GPA0  TM_A0
+      /*1*/  {OUTPUT, LOW},   // GPA1  TM_A1
+      /*2*/  {OUTPUT, LOW},   // GPA2  TM_A2
+      /*3*/  {OUTPUT, LOW},   // GPA3  EX5
+      /*4*/  {OUTPUT, LOW},   // GPA4  EX3
+      /*5*/  {OUTPUT, LOW},   // GPA5  EX4
+      /*6*/  {OUTPUT, LOW},   // GPA6  EX1
       /*7*/  {OUTPUT, LOW},   // GPA7  LED_L0
       /*8*/  {OUTPUT, LOW},   // GPB0  Not in use
-      /*9*/  {INPUT_PULLUP,0},// GPB1  Test_button (aktiv låg mot GND)
-      /*10*/ {OUTPUT, LOW},   // GPB2  PWDN_MT8870 (justera nivå vid behov)
-      /*11*/ {INPUT, 0},      // GPB3  STD (status från MT8870)
-      /*12*/ {INPUT, 0},      // GPB4  Q4 (MT8870) (pin 5)
-      /*13*/ {INPUT, 0},      // GPB5  Q3 (MT8870) (pin 6)
-      /*14*/ {INPUT, 0},      // GPB6  Q2 (MT8870) (pin 7)
-      /*15*/ {INPUT, 0},      // GPB7  Q1 (MT8870) (pin 8)
+      /*9*/  {INPUT_PULLUP,0},// GPB1  FUNCTION_BUTTON
+      /*10*/ {OUTPUT, LOW},   // GPB2  PWDN_MT8870
+      /*11*/ {INPUT, 0},      // GPB3  STD
+      /*12*/ {INPUT, 0},      // GPB4  Q4
+      /*13*/ {INPUT, 0},      // GPB5  Q3
+      /*14*/ {INPUT, 0},      // GPB6  Q2
+      /*15*/ {INPUT, 0},      // GPB7  Q1
     };
 
     // MCP MT8816
@@ -237,9 +237,9 @@ namespace cfg {
     constexpr uint8_t ax_pins[4] = {mcp::AX0, mcp::AX1, mcp::AX2, mcp::AX3}; // GPB0-GPB3
     constexpr uint8_t ay_pins[3] = {mcp::AY0, mcp::AY1, mcp::AY2}; // GPB4-GPB6
 
-    constexpr uint8_t  DAC1 = 12;
-    constexpr uint8_t  DAC2 = 13;
-    constexpr uint8_t  DAC3 = 14;
-    constexpr uint8_t  DTMF = 15;
+    constexpr uint8_t  DAC1   = 15;
+    constexpr uint8_t  DAC2   = 14;
+    constexpr uint8_t  DAC3   = 13;
+    constexpr uint8_t  D_OUTL = 12;
   }
 }

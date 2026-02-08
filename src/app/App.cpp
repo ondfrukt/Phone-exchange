@@ -18,7 +18,8 @@ App::App()
                 toneGenerator1_, toneGenerator2_, toneGenerator3_),
 
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
-    functions_(interruptManager_, mcpDriver_) {
+    functions_(interruptManager_, mcpDriver_),
+    dtmfMux_(mcpDriver_, Settings::instance()) {
     lineManager_.setToneReader(&toneReader_);
 }
 
@@ -63,6 +64,11 @@ void App::begin() {
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
     webServer_.begin();
+
+    // ---- Test: Sätt alla MAIN-pinnar höga (för att testa GPIO och interrupt) ----
+    mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
+    mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A1, LOW);
+    mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A2, LOW);
 }
 
 void App::loop() {

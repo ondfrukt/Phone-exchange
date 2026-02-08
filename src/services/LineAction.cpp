@@ -44,7 +44,7 @@ void LineAction::update() {
             lineManager_.connectionMatrix.setConnection(incomingFrom, index, ConnectionMatrix::State:: Established);
             lineManager_.setStatus(incomingFrom, LineStatus::Connected);
             lineManager_.setStatus(index, LineStatus::Connected);
-            mt8816Driver_.SetAudioConnection(incomingFrom, index, true); // Connect audio between the two lines
+            //mt8816Driver_.SetAudioConnection(incomingFrom, index, true); // Connect audio between the two lines
 
           // OFF -> ON & Line status = Connected
           } else if (line.previousHookStatus == model::HookStatus::Off 
@@ -62,7 +62,7 @@ void LineAction::update() {
             lineManager_.connectionMatrix.setConnection(incomingFrom, index, ConnectionMatrix::State:: None);
             lineManager_.setStatus(incomingFrom, LineStatus::Disconnected);
             lineManager_.setStatus(index, LineStatus::Idle);
-            mt8816Driver_.SetAudioConnection(incomingFrom, index, false); // Connect audio between the two lines
+            //mt8816Driver_.SetAudioConnection(incomingFrom, index, false); // Connect audio between the two lines
 
           // OFF -> ON & Line status = Disconnected (other party already hung up)
           } else if (line.previousHookStatus == model::HookStatus::Off 
@@ -150,14 +150,14 @@ void LineAction::action(int index) {
       // mqttHandler.publishMQTT(line, line_idle);
       break;
 
-    case LineStatus::Ready:
+    case LineStatus::Ready:{
       
       // mqttHandler.publishMQTT(line, line_ready);
-      startToneGenForStatus(line, model::ToneId::Ready);
-      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
+      uint8_t DAC = startToneGenForStatus(line, model::ToneId::Ready);
+      mt8816Driver_.SetConnection(index, DAC, true); // Connect tone generator to line for dial tone
       // lastLineReady = line;
       break;
-    
+    }
     case LineStatus::PulseDialing:
       turnOffToneGenIfUsed(line);
     //mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, false); // Close listening port for DTMF
@@ -384,18 +384,25 @@ void LineAction::timerExpired(LineHandler& line) {
 }
 
 // Start tone generator for specific line status
-void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
+uint8_t LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
   if (!toneGen1_.isPlaying()){
     toneGen1_.startToneSequence(status);
     line.toneGenUsed = 1;
+    return cfg::mt8816::DAC1;
   }
   else if (!toneGen2_.isPlaying()){
     toneGen2_.startToneSequence(status);
     line.toneGenUsed = 2;
+    return cfg::mt8816::DAC2;
   }
   else if (!toneGen3_.isPlaying()){
     toneGen3_.startToneSequence(status);
     line.toneGenUsed = 3;
+    return cfg::mt8816::DAC3;
+  }
+  else {
+    Serial.println(RED "LineAction: No available tone generator for line " + String(line.lineNumber) + COLOR_RESET);
+    return 0; // No available tone generator
   }
 }
 

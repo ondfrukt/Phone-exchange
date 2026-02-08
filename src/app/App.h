@@ -5,6 +5,7 @@
 #include "drivers/MCPDriver.h"
 #include "drivers/InterruptManager.h"
 #include "drivers/MT8816Driver.h"
+#include "drivers/DTMF_Mux.h"
 
 #include "services/LineHandler.h"
 #include "services/LineManager.h"
@@ -56,5 +57,6 @@ private:
     Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
+    DTMF_Mux dtmfMux_;
     
 };

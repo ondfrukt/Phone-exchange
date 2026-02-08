@@ -30,11 +30,11 @@ void Settings::resetDefaults() {
   debugLmLevel          = 2;
   debugWSLevel          = 0;
   debugLALevel          = 2;
-  debugMTLevel          = 0;
+  debugMTLevel          = 2;
   debugTRLevel          = 0;
-  debugMCPLevel         = 3;
+  debugMCPLevel         = 0;
   debugI2CLevel         = 0;
-  debugTonGenLevel      = 0;
+  debugTonGenLevel      = 0; 
   debugRGLevel          = 0;
   debugIMLevel          = 0;
 

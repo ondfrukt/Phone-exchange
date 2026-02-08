@@ -32,7 +32,7 @@ private:
   ToneGenerator* toneGenerators[3];
 
   void turnOffToneGenIfUsed(LineHandler& line);
-  void startToneGenForStatus(LineHandler& line, model::ToneId status);
+  uint8_t startToneGenForStatus(LineHandler& line, model::ToneId status);
 
   void timerExpired(LineHandler& line);
 };

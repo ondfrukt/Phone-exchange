@@ -1,5 +1,9 @@
 #pragma once
 #include <Arduino.h>
+#include "config.h"
+#include "settings/settings.h"
+#include "drivers/MCPDriver.h"
+#include "drivers/MT8816Driver.h"
 #include <vector>
 
 /**
