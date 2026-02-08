@@ -66,7 +66,7 @@ namespace cfg {
     constexpr uint8_t EX4 = 5;
     constexpr uint8_t EX3 = 4;
     constexpr uint8_t EX5 = 3;
-    constexpr uint8_t TM_A1 = 2;
+    constexpr uint8_t TM_A2 = 2;
     constexpr uint8_t TM_A1 = 1;
     constexpr uint8_t TM_A0 = 0;
 
@@ -76,9 +76,9 @@ namespace cfg {
     };
 
     constexpr PinModeEntry MCP_MAIN[16] = {
-      /*0*/  {OUTPUT, LOW},   // GPA0  TM_0
-      /*1*/  {OUTPUT, LOW},   // GPA1  TM_1
-      /*2*/  {OUTPUT, LOW},   // GPA2  TM_2
+      /*0*/  {OUTPUT, LOW},   // GPA0  TM_A0
+      /*1*/  {OUTPUT, LOW},   // GPA1  TM_A1
+      /*2*/  {OUTPUT, LOW},   // GPA2  TM_A2
       /*3*/  {OUTPUT, LOW},   // GPA3  EX5
       /*4*/  {OUTPUT, LOW},   // GPA4  EX3
       /*5*/  {OUTPUT, LOW},   // GPA5  EX4
