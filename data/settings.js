@@ -1,6 +1,10 @@
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Hjälpfunktioner för ms <-> sekunder konvertering
+  const msToSec = (ms) => (ms / 1000).toFixed(2);
+  const secToMs = (sec) => Math.round(parseFloat(sec) * 1000);
+  
   // --- Debug UI ---
   const $dbgShk = document.getElementById('dbg-shk');
   const $dbgLm  = document.getElementById('dbg-lm');
@@ -10,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgTr  = document.getElementById('dbg-tr');
   const $dbgTg  = document.getElementById('dbg-tg');
   const $dbgRg  = document.getElementById('dbg-rg');
+  const $dbgMcp = document.getElementById('dbg-mcp');
+  const $dbgI2c = document.getElementById('dbg-i2c');
+  const $dbgIm  = document.getElementById('dbg-im');
 
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
@@ -17,6 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const $toneEnabled = document.getElementById('tone-enabled');
   const $toneEnabledLabel = document.getElementById('tone-enabled-label');
+
+  // --- Console UI (receive-only) ---
+  const $consoleLog = document.getElementById('console-log');
+
+  // Client-side console buffer to limit DOM updates and keep scroll performant
+  const consoleMaxLines = 500;
+  const consoleLines = [];
+
+  let autoScrollConsole = true;
 
   // --- Ring Test UI ---
   const $ringLineSelect = document.getElementById('ring-line-select');
@@ -112,6 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
       if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
       if (typeof d.rg  === 'number') $dbgRg.value  = String(d.rg|0);
+      if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
+      if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
+      if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -131,7 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
         mt: $dbgMt.value,
         tr: $dbgTr.value,
         tg: $dbgTg.value,
-        rg: $dbgRg.value
+        rg: $dbgRg.value,
+        mcp: $dbgMcp.value,
+        i2c: $dbgI2c.value,
+        im: $dbgIm.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -194,8 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await fetch('/api/settings/ring');
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
-      if (typeof d.ringLengthMs === 'number') $ringLength.value = d.ringLengthMs;
-      if (typeof d.ringPauseMs === 'number') $ringPause.value = d.ringPauseMs;
+      if (typeof d.ringLengthMs === 'number') $ringLength.value = msToSec(d.ringLengthMs);
+      if (typeof d.ringPauseMs === 'number') $ringPause.value = msToSec(d.ringPauseMs);
       if (typeof d.ringIterations === 'number') $ringIterations.value = d.ringIterations;
     } catch (e) {
       console.warn('Could not read ring settings', e);
@@ -209,8 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
       $ringSaveBtn.classList.add('working');
       setRingSettingsStatus('Saving…');
       const body = new URLSearchParams({
-        ringLengthMs: $ringLength.value,
-        ringPauseMs: $ringPause.value,
+        ringLengthMs: secToMs($ringLength.value),
+        ringPauseMs: secToMs($ringPause.value),
         ringIterations: $ringIterations.value
       }).toString();
       const r = await fetch('/api/settings/ring', {
@@ -236,8 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await fetch('/api/settings/shk');
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
-      if (typeof d.burstTickMs === 'number') $burstTickMs.value = d.burstTickMs;
-      if (typeof d.hookStableMs === 'number') $hookStableMs.value = d.hookStableMs;
+      if (typeof d.burstTickMs === 'number') $burstTickMs.value = msToSec(d.burstTickMs);
+      if (typeof d.hookStableMs === 'number') $hookStableMs.value = msToSec(d.hookStableMs);
       if (typeof d.hookStableConsec === 'number') $hookStableConsec.value = d.hookStableConsec;
     } catch (e) {
       console.warn('Could not read SHK settings', e);
@@ -251,8 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
       $shkSaveBtn.classList.add('working');
       setShkSettingsStatus('Saving…');
       const body = new URLSearchParams({
-        burstTickMs: $burstTickMs.value,
-        hookStableMs: $hookStableMs.value,
+        burstTickMs: secToMs($burstTickMs.value),
+        hookStableMs: secToMs($hookStableMs.value),
         hookStableConsec: $hookStableConsec.value
       }).toString();
       const r = await fetch('/api/settings/shk', {
@@ -278,15 +300,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const r = await fetch('/api/settings/timers');
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
-      if (typeof d.timer_Ready === 'number') $timerReady.value = d.timer_Ready;
-      if (typeof d.timer_Dialing === 'number') $timerDialing.value = d.timer_Dialing;
-      if (typeof d.timer_Ringing === 'number') $timerRinging.value = d.timer_Ringing;
-      if (typeof d.timer_pulsDialing === 'number') $timerPulseDialing.value = d.timer_pulsDialing;
-      if (typeof d.timer_toneDialing === 'number') $timerToneDialing.value = d.timer_toneDialing;
-      if (typeof d.timer_fail === 'number') $timerFail.value = d.timer_fail;
-      if (typeof d.timer_disconnected === 'number') $timerDisconnected.value = d.timer_disconnected;
-      if (typeof d.timer_timeout === 'number') $timerTimeout.value = d.timer_timeout;
-      if (typeof d.timer_busy === 'number') $timerBusy.value = d.timer_busy;
+      if (typeof d.timer_Ready === 'number') $timerReady.value = msToSec(d.timer_Ready);
+      if (typeof d.timer_Dialing === 'number') $timerDialing.value = msToSec(d.timer_Dialing);
+      if (typeof d.timer_Ringing === 'number') $timerRinging.value = msToSec(d.timer_Ringing);
+      if (typeof d.timer_pulsDialing === 'number') $timerPulseDialing.value = msToSec(d.timer_pulsDialing);
+      if (typeof d.timer_toneDialing === 'number') $timerToneDialing.value = msToSec(d.timer_toneDialing);
+      if (typeof d.timer_fail === 'number') $timerFail.value = msToSec(d.timer_fail);
+      if (typeof d.timer_disconnected === 'number') $timerDisconnected.value = msToSec(d.timer_disconnected);
+      if (typeof d.timer_timeout === 'number') $timerTimeout.value = msToSec(d.timer_timeout);
+      if (typeof d.timer_busy === 'number') $timerBusy.value = msToSec(d.timer_busy);
     } catch (e) {
       console.warn('Could not read timer settings', e);
       setTimerStatus('Could not read timer settings');
@@ -299,15 +321,15 @@ document.addEventListener('DOMContentLoaded', () => {
       $timerSaveBtn.classList.add('working');
       setTimerStatus('Saving…');
       const body = new URLSearchParams({
-        timer_Ready: $timerReady.value,
-        timer_Dialing: $timerDialing.value,
-        timer_Ringing: $timerRinging.value,
-        timer_pulsDialing: $timerPulseDialing.value,
-        timer_toneDialing: $timerToneDialing.value,
-        timer_fail: $timerFail.value,
-        timer_disconnected: $timerDisconnected.value,
-        timer_timeout: $timerTimeout.value,
-        timer_busy: $timerBusy.value
+        timer_Ready: secToMs($timerReady.value),
+        timer_Dialing: secToMs($timerDialing.value),
+        timer_Ringing: secToMs($timerRinging.value),
+        timer_pulsDialing: secToMs($timerPulseDialing.value),
+        timer_toneDialing: secToMs($timerToneDialing.value),
+        timer_fail: secToMs($timerFail.value),
+        timer_disconnected: secToMs($timerDisconnected.value),
+        timer_timeout: secToMs($timerTimeout.value),
+        timer_busy: secToMs($timerBusy.value)
       }).toString();
       const r = await fetch('/api/settings/timers', {
         method: 'POST',
@@ -398,6 +420,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Console: format timestamp and append a new console line to the client buffer.
+  // We keep the DOM updates limited by maintaining consoleLines and writing the
+  // combined textNode. This reduces reflow when many messages arrive.
+  function formatTime(ts) {
+    try {
+      // Timestamp från backend är i sekunder (Unix timestamp) om >1000000000,
+      // annars är det gamla millis() format
+      const dt = (ts > 1000000000) ? new Date(ts * 1000) : new Date(ts);
+      return dt.toLocaleTimeString();
+    } catch {
+      return '';
+    }
+  }
+
+  function appendConsoleLine(obj) {
+    const time = obj.ts ? formatTime(obj.ts) : '';
+    const src = obj.source ? `[${obj.source}] ` : '';
+    const text = obj.text || '';
+    const line = `${time} ${src}${text}`;
+
+    consoleLines.push(line);
+    if (consoleLines.length > consoleMaxLines) consoleLines.shift();
+
+    // Single DOM write for the whole buffer
+    if ($consoleLog) {
+      $consoleLog.textContent = consoleLines.join('\n');
+
+      if (autoScrollConsole) {
+        // Keep console scrolled to bottom when user hasn't manually scrolled up
+        $consoleLog.scrollTop = $consoleLog.scrollHeight;
+      }
+    }
+  }
+
+  // Track manual scroll to disable auto-scroll when user scrolls up.
+  $consoleLog?.addEventListener('scroll', () => {
+    if (!$consoleLog) return;
+    const nearBottom = ($consoleLog.scrollTop + $consoleLog.clientHeight) >= ($consoleLog.scrollHeight - 20);
+    autoScrollConsole = nearBottom;
+  });
+
   // Event listeners
   $dbgBtn?.addEventListener('click', saveDebug);
   $restartBtn?.addEventListener('click', restartDevice);
@@ -453,6 +516,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.tr  === 'number') $dbgTr.value  = String(d.tr|0);
       if (typeof d.tg  === 'number') $dbgTg.value  = String(d.tg|0);
       if (typeof d.rg  === 'number') $dbgRg.value  = String(d.rg|0);
+      if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
+      if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
+      if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
+    } catch {}
+  });
+
+  // Console messages via SSE
+  es.addEventListener('console', ev => {
+    try {
+      const d = JSON.parse(ev.data);
+      appendConsoleLine(d);
     } catch {}
   });
 

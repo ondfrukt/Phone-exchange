@@ -17,6 +17,8 @@ public:
   void begin();
   void update();
   void action(int index);
+  void connectLines(int lineA, int lineB);
+  void disconnectLines(int lineA, int lineB);
 
 private:
   LineManager& lineManager_;
@@ -30,7 +32,7 @@ private:
   ToneGenerator* toneGenerators[3];
 
   void turnOffToneGenIfUsed(LineHandler& line);
-  void startToneGenForStatus(LineHandler& line, model::ToneId status);
+  uint8_t startToneGenForStatus(LineHandler& line, model::ToneId status);
 
   void timerExpired(LineHandler& line);
 };

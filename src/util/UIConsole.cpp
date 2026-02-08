@@ -1,5 +1,6 @@
 #include "util/UIConsole.h"
 #include "freertos/semphr.h"
+#include <time.h>
 
 namespace util {
 
@@ -62,7 +63,18 @@ void UIConsole::log(const String& text, const char* source) {
     const String escSrc = escapeJsonString(String(source));
     json += ",\"source\":\"" + escSrc + "\"";
   }
-  json += ",\"ts\":" + String(millis());
+  
+  // Använd verklig tid om tillgänglig, annars millis()
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    // Formatera som Unix timestamp (sekunder sedan 1970-01-01)
+    time_t now;
+    time(&now);
+    json += ",\"ts\":" + String((unsigned long)now);
+  } else {
+    // Fallback till millis om tid inte är synkad ännu
+    json += ",\"ts\":" + String(millis());
+  }
   json += "}";
 
   // kort och skyddat

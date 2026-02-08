@@ -136,6 +136,42 @@
       </div>
 
       <div class="row">
+        <span class="k">MCPDriver</span>
+        <span class="v">
+          <select id="dbg-mcp" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">I2C</span>
+        <span class="v">
+          <select id="dbg-i2c" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">InterruptManager</span>
+        <span class="v">
+          <select id="dbg-im" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
         <span class="k">Tone generator enabled</span>
         <span class="v">
           <label style="display:flex; align-items:center; gap:6px;">
@@ -159,17 +195,17 @@
       <h2 style="margin:0 0 12px; font-size:1.2rem">Ring Settings</h2>
       
       <div class="row">
-        <span class="k">Ring Length (ms)</span>
+        <span class="k">Ring Length (s)</span>
         <span class="v">
-          <input type="number" id="ring-length" class="form-input" min="100" max="10000" step="100" />
+          <input type="number" id="ring-length" class="form-input" min="0.1" max="10" step="0.1" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Ring Pause (ms)</span>
+        <span class="k">Ring Pause (s)</span>
         <span class="v">
-          <input type="number" id="ring-pause" class="form-input" min="100" max="10000" step="100" />
+          <input type="number" id="ring-pause" class="form-input" min="0.1" max="10" step="0.1" />
         </span>
         <span></span>
       </div>
@@ -196,17 +232,17 @@
       <p class="description">Tune SHK sampling during ringing/off-hook detection</p>
 
       <div class="row">
-        <span class="k">Burst Tick (ms)</span>
+        <span class="k">Burst Tick (s)</span>
         <span class="v">
-          <input type="number" id="burst-tick-ms" class="form-input" min="1" max="100" step="1" />
+          <input type="number" id="burst-tick-ms" class="form-input" min="0.001" max="0.1" step="0.001" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Hook Stable Time (ms)</span>
+        <span class="k">Hook Stable Time (s)</span>
         <span class="v">
-          <input type="number" id="hook-stable-ms" class="form-input" min="10" max="2000" step="10" />
+          <input type="number" id="hook-stable-ms" class="form-input" min="0.01" max="2" step="0.01" />
         </span>
         <span></span>
       </div>
@@ -232,73 +268,73 @@
       <h2 style="margin:0 0 12px; font-size:1.2rem">Timer Settings</h2>
       
       <div class="row">
-        <span class="k">Ready Timer (ms)</span>
+        <span class="k">Ready Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-ready" class="form-input" min="1000" max="600000" step="1000" />
+          <input type="number" id="timer-ready" class="form-input" min="1" max="600" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Dialing Timer (ms)</span>
+        <span class="k">Dialing Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-dialing" class="form-input" min="1000" max="60000" step="1000" />
+          <input type="number" id="timer-dialing" class="form-input" min="1" max="60" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Ringing Timer (ms)</span>
+        <span class="k">Ringing Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-ringing" class="form-input" min="1000" max="60000" step="1000" />
+          <input type="number" id="timer-ringing" class="form-input" min="1" max="60" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Pulse Dialing Timer (ms)</span>
+        <span class="k">Pulse Dialing Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-pulse-dialing" class="form-input" min="1000" max="60000" step="1000" />
+          <input type="number" id="timer-pulse-dialing" class="form-input" min="1" max="60" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Tone Dialing Timer (ms)</span>
+        <span class="k">Tone Dialing Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-tone-dialing" class="form-input" min="1000" max="60000" step="1000" />
+          <input type="number" id="timer-tone-dialing" class="form-input" min="1" max="60" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Fail Timer (ms)</span>
+        <span class="k">Fail Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-fail" class="form-input" min="1000" max="120000" step="1000" />
+          <input type="number" id="timer-fail" class="form-input" min="1" max="120" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Disconnected Timer (ms)</span>
+        <span class="k">Disconnected Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-disconnected" class="form-input" min="1000" max="120000" step="1000" />
+          <input type="number" id="timer-disconnected" class="form-input" min="1" max="120" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Timeout Timer (ms)</span>
+        <span class="k">Timeout Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-timeout" class="form-input" min="1000" max="120000" step="1000" />
+          <input type="number" id="timer-timeout" class="form-input" min="1" max="120" step="0.5" />
         </span>
         <span></span>
       </div>
 
       <div class="row">
-        <span class="k">Busy Timer (ms)</span>
+        <span class="k">Busy Timer (s)</span>
         <span class="v">
-          <input type="number" id="timer-busy" class="form-input" min="1000" max="120000" step="1000" />
+          <input type="number" id="timer-busy" class="form-input" min="1" max="120" step="0.5" />
         </span>
         <span></span>
       </div>
@@ -319,6 +355,13 @@
           Restart Device
         </button>
       </div>
+    </section>
+
+    <!-- Console Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Console</h2>
+      <p class="description">System log messages</p>
+      <pre id="console-log" class="console-log" aria-live="polite" role="log"></pre>
     </section>
   </main>
 </body>

@@ -13,7 +13,33 @@ void ToneReader::activate()
   }
   isActive = true;
   mcpDriver_.digitalWriteMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::PWDN_MT8870 , false);
+  
+  // Small delay to let MT8870 stabilize after power on
+  delay(10);
+  
+  // Reset all state variables to ensure clean start
+  lastStdLevel_ = false;
+  stdRisingEdgePending_ = false;
+  stdRisingEdgeTime_ = 0;
+  lastDtmfTime_ = 0;
+  lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
+  
+  // Clear any pending STD interrupts that might have accumulated
+  int clearedCount = 0;
+  while (true) {
+    IntResult ir = interruptManager_.pollEvent(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::STD);
+    if (!ir.hasEvent) break;
+    clearedCount++;
+  }
+  
+  if (settings_.debugTRLevel >= 2) {
+    Serial.print(F("ToneReader: State reset after activation, cleared "));
+    Serial.print(clearedCount);
+    Serial.println(F(" pending interrupts"));
+    util::UIConsole::log("State reset after activation, cleared " + String(clearedCount) + " pending interrupts", "ToneReader");
+  }
 }
+
 
 void ToneReader::deactivate()
 {
@@ -23,6 +49,11 @@ void ToneReader::deactivate()
   }
   isActive = false;
   mcpDriver_.digitalWriteMCP(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::PWDN_MT8870 , true);
+  
+  // Reset state variables when deactivating
+  lastStdLevel_ = false;
+  stdRisingEdgePending_ = false;
+  stdRisingEdgeTime_ = 0;
 }
 
 void ToneReader::update() {
@@ -60,8 +91,15 @@ void ToneReader::update() {
       uint8_t nibble = 0;
       if (readDtmfNibble(nibble)) {
         
-        lineManager_.setStatus(lineManager_.lastLineReady, model::LineStatus::ToneDialing);
-        lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
+        // Filter out spurious nibble=0x0 (all Q pins LOW) - this is never a valid DTMF tone
+        // These often appear as ghost interrupts when MT8870 starts up or from noise
+        if (nibble == 0x0) {
+          if (settings_.debugTRLevel >= 1) {
+            Serial.println(F("ToneReader: Ignoring spurious nibble=0x0 (not a valid DTMF tone)"));
+            util::UIConsole::log("Ignoring spurious nibble=0x0", "ToneReader");
+          }
+          return; // Don't update debounce variables, completely ignore this interrupt
+        }
         
         // Check debouncing: ignore if same digit detected within debounce period
         // Use unsigned subtraction which handles millis() rollover correctly
@@ -99,6 +137,12 @@ void ToneReader::update() {
 
           if (ch != '\0') {
             int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
+            
+            // Only set status to ToneDialing if the line is currently in Ready state and we have a valid digit
+            if (idx >= 0 && lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready) {
+              lineManager_.setStatus(idx, model::LineStatus::ToneDialing);
+            }
+            lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
 
             // To avoid strange signals thats detected as dtomf tones, only accept tones when line is in Ready or ToneDialing state
             if (idx >= 0 && (lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready || 
@@ -196,6 +240,25 @@ void ToneReader::update() {
         util::UIConsole::log("ToneReader: Rising edge detected - marking for stability check", "ToneReader");
       }
       
+      // Debug: Read Q pins immediately at rising edge
+      if (settings_.debugTRLevel >= 2) {
+        uint16_t gpioAB = 0;
+        if (mcpDriver_.readGpioAB16(cfg::mcp::MCP_MAIN_ADDRESS, gpioAB)) {
+          uint8_t q1 = (gpioAB >> cfg::mcp::Q1) & 0x1;
+          uint8_t q2 = (gpioAB >> cfg::mcp::Q2) & 0x1;
+          uint8_t q3 = (gpioAB >> cfg::mcp::Q3) & 0x1;
+          uint8_t q4 = (gpioAB >> cfg::mcp::Q4) & 0x1;
+          Serial.print(F("ToneReader: Q-pins at rising edge: Q4="));
+          Serial.print(q4);
+          Serial.print(F(" Q3="));
+          Serial.print(q3);
+          Serial.print(F(" Q2="));
+          Serial.print(q2);
+          Serial.print(F(" Q1="));
+          Serial.println(q1);
+        }
+      }
+      
       // Mark the rising edge and record the time
       // We'll process it after verifying STD is stable for the configured duration
       stdRisingEdgePending_ = true;
@@ -204,8 +267,14 @@ void ToneReader::update() {
     } else if (fallingEdge) {
       // If we get a falling edge before processing the rising edge, validate duration
       // This helps filter very short glitches
+      unsigned long toneDuration = 0;
       if (stdRisingEdgePending_) {
-        unsigned long toneDuration = millis() - stdRisingEdgeTime_;
+        toneDuration = millis() - stdRisingEdgeTime_;
+        if (settings_.debugTRLevel >= 1) {
+          Serial.print(F("ToneReader: Falling edge - STD was HIGH for "));
+          Serial.print(toneDuration);
+          Serial.println(F("ms"));
+        }
         if (toneDuration < settings_.dtmfMinToneDurationMs) {
           if (settings_.debugTRLevel >= 1) {
             Serial.print(F("ToneReader: Tone too short ("));
@@ -226,8 +295,15 @@ void ToneReader::update() {
         stdRisingEdgePending_ = false;
       }
       
+      // Only set timer if line is in ToneDialing state (meaning a valid digit was processed)
       if (lineManager_.lastLineReady >= 0) {
-        lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing); // Start timer for last active line
+        auto& line = lineManager_.getLine(lineManager_.lastLineReady);
+        if (line.currentLineStatus == model::LineStatus::ToneDialing) {
+          lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing);
+        } else if (settings_.debugTRLevel >= 2) {
+          Serial.println(F("ToneReader: Falling edge - line not in ToneDialing, no timer set"));
+          util::UIConsole::log("Falling edge - line not in ToneDialing, no timer set", "ToneReader");
+        }
       } else if (settings_.debugTRLevel >= 1) {
         Serial.println(F("ToneReader: Falling edge - no valid lastLineReady to set timer"));
         util::UIConsole::log("Falling edge - no valid lastLineReady to set timer", "ToneReader");

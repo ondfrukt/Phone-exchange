@@ -1,9 +1,11 @@
 #pragma once
+#include <Arduino.h>
 #include "config.h"
 #include <Wire.h>
 #include "drivers/MCPDriver.h"
 #include "drivers/InterruptManager.h"
 #include "drivers/MT8816Driver.h"
+#include "drivers/DTMF_Mux.h"
 
 #include "services/LineHandler.h"
 #include "services/LineManager.h"
@@ -21,10 +23,9 @@
 
 #include "esp_system.h"
 
-#include "util/FunctionButton.h"
+#include "util/Functions.h"
 #include "util/I2CScanner.h"
 #include "util/UIConsole.h"
-
 
 class App {
 public:
@@ -37,6 +38,7 @@ public:
     MT8816Driver mt8816Driver_;
 
 private:
+    void GPIOTest(uint8_t addr, int pin);
 
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;
@@ -52,8 +54,9 @@ private:
     net::Provisioning provisioning_;
     WebServer webServer_;
 
-    FunctionButton functionButton_;
+    Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
+    DTMF_Mux dtmfMux_;
     
 };

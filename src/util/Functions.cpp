@@ -1,7 +1,8 @@
-#include "util/FunctionButton.h"
+#include "util/Functions.h"
 
 
-void FunctionButton::update() {
+
+void Functions::update() {
     // Static variables for debouncing and tracking button state:
     // btnDown: tracks if the button is currently pressed
     // pressedAtMs: timestamp when the button was pressed
@@ -20,25 +21,42 @@ void FunctionButton::update() {
         btnDown     = true;
         pressedAtMs = now;
     } else {
-      testRing();
+      restartDevice(now - pressedAtMs);
     }
   }
 }
 
-void FunctionButton::restartDevice(uint32_t held) {
+void Functions::restartDevice(uint32_t held) {
     if (held >= 5000) {
-        Serial.println("Long press (>5s): running special method");
-        // myLongPressAction();
+        Serial.println("Resetting settings and WiFi credentials...");
+        
+        // Clear all settings stored in Preferences under "myapp" namespace
+        Preferences prefs;
+        prefs.begin("myapp", false);  // Settings namespace
+        prefs.clear();
+        prefs.end();
+        delay(1000);
+        
+        // Clear WiFi credentials from NVS
+        WiFi.disconnect(true, true);
+        prefs.begin("wifi", false);
+        prefs.clear();
+        prefs.end();
+        delay(1000);
+        
+        Serial.println("Settings and WiFi reset complete. Restarting...");
+        delay(1000);
+        ESP.restart();
     } else {
-        Serial.println("Short press: restart om 2s...");
-        delay(2000);
+        Serial.println("Restarting...");
+        delay(1000);
         ESP.restart();
     }
 
 }
 
-void FunctionButton::testRing() {
-    Serial.println("FunctionButton: testRing()");
+void Functions::testRing() {
+    Serial.println("Functions: testRing()");
     
     int RM = cfg::mcp::RM_PINS[0];
     int FR = cfg::mcp::FR_PINS[0];

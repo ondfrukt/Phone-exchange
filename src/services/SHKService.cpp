@@ -275,7 +275,10 @@ void SHKService::setStableHook(int index, bool offHook, bool rawHigh, uint32_t n
   if (newHook != line.currentHookStatus) {
     line.currentHookStatus = newHook;
     line.SHK = offHook;
-    lineManager_.setStatus(index, offHook ? model::LineStatus::Ready : model::LineStatus::Idle);
+
+    lineManager_.lineHookChangeFlag |= (1u << index);
+
+    //lineManager_.setStatus(index, offHook ? model::LineStatus::Ready : model::LineStatus::Idle);
 
     if (settings_.debugSHKLevel >= 2) {
       Serial.printf("SHKService: L%d stable hook %s (raw=%d) after %u ms\n", index, offHook ? "OffHook" : "OnHook", rawHigh ? 1 : 0, millis() - sample.hookCandSince);
@@ -438,20 +441,24 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
   auto& line = lineManager_.getLine(idx);
 
   if (sample.pulseCountWork > 0) {
-    char d = mapPulseToDigit_(sample.pulseCountWork); // 10 → '0'
-    line.dialedDigits += d; // Add digit directly to LineHandler.
+    char digit = mapPulseToDigit_(sample.pulseCountWork); // 10 → '0'
+    line.dialedDigits += digit; // Add digit directly to LineHandler.
     line.lineTimerEnd = nowMs + settings_.timer_toneDialing; // Reset timer
 
     if (settings_.debugSHKLevel >= 1) {
-      Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, d, (int)sample.pulseCountWork);
+      Serial.printf("SHKService: Line %d digit '%c' (pulses=%d)\n", (int)idx, digit, (int)sample.pulseCountWork);
       Serial.flush();  // Ensure immediate output
-      util::UIConsole::log("Line " + String(idx) + " digit '" + String(d) + "' (pulses=" + String(sample.pulseCountWork) + ")", "SHKService");
+      util::UIConsole::log("Line " + String(idx) + " digit '" + String(digit) + "' (pulses=" + String(sample.pulseCountWork) + ")", "SHKService");
     }
+
     Serial.print(MAGENTA);
-    Serial.printf("SHKService: Line %d dialedDigits now: %s\n", (int)idx, line.dialedDigits.c_str());
+    Serial.print(F("SHKService: Added to line "));
+    Serial.print(idx);
+    Serial.print(F(" digit='"));
+    Serial.print(digit);
+    Serial.print(F("' dialedDigits: "));
+    Serial.println(line.dialedDigits);
     Serial.print(COLOR_RESET);
-    Serial.flush();  // Ensure immediate output
-    util::UIConsole::log("Line " + String(idx) + " dialedDigits now: " + line.dialedDigits, "SHKService");
   }
   lineManager_.setLineTimer(idx, settings_.timer_pulsDialing);
   resetPulseState_(idx);
@@ -459,6 +466,7 @@ void SHKService::emitDigitAndReset_(int idx, bool rawHigh, uint32_t nowMs) {
   resyncFast_(idx, rawHigh, nowMs);
 }
 
+// Resets pulse detector state for line 'idx'.
 void SHKService::resetPulseState_(int idx) {
   auto& sample = lineState_[idx];
   auto& line = lineManager_.getLine(idx);
