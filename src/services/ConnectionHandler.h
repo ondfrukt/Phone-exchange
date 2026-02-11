@@ -7,9 +7,9 @@
 #include "util/UIConsole.h"
 
 
-class LineAudioConnections {
+class ConnectionHandler {
 public:
-  LineAudioConnections(MT8816Driver& mt8816Driver, Settings& settings) : mt8816Driver_(mt8816Driver), settings(settings) {};
+  ConnectionHandler(MT8816Driver& mt8816Driver, Settings& settings) : mt8816Driver_(mt8816Driver), settings(settings) {};
 
   void connectLines(uint8_t lineA, uint8_t lineB);
   void disconnectLines(uint8_t lineA, uint8_t lineB);

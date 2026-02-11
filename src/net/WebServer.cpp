@@ -87,7 +87,7 @@ void WebServer::setupLineManagerCallback_() {
     // Only send SSE if there are connected clients
     if (events_.count() > 0) {
       String json = "{\"line\":" + String(index) +
-                    ",\"status\":\"" + model::toString(status) + "\"}";
+                    ",\"status\":\"" + model::LineStatusToString(status) + "\"}";
       events_.send(json.c_str(), "lineStatus", millis());
     }
   });

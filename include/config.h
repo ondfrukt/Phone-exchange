@@ -237,9 +237,9 @@ namespace cfg {
     constexpr uint8_t ax_pins[4] = {mcp::AX0, mcp::AX1, mcp::AX2, mcp::AX3}; // GPB0-GPB3
     constexpr uint8_t ay_pins[3] = {mcp::AY0, mcp::AY1, mcp::AY2}; // GPB4-GPB6
 
-    constexpr uint8_t  DAC1 = 12;
-    constexpr uint8_t  DAC2 = 13;
-    constexpr uint8_t  DAC3 = 14;
-    constexpr uint8_t  DTMF = 15;
+    constexpr uint8_t  DAC1 = 15;
+    constexpr uint8_t  DAC2 = 14;
+    constexpr uint8_t  DAC3 = 13;
+    constexpr uint8_t  D_OUTL = 12;
   }
 }

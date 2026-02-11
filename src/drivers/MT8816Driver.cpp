@@ -26,6 +26,16 @@ void MT8816Driver::setConnection(uint8_t x, uint8_t y, bool state) {
     delayMicroseconds(10);
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::STROBE, LOW);
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::CS, LOW);
+
+    if (settings_.debugMTLevel >= 2) {
+      Serial.print("MT8816: Set connection x=");
+      Serial.print(x);
+      Serial.print(" y=");
+      Serial.print(y);
+      Serial.print(" state=");
+      Serial.println(state ? "HIGH" : "LOW");
+      util::UIConsole::log("Set connection x=" + String(x) + " y=" + String(y) + " state=" + String(state ? "HIGH" : "LOW"), "MT8816Driver");
+    }
 }
 
 void MT8816Driver::setAddress(uint8_t x, uint8_t y)

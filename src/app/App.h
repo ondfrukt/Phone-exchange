@@ -42,7 +42,7 @@ private:
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;
     ToneGenerator toneGenerator3_;
-    LineAudioConnections lineAudioConnections_;
+    ConnectionHandler connectionHandler_;
 
     LineManager lineManager_;
     ToneReader toneReader_;

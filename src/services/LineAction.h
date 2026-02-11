@@ -6,14 +6,14 @@
 #include "LineManager.h"
 #include "services/RingGenerator.h"
 #include "services/ToneReader.h"
-#include "services/LineAudioConnections.h"
+#include "services/ConnectionHandler.h"
 #include "services/ToneGenerator.h"
 
 class LineAction {
 public:
   LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator,
              ToneReader& toneReader,
-             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3, LineAudioConnections& lineAudioConnections);
+             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3, ConnectionHandler& connectionHandler);
   
   void begin();
   void update();
@@ -29,7 +29,7 @@ private:
   ToneGenerator& toneGen2_;
   ToneGenerator& toneGen3_;
   ToneGenerator* toneGenerators[3];
-  LineAudioConnections& lineAudioConnections_;
+  ConnectionHandler& connectionHandler_;
 
   void turnOffToneGenIfUsed(LineHandler& line);
   void startToneGenForStatus(LineHandler& line, model::ToneId status);
