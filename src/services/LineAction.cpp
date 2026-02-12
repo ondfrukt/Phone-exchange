@@ -16,80 +16,92 @@ void LineAction::begin() {
 // Main update loop to check for line status changes and timer expirations
 void LineAction::update() {
 
-  // Check if any hook status has changed
+  // First check for hook status changes and update line statuses accordingly
+  hookStatusCangeCheck();
+  // Then check for line status changes and handle actions
+  statusChangeCheck();
+  // Finally check for timer expirations and handle them
+  timerExpiredCheck();
+}
+
+// Check for hook status changes and update line status accordingly
+void LineAction::hookStatusCangeCheck() {
+
   if(lineManager_.lineHookChangeFlag != 0){
     uint8_t hookChanges = lineManager_.lineHookChangeFlag & settings_.activeLinesMask;
 
     // loop through lines with hook status changes and update line status accordingly
     for (int index = 0; index < 8; ++index)
-        if (hookChanges & (1 << index)) {
-          lineManager_.lineHookChangeFlag &= ~(1 << index); // Clear the hook change flag
-          LineHandler& line = lineManager_.getLine(index);
-          uint8_t incomingFrom = line.incomingFrom; // Store incomingFrom before any potential status changes
+      if (hookChanges & (1 << index)) {
+        lineManager_.lineHookChangeFlag &= ~(1 << index); // Clear the hook change flag
+        LineHandler& line = lineManager_.getLine(index);
+        uint8_t incomingFrom = line.incomingFrom; // Store incomingFrom before any potential status changes
 
-          // Update line status based on hook state
+      // Update line status based on hook state
 
-          // Hook ON -> Hook OFF & Line status = Idle
-          if (line.previousHookStatus == model::HookStatus::On 
-            && line.currentHookStatus == model::HookStatus::Off 
-            && line.currentLineStatus == model::LineStatus::Idle) {
+      // Hook ON -> Hook OFF & Line status = Idle
+      if (line.previousHookStatus == model::HookStatus::On 
+        && line.currentHookStatus == model::HookStatus::Off 
+        && line.currentLineStatus == model::LineStatus::Idle) {
 
-            // New call - set status to Ready to play dial tone and wait for input
-            lineManager_.setStatus(index, model::LineStatus::Ready);
+        // New call - set status to Ready
+        lineManager_.setStatus(index, model::LineStatus::Ready);
+        
+      // Hook ON -> Hook OFF & Line status = Incoming
+      } else if (line.previousHookStatus == model::HookStatus::On
+        && line.currentHookStatus == model::HookStatus::Off
+        && line.currentLineStatus == model::LineStatus::Incoming) {
+
+        // Answer the call - set status to Connected and update connection info
+        lineManager_.setStatus(incomingFrom, model::LineStatus::Connected);
+        line.outgoingTo = incomingFrom;
+        lineManager_.getLine(incomingFrom).incomingFrom = index;
+        lineManager_.setStatus(index, model::LineStatus::Connected);
           
-          // Hook ON -> Hook OFF & Line status = Incoming
-          } else if (line.previousHookStatus == model::HookStatus::On
-            && line.currentHookStatus == model::HookStatus::Off
-            && line.currentLineStatus == model::LineStatus::Incoming) {
+      // Hook OFF -> Hook ON & Line status = Connected
+      } else if (line.previousHookStatus == model::HookStatus::Off 
+        && line.currentHookStatus == model::HookStatus::On 
+        && line.currentLineStatus == model::LineStatus::Connected) {
+        
+        lineManager_.setStatus(incomingFrom, model::LineStatus::Disconnected);
+        lineManager_.setStatus(index, model::LineStatus::Idle);
 
-            // Answer the call - set status to Connected and update connection info
-            lineManager_.setStatus(incomingFrom, model::LineStatus::Connected);
-            line.outgoingTo = incomingFrom;
-            lineManager_.getLine(incomingFrom).incomingFrom = index;
-            lineManager_.setStatus(index, model::LineStatus::Connected);
-            
-          // Hook OFF -> Hook ON & Line status = Connected
-          } else if (line.previousHookStatus == model::HookStatus::Off 
-            && line.currentHookStatus == model::HookStatus::On 
-            && line.currentLineStatus == model::LineStatus::Connected) {
-            
-            lineManager_.setStatus(incomingFrom, model::LineStatus::Disconnected);
-            lineManager_.setStatus(index, model::LineStatus::Idle);
+      // Hook OFF -> Hook ON & Line status = Disconnected (other party already hung up)
+      } else if (line.previousHookStatus == model::HookStatus::Off 
+        && line.currentHookStatus == model::HookStatus::On 
+        && line.currentLineStatus == model::LineStatus::Disconnected) {
+        
+        lineManager_.setStatus(index, model::LineStatus::Idle);
 
-          // Hook OFF -> Hook ON & Line status = Disconnected (other party already hung up)
-          } else if (line.previousHookStatus == model::HookStatus::Off 
-            && line.currentHookStatus == model::HookStatus::On 
-            && line.currentLineStatus == model::LineStatus::Disconnected) {
-            
-            lineManager_.setStatus(index, model::LineStatus::Idle);
+      // OFF -> ON
+      } else {
+        lineManager_.setStatus(index, model::LineStatus::Idle);
+      }
 
-          // OFF -> ON
-          } else {
-            lineManager_.setStatus(index, model::LineStatus::Idle);
-          }
-
-          // Update previous hook status after processing the change
-          line.previousHookStatus = line.currentHookStatus;
-      } 
+      // Update previous hook status after processing the change
+      line.previousHookStatus = line.currentHookStatus;
+    } 
   }
+}
 
-
-  // Check if any line has changed status
+// Check for line status changes and handle actions
+void LineAction::statusChangeCheck() {
   if(lineManager_.lineStatusChangeFlag != 0){
     uint8_t changes = lineManager_.lineStatusChangeFlag & settings_.activeLinesMask;
     for (int index = 0; index < 8; ++index)
-        if (changes & (1 << index)) {
-          lineManager_.clearChangeFlag(index); // Clear the change flag
-
-          // Handle the action for the line
-          action(index);
+      if (changes & (1 << index)) {
+        lineManager_.clearChangeFlag(index); // Clear the change flag
+        // Handle the action for the line
+        action(index);
       } 
   }
-  // Check if any line timers have expired
+}
+
+// Check for timer expirations and handle them
+void LineAction::timerExpiredCheck() {
   if(lineManager_.activeTimersMask != 0){
     unsigned long currentTime = millis();
     uint8_t timers = lineManager_.activeTimersMask & settings_.activeLinesMask;
-    
 
     for (int index = 0; index < 8; ++index)
         if (timers & (1 << index)) {
@@ -290,7 +302,7 @@ void LineAction::timerExpired(LineHandler& line) {
     case LineStatus::ToneDialing:
     case LineStatus::PulseDialing: 
       {
-        
+
         int lineCalled = lineManager_.searchPhoneNumber(line.dialedDigits);
         Serial.print("LineAction: LineCalled received: " + String(lineCalled) + "\n");
 
@@ -378,7 +390,7 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
 
   if (!toneGen1_.isPlaying()){
     toneGen1_.startToneSequence(status);
-    line.toneGenUsed = 1;
+    line.toneGenUsed = cfg::mt8816::DAC1;
     connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC1); // Connect line to tone generator 1
     if (settings_.debugLALevel >= 2) {
       Serial.println("LineAction: Tone generator 1 is free, using it for line " + String(line.lineNumber));
@@ -387,7 +399,7 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
   }
   else if (!toneGen2_.isPlaying()){
     toneGen2_.startToneSequence(status);
-    line.toneGenUsed = 2;
+    line.toneGenUsed = cfg::mt8816::DAC2;
     connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC2); // Connect line to tone generator 2
     if (settings_.debugLALevel >= 2) {
       Serial.println("LineAction: Tone generator 1 is busy, using tone generator 2 for line " + String(line.lineNumber));
@@ -396,7 +408,7 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
   }
   else if (!toneGen3_.isPlaying()){
     toneGen3_.startToneSequence(status);
-    line.toneGenUsed = 3;
+    line.toneGenUsed = cfg::mt8816::DAC3;
     connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC3); // Connect line to tone generator 3
     if (settings_.debugLALevel >= 2) {
       Serial.println("LineAction: Tone generator 1 and 2 are busy, using tone generator 3 for line " + String(line.lineNumber));
@@ -412,7 +424,7 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
 // Turn off tone generator if it is being used by the line
 void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
   if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed -1]->stop();
+    toneGenerators[line.toneGenUsed]->stop();
     connectionHandler_.disconnectAudioToLine(line.lineNumber, line.toneGenUsed); // Disconnect line from tone generator
     line.toneGenUsed = 0;
   }

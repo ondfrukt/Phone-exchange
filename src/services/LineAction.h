@@ -31,8 +31,11 @@ private:
   ToneGenerator* toneGenerators[3];
   ConnectionHandler& connectionHandler_;
 
+  void hookStatusCangeCheck();
+  void statusChangeCheck();
+  void timerExpiredCheck();
+
   void turnOffToneGenIfUsed(LineHandler& line);
   void startToneGenForStatus(LineHandler& line, model::ToneId status);
-
   void timerExpired(LineHandler& line);
 };
