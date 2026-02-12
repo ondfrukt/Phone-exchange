@@ -27,17 +27,17 @@ void Settings::resetDefaults() {
 
   // -- Debug levels ---
   debugSHKLevel         = 0; // Debug for SHKService
-  debugLmLevel          = 2; // Debug for LineManager
+  debugLmLevel          = 0; // Debug for LineManager
   debugWSLevel          = 0; // Debug for WebServer
-  debugLALevel          = 3; // Debug for LineAction
-  debugMTLevel          = 3; // Debug for MT8816Driver
+  debugLALevel          = 0; // Debug for LineAction
+  debugMTLevel          = 0; // Debug for MT8816Driver
   debugTRLevel          = 0; // Debug for ToneReader
   debugMCPLevel         = 0; // Debug for MCPDriver
   debugI2CLevel         = 0; // Debug for I2C
-  debugTonGenLevel      = 2; // Debug for ToneGenerator
+  debugTonGenLevel      = 0; // Debug for ToneGenerator
   debugRGLevel          = 0; // Debug for RingGenerator
   debugIMLevel          = 0; // Debug for InterruptManager
-  debugLAC              = 2; // Debug for LineAudioConnections
+  debugLAC              = 0; // Debug for LineAudioConnections
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;

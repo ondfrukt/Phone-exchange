@@ -11,6 +11,7 @@ LineHandler::LineHandler(int line) {
 
     incomingFrom = -1;           
     outgoingTo = -1;                      
+    toneGenUsed = 0;
     
     currentHookStatus = HookStatus::On;
     previousHookStatus = HookStatus::On;

@@ -423,9 +423,26 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
 
 // Turn off tone generator if it is being used by the line
 void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
-  if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed]->stop();
-    connectionHandler_.disconnectAudioToLine(line.lineNumber, line.toneGenUsed); // Disconnect line from tone generator
-    line.toneGenUsed = 0;
+  if (line.toneGenUsed == 0) {
+    return;
   }
+
+  switch (line.toneGenUsed) {
+    case cfg::mt8816::DAC1:
+      toneGen1_.stop();
+      break;
+    case cfg::mt8816::DAC2:
+      toneGen2_.stop();
+      break;
+    case cfg::mt8816::DAC3:
+      toneGen3_.stop();
+      break;
+    default:
+      // Invalid mapping, clear state to avoid repeated faults.
+      line.toneGenUsed = 0;
+      return;
+  }
+
+  connectionHandler_.disconnectAudioToLine(line.lineNumber, line.toneGenUsed); // Disconnect line from tone generator
+  line.toneGenUsed = 0;
 }
