@@ -62,7 +62,7 @@ void App::begin() {
     // --- Net and webserver ---
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
-    webServer_.begin();
+    Serial.println("App: Deferring WebServer start until WiFi has IP");
 
     mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
     mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
@@ -81,6 +81,15 @@ void App::loop() {
   interruptManager_.collectInterrupts();
   
   wifiClient_.loop();   // Handle WiFi events and connection
+  if (!webServerStarted_ && wifiClient_.isConnected()) {
+    Serial.println("App: WiFi connected, starting WebServer...");
+    const bool webReady = webServer_.begin();
+    webServerStarted_ = true;
+    Serial.printf("App: WebServer ready=%s (server+LittleFS)\n", webReady ? "true" : "false");
+    if (!webReady) {
+      Serial.println("App: Web UI may be unavailable. Check LittleFS upload.");
+    }
+  }
   lineAction_.update(); // Check for line status changes and timers
   SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones
