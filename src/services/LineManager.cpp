@@ -28,12 +28,15 @@ void LineManager::begin() {
   }
 }
 
+
+
 void LineManager::syncLineActive(size_t i) {
   auto& settings_ = Settings::instance();
   bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;
   lines[i].lineActive = isActive;
 }
 
+// Returns a reference to the LineHandler object for the specified line index
 LineHandler& LineManager::getLine(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::getLine - ogiltigt index: ");
@@ -45,6 +48,7 @@ LineHandler& LineManager::getLine(int index) {
   return lines[static_cast<size_t>(index)];
 }
 
+// Set the status for the specified line
 void LineManager::setStatus(int index, LineStatus newStatus) {
   // Validate index
   if (index < 0 || index >= static_cast<int>(lines.size())) {
@@ -107,6 +111,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   }
 }
 
+// Clear the status change flag for the specified line
 void LineManager::clearChangeFlag(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::clearChangeFlag - ogiltigt index: ");
@@ -118,6 +123,7 @@ void LineManager::clearChangeFlag(int index) {
   lineStatusChangeFlag &= ~(1 << index); 
 }
 
+// 
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
   pushStatusChanged_ = std::move(cb);
 }
@@ -165,6 +171,7 @@ void LineManager::resetLineTimer(int index) {
   activeTimersMask &= ~(1 << index); // Clear the timer active flag
 }
 
+// Set the phone number for the specified line
 void LineManager::setPhoneNumber(int index, const String& value) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setPhoneNumber - ogiltigt index: ");
@@ -180,10 +187,11 @@ void LineManager::setPhoneNumber(int index, const String& value) {
   settings_.linePhoneNumbers[index] = sanitized;
 }
 
+// Search for a line index based on the provided phone number. Returns -1 if not found.
 int LineManager::searchPhoneNumber(const String& phoneNumber) {
   // Trimma och förbered söksträngen
 
-
+  // Degbug output of current phone numbers
   if (settings_.debugLmLevel >= 2){
     Serial.print("Numbers: ");
     for (int i = 0; i < static_cast<int>(lines.size()); ++i) {
@@ -193,24 +201,25 @@ int LineManager::searchPhoneNumber(const String& phoneNumber) {
     Serial.println();
   }
   
-
+  // Debug output for search
   if (settings_.debugLmLevel >= 1){
     Serial.print("LineManager: Searching for phone number '");
     Serial.print(phoneNumber);
     Serial.println("'");
     util::UIConsole::log("LineManager: Searching for phone number '" + phoneNumber + "'", "LineManager");
   }
+
+  // Trim the input phone number for searching
   String searchNumber = phoneNumber;
   searchNumber.trim();
 
-  // Loopa genom alla linjer
+  // Loop through lines to find a matching phone number (skipping inactive lines)
   for (size_t i = 0; i < lines.size(); ++i) {
-    // Skippa inaktiva linjer (valfritt)
     if (!lines[i].lineActive) {
       continue;
     }
     
-    // Jämför telefonnummer
+    // compare the line's phone number with the search number
     if (lines[i].phoneNumber == searchNumber) {
       
       if (settings_.debugLmLevel >= 1){
@@ -219,13 +228,9 @@ int LineManager::searchPhoneNumber(const String& phoneNumber) {
         Serial.println();
         util::UIConsole::log("LineManager: Found matching phone number on line " + String(i), "LineManager");
       }
-      return static_cast<int>(i);  // Returnera linjens index
+      return static_cast<int>(i);  // Return the line index
     }
   }
   
-  if (settings_.debugLmLevel >= 1){
-    Serial.println("LineManager: No matching phone number found");
-    util::UIConsole::log("LineManager: No matching phone number found", "LineManager");
-  }
-  return -1;  // Ingen matchning hittades
+  return -1;  // No match found
 }

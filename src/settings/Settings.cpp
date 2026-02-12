@@ -26,18 +26,18 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 0;
-  debugLmLevel          = 0;
-  debugWSLevel          = 0;
-  debugLALevel          = 3;
-  debugMTLevel          = 3;
-  debugTRLevel          = 0;
-  debugMCPLevel         = 0;
-  debugI2CLevel         = 0;
-  debugTonGenLevel      = 0;
-  debugRGLevel          = 0;
-  debugIMLevel          = 0;
-  debugLAC              = 2;
+  debugSHKLevel         = 0; // Debug for SHKService
+  debugLmLevel          = 2; // Debug for LineManager
+  debugWSLevel          = 0; // Debug for WebServer
+  debugLALevel          = 3; // Debug for LineAction
+  debugMTLevel          = 3; // Debug for MT8816Driver
+  debugTRLevel          = 0; // Debug for ToneReader
+  debugMCPLevel         = 0; // Debug for MCPDriver
+  debugI2CLevel         = 0; // Debug for I2C
+  debugTonGenLevel      = 2; // Debug for ToneGenerator
+  debugRGLevel          = 0; // Debug for RingGenerator
+  debugIMLevel          = 0; // Debug for InterruptManager
+  debugLAC              = 2; // Debug for LineAudioConnections
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;

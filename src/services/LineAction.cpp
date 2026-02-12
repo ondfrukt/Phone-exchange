@@ -290,28 +290,31 @@ void LineAction::timerExpired(LineHandler& line) {
     case LineStatus::ToneDialing:
     case LineStatus::PulseDialing: 
       {
-          int lineCalled = lineManager_.searchPhoneNumber(line.dialedDigits);
-          Serial.print("LineAction: LineCalled received: " + String(lineCalled) + "\n");
+        
+        int lineCalled = lineManager_.searchPhoneNumber(line.dialedDigits);
+        Serial.print("LineAction: LineCalled received: " + String(lineCalled) + "\n");
 
       if (settings_.debugLALevel >= 1) {
         Serial.println("LineAction: ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled));
         util::UIConsole::log("ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled), "LineAction");
       }
       
-      // Check for special case of dialing own number
+      Serial.print ("LineAction: Checking index");
       if (lineCalled == index){
         Serial.println(RED "LineAction: Line " + String(index) + " dialed its own number. Setting to Fail." + COLOR_RESET);
         lineManager_.setStatus(index, LineStatus::Fail);
+        break;
       }
 
       // Check if a matching phone number was found
       if (lineCalled != -1){
 
         // Check if the line that is being called is active
-        if (!lineManager_.getLine(index).lineActive)
-          Serial.println(RED "LineAction: Line " + String(index) + " is not active. Setting to Fail." + COLOR_RESET);
+        if (!lineManager_.getLine(lineCalled).lineActive){
+          Serial.println(RED "LineAction: Line " + String(lineCalled) + " is not active. Setting to Fail." + COLOR_RESET);
           lineManager_.setStatus(index, LineStatus::Fail);
           return;
+        }
         
         // Check if the called line is idle
         if (lineManager_.getLine(lineCalled).currentLineStatus != LineStatus::Idle){
