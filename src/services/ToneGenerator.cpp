@@ -47,8 +47,8 @@ void ToneGenerator::startToneSequence(model::ToneId sequence) {
   stepStartTimeMs_ = millis();
 
   if (Settings::instance().debugTonGenLevel >= 1) {
-    Serial.println("ToneGenerator: Started tone sequence " + String(static_cast<uint8_t>(sequence)) + " on CS pin " + String(csPin_));
-    util::UIConsole::log("Started tone sequence " + String(static_cast<uint8_t>(sequence)) + " on CS pin " + String(csPin_), "ToneGenerator");
+    Serial.println("ToneGenerator: Started tone sequence " + String(ToneIdToString(sequence)) + " on CS pin " + String(csPin_));
+    util::UIConsole::log("Started tone sequence " + String(ToneIdToString(sequence)) + " on CS pin " + String(csPin_), "ToneGenerator");
   }
 
 }

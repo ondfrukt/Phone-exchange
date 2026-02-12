@@ -42,6 +42,7 @@ private:
     ToneGenerator toneGenerator1_;
     ToneGenerator toneGenerator2_;
     ToneGenerator toneGenerator3_;
+    ConnectionHandler connectionHandler_;
 
     LineManager lineManager_;
     ToneReader toneReader_;
@@ -56,5 +57,6 @@ private:
     Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
+    bool webServerStarted_ = false;
     
 };

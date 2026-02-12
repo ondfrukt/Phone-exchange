@@ -2,7 +2,6 @@
 #include <functional>
 #include "settings/settings.h"
 #include "model/Types.h"
-#include "ConnectionMatrix.h"
 #include "util/UIConsole.h"
 #include "LineHandler.h"
 
@@ -20,9 +19,6 @@ public:
   void resetLineTimer(int index);
   void setPhoneNumber(int index, const String& value);
   int searchPhoneNumber(const String& phoneNumber);
-
-  // Connection management
-  ConnectionMatrix connectionMatrix;
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
   using ActiveLinesChangedCallback = std::function<void(uint8_t)>;

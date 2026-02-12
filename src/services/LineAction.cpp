@@ -2,9 +2,9 @@
 
 
 LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator, ToneReader& toneReader,
-            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3)
+            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3, ConnectionHandler& connectionHandler)
           : lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver), ringGenerator_(ringGenerator), toneReader_(toneReader),
-            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3) {
+            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3), connectionHandler_(connectionHandler) {
 };
 
 void LineAction::begin() {
@@ -16,105 +16,92 @@ void LineAction::begin() {
 // Main update loop to check for line status changes and timer expirations
 void LineAction::update() {
 
-  // Check if any hook status has changed
+  // First check for hook status changes and update line statuses accordingly
+  hookStatusCangeCheck();
+  // Then check for line status changes and handle actions
+  statusChangeCheck();
+  // Finally check for timer expirations and handle them
+  timerExpiredCheck();
+}
+
+// Check for hook status changes and update line status accordingly
+void LineAction::hookStatusCangeCheck() {
+
   if(lineManager_.lineHookChangeFlag != 0){
     uint8_t hookChanges = lineManager_.lineHookChangeFlag & settings_.activeLinesMask;
+
+    // loop through lines with hook status changes and update line status accordingly
     for (int index = 0; index < 8; ++index)
-        if (hookChanges & (1 << index)) {
-          lineManager_.lineHookChangeFlag &= ~(1 << index); // Clear the hook change flag
-          LineHandler& line = lineManager_.getLine(index);
+      if (hookChanges & (1 << index)) {
+        lineManager_.lineHookChangeFlag &= ~(1 << index); // Clear the hook change flag
+        LineHandler& line = lineManager_.getLine(index);
+        uint8_t incomingFrom = line.incomingFrom; // Store incomingFrom before any potential status changes
 
-          // Update line status based on hook state
+      // Update line status based on hook state
 
-          // ON -> OFF & Line status = Idle
-          if (line.previousHookStatus == model::HookStatus::On 
-            && line.currentHookStatus == model::HookStatus::Off 
-            && line.currentLineStatus == model::LineStatus::Idle) {
+      // Hook ON -> Hook OFF & Line status = Idle
+      if (line.previousHookStatus == model::HookStatus::On 
+        && line.currentHookStatus == model::HookStatus::Off 
+        && line.currentLineStatus == model::LineStatus::Idle) {
 
-            lineManager_.setStatus(index, model::LineStatus::Ready);
+        // New call - set status to Ready
+        lineManager_.setStatus(index, model::LineStatus::Ready);
+        
+      // Hook ON -> Hook OFF & Line status = Incoming
+      } else if (line.previousHookStatus == model::HookStatus::On
+        && line.currentHookStatus == model::HookStatus::Off
+        && line.currentLineStatus == model::LineStatus::Incoming) {
+
+        // Answer the call - set status to Connected and update connection info
+        lineManager_.setStatus(incomingFrom, model::LineStatus::Connected);
+        line.outgoingTo = incomingFrom;
+        lineManager_.getLine(incomingFrom).incomingFrom = index;
+        lineManager_.setStatus(index, model::LineStatus::Connected);
           
-          // ON -> OFF & Line status = Incoming
-          } else if (line.previousHookStatus == model::HookStatus::On 
-            && line.currentHookStatus == model::HookStatus::Off
-            && line.currentLineStatus == model::LineStatus::Incoming) {
-            
-            int incomingFrom = lineManager_.connectionMatrix.getConnectedLine(index);
+      // Hook OFF -> Hook ON & Line status = Connected
+      } else if (line.previousHookStatus == model::HookStatus::Off 
+        && line.currentHookStatus == model::HookStatus::On 
+        && line.currentLineStatus == model::LineStatus::Connected) {
+        
+        lineManager_.setStatus(incomingFrom, model::LineStatus::Disconnected);
+        lineManager_.setStatus(index, model::LineStatus::Idle);
 
-            // Establish connection
-            lineManager_.connectionMatrix.setConnection(incomingFrom, index, ConnectionMatrix::State:: Established);
-            lineManager_.setStatus(incomingFrom, LineStatus::Connected);
-            lineManager_.setStatus(index, LineStatus::Connected);
-            mt8816Driver_.SetAudioConnection(incomingFrom, index, true); // Connect audio between the two lines
+      // Hook OFF -> Hook ON & Line status = Disconnected (other party already hung up)
+      } else if (line.previousHookStatus == model::HookStatus::Off 
+        && line.currentHookStatus == model::HookStatus::On 
+        && line.currentLineStatus == model::LineStatus::Disconnected) {
+        
+        lineManager_.setStatus(index, model::LineStatus::Idle);
 
-          // OFF -> ON & Line status = Connected
-          } else if (line.previousHookStatus == model::HookStatus::Off 
-            && line.currentHookStatus == model::HookStatus::On 
-            && line.currentLineStatus == model::LineStatus::Connected) {
-            
-            int incomingFrom = lineManager_.connectionMatrix.getConnectedLine(index);
+      // OFF -> ON
+      } else {
+        lineManager_.setStatus(index, model::LineStatus::Idle);
+      }
 
-            Serial.print("Hanging up line ");
-            Serial.print(index);
-            Serial.print(" connected to line ");
-            Serial.println(incomingFrom);
-            
-            // Disconnect connection
-            lineManager_.connectionMatrix.setConnection(incomingFrom, index, ConnectionMatrix::State:: None);
-            lineManager_.setStatus(incomingFrom, LineStatus::Disconnected);
-            lineManager_.setStatus(index, LineStatus::Idle);
-            mt8816Driver_.SetAudioConnection(incomingFrom, index, false); // Connect audio between the two lines
-
-          // OFF -> ON & Line status = Disconnected (other party already hung up)
-          } else if (line.previousHookStatus == model::HookStatus::Off 
-            && line.currentHookStatus == model::HookStatus::On 
-            && line.currentLineStatus == model::LineStatus::Disconnected) {
-            
-            // User hung up while hearing disconnected tone - go directly to Idle
-            Serial.print("Line ");
-            Serial.print(index);
-            Serial.println(" hung up while in Disconnected state - going to Idle");
-            lineManager_.setStatus(index, LineStatus::Idle);
-
-          // OFF -> ON & Line status = Ringing (caller hangs up before answer)
-          } else if (line.previousHookStatus == model::HookStatus::Off 
-            && line.currentHookStatus == model::HookStatus::On 
-            && line.currentLineStatus == model::LineStatus::Ringing) {
-            
-            int calledLine = lineManager_.connectionMatrix.getConnectedLine(index);
-            
-            // Cancel the call
-            lineManager_.connectionMatrix.setConnection(calledLine, index, ConnectionMatrix::State::None);
-            lineManager_.setStatus(calledLine, LineStatus::Idle);
-            lineManager_.setStatus(index, LineStatus::Idle);
-            ringGenerator_.stopRingingLine(calledLine); // Stop ringing
-
-          // OFF -> ON
-          } else {
-            lineManager_.setStatus(index, model::LineStatus::Idle);
-          }
-
-          // Update previous hook status after processing the change
-          line.previousHookStatus = line.currentHookStatus;
-      } 
+      // Update previous hook status after processing the change
+      line.previousHookStatus = line.currentHookStatus;
+    } 
   }
+}
 
-
-  // Check if any line has changed status
+// Check for line status changes and handle actions
+void LineAction::statusChangeCheck() {
   if(lineManager_.lineStatusChangeFlag != 0){
     uint8_t changes = lineManager_.lineStatusChangeFlag & settings_.activeLinesMask;
     for (int index = 0; index < 8; ++index)
-        if (changes & (1 << index)) {
-          lineManager_.clearChangeFlag(index); // Clear the change flag
-
-          // Handle the action for the line
-          action(index);
+      if (changes & (1 << index)) {
+        lineManager_.clearChangeFlag(index); // Clear the change flag
+        // Handle the action for the line
+        action(index);
       } 
   }
-  // Check if any line timers have expired
+}
+
+// Check for timer expirations and handle them
+void LineAction::timerExpiredCheck() {
   if(lineManager_.activeTimersMask != 0){
     unsigned long currentTime = millis();
     uint8_t timers = lineManager_.activeTimersMask & settings_.activeLinesMask;
-    
 
     for (int index = 0; index < 8; ++index)
         if (timers & (1 << index)) {
@@ -154,7 +141,6 @@ void LineAction::action(int index) {
       
       // mqttHandler.publishMQTT(line, line_ready);
       startToneGenForStatus(line, model::ToneId::Ready);
-      mt8816Driver_.SetAudioConnection(index, cfg::mt8816::DTMF, true); // Open listening port for DTMF
       // lastLineReady = line;
       break;
     
@@ -237,7 +223,8 @@ void LineAction::action(int index) {
     
     case LineStatus::Connected:
       turnOffToneGenIfUsed(line);
-      ringGenerator_.stopRingingLine(index); // Stop ringing if active
+      ringGenerator_.stopRingingLine(index);
+      connectionHandler_.connectLines(index, line.incomingFrom);
 
     //   mqttHandler.publishMQTT(line, line_connected);
     //   // Setting for the calling line
@@ -258,6 +245,7 @@ void LineAction::action(int index) {
     case LineStatus::Disconnected:
       turnOffToneGenIfUsed(line);
       lineManager_.setLineTimer(index, settings_.timer_disconnected);
+      connectionHandler_.disconnectLines(index, line.incomingFrom);
 
     //   mqttHandler.publishMQTT(line, line_disconnected);
 
@@ -279,7 +267,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Incoming:
-      ringGenerator_.generateRingSignal(index);
+      //ringGenerator_.generateRingSignal(index);
       lineManager_.setLineTimer(index, settings_.timer_incomming); // Set timer for Incoming state
 
     //   mqttHandler.publishMQTT(line, line_incoming);
@@ -302,8 +290,8 @@ void LineAction::timerExpired(LineHandler& line) {
   LineStatus currentStatus = line.currentLineStatus;
 
   if (settings_.debugLALevel >= 1) {
-    Serial.println("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus));
-    util::UIConsole::log("LineAction: Timer expired for line " + String(index) + " in state " + model::toString(currentStatus), "LineAction");
+    Serial.println("LineAction: Timer expired for line " + String(index) + " in state " + model::LineStatusToString(currentStatus));
+    util::UIConsole::log("LineAction: Timer expired for line " + String(index) + " in state " + model::LineStatusToString(currentStatus), "LineAction");
   }
 
   switch (currentStatus) {
@@ -314,21 +302,31 @@ void LineAction::timerExpired(LineHandler& line) {
     case LineStatus::ToneDialing:
     case LineStatus::PulseDialing: 
       {
-          int lineCalled = lineManager_.searchPhoneNumber(line.dialedDigits);
-          Serial.print("lineCalled received: " + String(lineCalled) + "\n");
+
+        int lineCalled = lineManager_.searchPhoneNumber(line.dialedDigits);
+        Serial.print("LineAction: LineCalled received: " + String(lineCalled) + "\n");
 
       if (settings_.debugLALevel >= 1) {
         Serial.println("LineAction: ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled));
         util::UIConsole::log("ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled), "LineAction");
       }
       
-      // Check for special case of dialing own number
+      Serial.print ("LineAction: Checking index");
       if (lineCalled == index){
         Serial.println(RED "LineAction: Line " + String(index) + " dialed its own number. Setting to Fail." + COLOR_RESET);
         lineManager_.setStatus(index, LineStatus::Fail);
+        break;
       }
+
       // Check if a matching phone number was found
-      else if (lineCalled != -1){
+      if (lineCalled != -1){
+
+        // Check if the line that is being called is active
+        if (!lineManager_.getLine(lineCalled).lineActive){
+          Serial.println(RED "LineAction: Line " + String(lineCalled) + " is not active. Setting to Fail." + COLOR_RESET);
+          lineManager_.setStatus(index, LineStatus::Fail);
+          return;
+        }
         
         // Check if the called line is idle
         if (lineManager_.getLine(lineCalled).currentLineStatus != LineStatus::Idle){
@@ -337,11 +335,11 @@ void LineAction::timerExpired(LineHandler& line) {
           return;
         }
 
-        // Set up the connection and change statuses
-        lineManager_.connectionMatrix.setConnection(index, lineCalled, ConnectionMatrix::State:: Ringing);
+        // Changing status for the calling line and the called line to start the ringing process
+        line.outgoingTo = lineCalled;
+        lineManager_.getLine(lineCalled).incomingFrom = index;
         lineManager_.setStatus(index, LineStatus::Ringing);
         lineManager_.setStatus(lineCalled, LineStatus::Incoming);
-
       }
       // No matching phone number found
       else {
@@ -385,24 +383,66 @@ void LineAction::timerExpired(LineHandler& line) {
 
 // Start tone generator for specific line status
 void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
+  if (settings_.debugLALevel >= 2) {
+    Serial.println("LineAction: Starting tone generator for line " + String(line.lineNumber) + " with toneId " + ToneIdToString(status));
+    util::UIConsole::log("Starting tone generator for line " + String(line.lineNumber) + " with status " + ToneIdToString(status), "LineAction");
+  }
+
   if (!toneGen1_.isPlaying()){
     toneGen1_.startToneSequence(status);
-    line.toneGenUsed = 1;
+    line.toneGenUsed = cfg::mt8816::DAC1;
+    connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC1); // Connect line to tone generator 1
+    if (settings_.debugLALevel >= 2) {
+      Serial.println("LineAction: Tone generator 1 is free, using it for line " + String(line.lineNumber));
+      util::UIConsole::log("Tone generator 1 is free, using it for line " + String(line.lineNumber), "LineAction");
+    }
   }
   else if (!toneGen2_.isPlaying()){
     toneGen2_.startToneSequence(status);
-    line.toneGenUsed = 2;
+    line.toneGenUsed = cfg::mt8816::DAC2;
+    connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC2); // Connect line to tone generator 2
+    if (settings_.debugLALevel >= 2) {
+      Serial.println("LineAction: Tone generator 1 is busy, using tone generator 2 for line " + String(line.lineNumber));
+      util::UIConsole::log("Tone generator 1 is busy, using tone generator 2 for line " + String(line.lineNumber), "LineAction");
+    }
   }
   else if (!toneGen3_.isPlaying()){
     toneGen3_.startToneSequence(status);
-    line.toneGenUsed = 3;
+    line.toneGenUsed = cfg::mt8816::DAC3;
+    connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC3); // Connect line to tone generator 3
+    if (settings_.debugLALevel >= 2) {
+      Serial.println("LineAction: Tone generator 1 and 2 are busy, using tone generator 3 for line " + String(line.lineNumber));
+      util::UIConsole::log("Tone generator 1 and 2 are busy, using tone generator 3 for line " + String(line.lineNumber), "LineAction");
+    }
+  }
+  else {
+    Serial.println(RED "LineAction: All tone generators are busy! Cannot play tone for line " + String(line.lineNumber) + COLOR_RESET);
+    util::UIConsole::log("All tone generators are busy! Cannot play tone for line " + String(line.lineNumber), "LineAction");
   }
 }
 
 // Turn off tone generator if it is being used by the line
 void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
-  if (line.toneGenUsed != 0){
-    toneGenerators[line.toneGenUsed -1]->stop();
-    line.toneGenUsed = 0;
+  if (line.toneGenUsed == 0) {
+    return;
   }
+
+  switch (line.toneGenUsed) {
+    case cfg::mt8816::DAC1:
+      toneGen1_.stop();
+      break;
+    case cfg::mt8816::DAC2:
+      toneGen2_.stop();
+      break;
+    case cfg::mt8816::DAC3:
+      toneGen3_.stop();
+      break;
+    default:
+      // Invalid mapping, clear state to avoid repeated faults.
+      line.toneGenUsed = 0;
+      return;
+  }
+
+  connectionHandler_.disconnectAudioToLine(line.lineNumber, line.toneGenUsed); // Disconnect line from tone generator
+  line.toneGenUsed = 0;
 }

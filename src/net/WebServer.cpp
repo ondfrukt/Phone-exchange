@@ -10,6 +10,7 @@ WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClie
 bool WebServer::begin() {
 
   setupFilesystem_();
+  Serial.printf("WebServer: LittleFS mount %s\n", fsMounted_ ? "OK" : "FAILED");
   // Initialize Console buffering (safe to call even if already init'd)
   util::UIConsole::init(200);
 
@@ -24,6 +25,8 @@ bool WebServer::begin() {
 
   server_.begin();
   serverStarted_ = true;
+  Serial.printf("WebServer: HTTP server started on port %u\n", 80u);
+  Serial.printf("WebServer: Current IP is %s\n", wifi_.getIp().c_str());
 
   // Bind console sink after server is started so messages are forwarded to SSE
   bindConsoleSink_();
@@ -87,7 +90,7 @@ void WebServer::setupLineManagerCallback_() {
     // Only send SSE if there are connected clients
     if (events_.count() > 0) {
       String json = "{\"line\":" + String(index) +
-                    ",\"status\":\"" + model::toString(status) + "\"}";
+                    ",\"status\":\"" + model::LineStatusToString(status) + "\"}";
       events_.send(json.c_str(), "lineStatus", millis());
     }
   });

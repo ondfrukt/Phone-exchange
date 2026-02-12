@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "config.h"
 #include "drivers/MCPDriver.h"
-#include "settings.h"
+#include "Settings.h"
 #include "model/Types.h"
 
 class LineManager;

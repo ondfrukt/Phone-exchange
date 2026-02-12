@@ -5,7 +5,7 @@ App::App()
   : mcpDriver_(),
     interruptManager_(mcpDriver_, Settings::instance()),
     mt8816Driver_(mcpDriver_, Settings::instance()),
-
+    connectionHandler_(mt8816Driver_, Settings::instance()),
     toneGenerator1_(cfg::ESP_PINS::CS1_PIN),
     toneGenerator2_(cfg::ESP_PINS::CS2_PIN),
     toneGenerator3_(cfg::ESP_PINS::CS3_PIN),
@@ -15,7 +15,7 @@ App::App()
     ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
     SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance(), ringGenerator_),
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_, toneReader_,
-                toneGenerator1_, toneGenerator2_, toneGenerator3_),
+                toneGenerator1_, toneGenerator2_, toneGenerator3_, connectionHandler_),
 
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
     functions_(interruptManager_, mcpDriver_) {
@@ -62,7 +62,12 @@ void App::begin() {
     // --- Net and webserver ---
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
-    webServer_.begin();
+    Serial.println("App: Deferring WebServer start until WiFi has IP");
+
+    mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
+    mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
+    mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
+
 }
 
 void App::loop() {
@@ -76,6 +81,15 @@ void App::loop() {
   interruptManager_.collectInterrupts();
   
   wifiClient_.loop();   // Handle WiFi events and connection
+  if (!webServerStarted_ && wifiClient_.isConnected()) {
+    Serial.println("App: WiFi connected, starting WebServer...");
+    const bool webReady = webServer_.begin();
+    webServerStarted_ = true;
+    Serial.printf("App: WebServer ready=%s (server+LittleFS)\n", webReady ? "true" : "false");
+    if (!webReady) {
+      Serial.println("App: Web UI may be unavailable. Check LittleFS upload.");
+    }
+  }
   lineAction_.update(); // Check for line status changes and timers
   SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones
@@ -85,73 +99,6 @@ void App::loop() {
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();
   if (toneGenerator3_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator3_.update();
 
-  //GPIOTest(cfg::mcp::MCP_SLIC1_ADDRESS, cfg::mcp::SHK_04);
-  GPIOTest(cfg::mcp::MCP_MAIN_ADDRESS, cfg::mcp::FUNCTION_BUTTON);
+  functions_.update(); // Run any utility functions
 
-}
-
-void App::GPIOTest(uint8_t addr, int pin) {
-  struct PinWatch {
-    bool used = false;
-    uint8_t addr = 0;
-    int pin = -1;
-    bool value = false;
-    bool initialized = false;
-    uint32_t lastSampleMs = 0;
-  };
-
-  static PinWatch watched[8];
-
-  PinWatch* slot = nullptr;
-  for (auto& entry : watched) {
-    if (entry.used && entry.addr == addr && entry.pin == pin) {
-      slot = &entry;
-      break;
-    }
-  }
-
-  if (!slot) {
-    for (auto& entry : watched) {
-      if (!entry.used) {
-        entry.used = true;
-        entry.addr = addr;
-        entry.pin = pin;
-        slot = &entry;
-        break;
-      }
-    }
-  }
-
-  if (!slot) return;
-
-  // Important for MCP interrupt debugging:
-  // reading GPIO acknowledges/clears pending interrupts on MCP23x17.
-  // Keep sampling rate low so INT remains asserted long enough to observe.
-  constexpr uint32_t kSampleIntervalMs = 150;
-  uint32_t nowMs = millis();
-  if ((nowMs - slot->lastSampleMs) < kSampleIntervalMs) {
-    return;
-  }
-  slot->lastSampleMs = nowMs;
-
-  bool currentValue = false;
-  if (!mcpDriver_.digitalReadMCP(addr, static_cast<uint8_t>(pin), currentValue)) {
-    return;
-  }
-
-  if (!slot->initialized) {
-    slot->value = currentValue;
-    slot->initialized = true;
-    return;
-  }
-
-  if (slot->value != currentValue) {
-    slot->value = currentValue;
-    Serial.print(F("GPIOTest addr=0x"));
-    Serial.print(addr, HEX);
-    Serial.print(F(" pin="));
-    Serial.print(pin);
-    Serial.print(F(" state="));
-    Serial.println(currentValue ? F("HIGH") : F("LOW"));
-  }
 }

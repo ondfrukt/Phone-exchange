@@ -36,6 +36,16 @@ namespace model {
     Fail    // Fail tone played
   };
 
+  inline const char* ToneIdToString(ToneId id) {
+    switch (id) {
+      case ToneId::Ready: return "Ready";
+      case ToneId::Ring:  return "Ring";
+      case ToneId::Busy:  return "Busy";
+      case ToneId::Fail:  return "Fail";
+      default:            return "Unknown";
+    }
+  }
+
   // Ringing state machine
   enum class RingState {
     RingIdle,
@@ -43,8 +53,17 @@ namespace model {
     RingPause      // Pause between rings
   };
 
+  inline const char* RingStateToString(RingState state) {
+    switch (state) {
+      case RingState::RingIdle:     return "RingIdle";
+      case RingState::RingToggling: return "RingToggling";
+      case RingState::RingPause:    return "RingPause";
+      default:                     return "Unknown";
+    }
+  }
+
   // Function to convert line status enum to string
-  inline const char* toString(LineStatus st) {
+  inline const char* LineStatusToString(LineStatus st) {
     switch (st) {
       case LineStatus::Idle:          return "Idle";
       case LineStatus::Ready:         return "Ready";
@@ -60,6 +79,8 @@ namespace model {
       case LineStatus::Incoming:      return "Incoming";
       case LineStatus::Operator:      return "Operator";
       case LineStatus::SystemConfig:  return "Config";
+
+      
       default:                        return "unknown";
       }
   }
