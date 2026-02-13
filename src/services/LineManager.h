@@ -33,13 +33,14 @@ public:
   uint8_t lineHookChangeFlag;   // Bitmask for lines with hook status changes
   uint8_t activeTimersMask;     // Bitmask for active line timers
   uint8_t linesNotIdle;         // Bitmask for lines that are not Idle
+  uint8_t toneScanMask;         // Bitmask for lines that should be scanned for tones
 
   int lastLineReady;   // Most recent line that became Ready (for toneReader)
 
 private:
   // The vector that holds all LineHandler instances
   std::vector<LineHandler> lines;
-
+  
   Settings& settings_;
   ToneReader* toneReader_ = nullptr;
   StatusChangedCallback pushStatusChanged_{nullptr};

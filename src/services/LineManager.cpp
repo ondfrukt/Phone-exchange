@@ -16,10 +16,11 @@ LineManager::LineManager(Settings& settings)
     lines.back().lineActive = isActive;
   }
   lineStatusChangeFlag = 0;     // Intiate to zero (no changes)
-  lineHookChangeFlag = 0; // Intiate to zero (no hook changes)
-  activeTimersMask = 0;   // Intiate to zero (no active timers)
-  linesNotIdle = 0;       // Intiate to zero (all lines idle)
-  lastLineReady = -1;     // No line is ready at start
+  lineHookChangeFlag = 0;       // Intiate to zero (no hook changes)
+  activeTimersMask = 0;         // Intiate to zero (no active timers)
+  linesNotIdle = 0;             // Intiate to zero (all lines idle)
+  lastLineReady = -1;           // No line is ready at start
+  toneScanMask = 0;             // Intiate to zero (no lines to scan for tones)
 }
 
 void LineManager::begin() {
@@ -27,8 +28,6 @@ void LineManager::begin() {
     line.lineIdle();
   }
 }
-
-
 
 void LineManager::syncLineActive(size_t i) {
   auto& settings_ = Settings::instance();
@@ -64,41 +63,46 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   resetLineTimer(index); // Reset any existing timer for this line
 
 
-  // Handle specific actions based on new status
-  if (newStatus == LineStatus::Idle) {
-    
-    // Reset line variables when setting to Idle
-    lines[index].lineIdle();
+  // Setting up bitmasks and handling tone reader activation based on the new status
+  switch (newStatus) {
+    case LineStatus::Idle:
+      lines[index].lineIdle();          // Reset line variables when setting to Idle
+      linesNotIdle &= ~(1 << index);    // Clear the bit for this line
+      toneScanMask &= ~(1 << index);    // Clear the bit to stop scanning this line for tones
+      if (lastLineReady == index) {     // Reset lastLineReady if this was the line that was last ready
+        lastLineReady = -1;
+      }
 
-    // Clear the bit for this line
-    linesNotIdle &= ~(1 << index);
+      // Deactivate MT8870 if no lines are active
+      if (linesNotIdle == 0 && toneReader_ != nullptr) {  
+        toneReader_->deactivate();
+      }
+      break;
     
-    // Reset lastLineReady if this was the line that was last ready
-    if (lastLineReady == index) {
-      lastLineReady = -1;
-    }
-    // Deactivate MT8870 if no lines are active
-    if (linesNotIdle == 0 && toneReader_ != nullptr) {
-      toneReader_->deactivate();
-    }
+      case LineStatus::Ready:
+      lastLineReady = index;             // Update the most recent Ready line
+      linesNotIdle |= (1 << index);      // Set the bit for this line
+      toneScanMask |= (1 << index);      // Set the bit to scan this line for tones
 
+      // Activate MT8870 if not already active
+      if (toneReader_ != nullptr && !toneReader_->isActive) {
+        toneReader_->activate();
+      }
+      
+      break;
+    case LineStatus::PulseDialing:
+      toneScanMask |= (1 << index);      // Set the bit to scan this line for tones
+      break;
+  
+    default:
+      linesNotIdle &= ~(1 << index);     // Clear the bit for this line since we do not need to scan for 
+                                         // tones in lines that are not Ready or PulseDialing
+      break;
   }
-  else if (newStatus == LineStatus::Ready) {
-    lastLineReady = index;                   // Update the most recent Ready line
-    linesNotIdle |= (1 << index);            // Set the bit for this line
-    
-    // Activate MT8870 if not already active
-    if (toneReader_ != nullptr && !toneReader_->isActive) {
-      toneReader_->activate();
-    }
 
-  }
-  else {
-    linesNotIdle |= (1 << index);           // Set the bit for this line
-  } 
-
-  lineStatusChangeFlag |= (1 << index);           // Set the change flag for the specified line
-
+  // No matther what the new status is, we want to set the lineStatusChangeFlag so that LineAction 
+  // can handle any necessary actions based on the new status
+  lineStatusChangeFlag |= (1 << index);           
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
   if (settings_.debugLmLevel >= 0) {
