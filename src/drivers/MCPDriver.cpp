@@ -17,6 +17,7 @@ static constexpr uint8_t REG_DEFVALA   = 0x06;
 static constexpr uint8_t REG_DEFVALB   = 0x07;
 static constexpr uint8_t REG_GPPUA     = 0x0C;
 static constexpr uint8_t REG_GPPUB     = 0x0D;
+static constexpr uint8_t REG_OLATA     = 0x14;
 
 // Split a PinModeEntry table into separate mode and initial-value arrays
 static void splitPinTable(const cfg::mcp::PinModeEntry (&tbl)[16], uint8_t (&modes)[16], bool (&initial)[16]) {
@@ -269,6 +270,27 @@ bool MCPDriver::digitalReadMCP(uint8_t addr, uint8_t pin, bool& out) {
 
   out = m->digitalRead(pin);
   return true;
+}
+
+// Update TMUX address lines on MCP_MAIN GPA0..GPA2 in one register write.
+// Keeps GPA3..GPA7 unchanged.
+bool MCPDriver::writeMainTmuxAddress(uint8_t sel) {
+  if (!haveMain_) return false;
+
+  uint8_t oldA = 0;
+  if (!readReg8_OK_(cfg::mcp::MCP_MAIN_ADDRESS, REG_OLATA, oldA)) {
+    if (!readReg8_OK_(cfg::mcp::MCP_MAIN_ADDRESS, REG_GPIOA, oldA)) {
+      return false;
+    }
+  }
+
+  const uint8_t newA = static_cast<uint8_t>((oldA & static_cast<uint8_t>(~0x07u)) |
+                                            (sel & 0x07u));
+  if (newA == oldA) {
+    return true;
+  }
+
+  return writeReg8_(cfg::mcp::MCP_MAIN_ADDRESS, REG_OLATA, newA);
 }
 
 // Interrupt service routines for each MCP device (thunks set flags)

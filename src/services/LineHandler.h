@@ -16,6 +16,7 @@ public:
     String placement;    
     LineStatus currentLineStatus;       // Current status of the line
     LineStatus previousLineStatus;      // Previous status for the line
+    uint8_t tmuxAddress[3];             // TMUX address for the line (if used)
 
     int incomingFrom;                   // Incoming call from
     int outgoingTo;                     // Outgoing call to

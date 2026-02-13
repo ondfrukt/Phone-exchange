@@ -242,4 +242,17 @@ namespace cfg {
     constexpr uint8_t  DAC3 = 13;
     constexpr uint8_t  D_OUTL = 12;
   }
+
+  namespace TMUX4051 {
+    constexpr uint8_t S0[3] = {0,0,0};
+    constexpr uint8_t S1[3] = {0,0,1};
+    constexpr uint8_t S2[3] = {0,1,0};
+    constexpr uint8_t S3[3] = {0,1,1};
+    constexpr uint8_t S4[3] = {1,0,0};
+    constexpr uint8_t S5[3] = {1,0,1};
+    constexpr uint8_t S6[3] = {1,1,0};
+    constexpr uint8_t S7[3] = {1,1,1};
+
+    constexpr const uint8_t* TMUXAddresses[8] = { S0, S1, S2, S3, S4, S5, S6, S7 };
+  }
 }

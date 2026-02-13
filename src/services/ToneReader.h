@@ -13,9 +13,12 @@ class ToneReader {
     void update();
     void activate();
     void deactivate();
-    bool isActive;
+    void toneScan();
+    bool isActive = false;
 
   private:
+    static constexpr unsigned long TMUX_SCAN_DWELL_MS = 3;
+
     InterruptManager& interruptManager_;
     MCPDriver& mcpDriver_;
     Settings& settings_;
@@ -27,6 +30,10 @@ class ToneReader {
     unsigned long lastDtmfTime_ = 0;
     uint8_t lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
     bool lastStdLevel_ = false;
+    int scanCursor_ = -1;
+    int currentScanLine_ = -1;
+    int stdLineIndex_ = -1;
+    unsigned long lastTmuxSwitchAtMs_ = 0;
     
     // STD signal stability tracking
     unsigned long stdRisingEdgeTime_ = 0;  // When STD went high

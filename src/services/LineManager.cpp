@@ -10,7 +10,6 @@ LineManager::LineManager(Settings& settings)
   auto& s = Settings::instance();   // singleton
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
-
     lines.back().phoneNumber = s.linePhoneNumbers[i];
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
@@ -73,14 +72,16 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
         lastLineReady = -1;
       }
 
-      // Deactivate MT8870 if no lines are active
-      if (linesNotIdle == 0 && toneReader_ != nullptr) {  
+      // Deactivate MT8870 if no lines need tone scanning
+      if (toneScanMask == 0 && toneReader_ != nullptr) {  
         toneReader_->deactivate();
       }
       break;
     
-      case LineStatus::Ready:
-      lastLineReady = index;             // Update the most recent Ready line
+    case LineStatus::Ready:
+    case LineStatus::ToneDialing:
+    case LineStatus::PulseDialing:
+      lastLineReady = index;             // Update the most recent line used for tone scanning
       linesNotIdle |= (1 << index);      // Set the bit for this line
       toneScanMask |= (1 << index);      // Set the bit to scan this line for tones
 
@@ -88,15 +89,15 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
       if (toneReader_ != nullptr && !toneReader_->isActive) {
         toneReader_->activate();
       }
-      
-      break;
-    case LineStatus::PulseDialing:
-      toneScanMask |= (1 << index);      // Set the bit to scan this line for tones
       break;
   
     default:
       linesNotIdle &= ~(1 << index);     // Clear the bit for this line since we do not need to scan for 
                                          // tones in lines that are not Ready or PulseDialing
+      toneScanMask &= ~(1 << index);
+      if (toneScanMask == 0 && toneReader_ != nullptr) {
+        toneReader_->deactivate();
+      }
       break;
   }
 
