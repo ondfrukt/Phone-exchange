@@ -26,17 +26,18 @@ void Settings::resetDefaults() {
   activeLinesMask       = 0b11111111;
 
   // -- Debug levels ---
-  debugSHKLevel         = 2;
-  debugLmLevel          = 2;
-  debugWSLevel          = 0;
-  debugLALevel          = 2;
-  debugMTLevel          = 2;
-  debugTRLevel          = 0;
-  debugMCPLevel         = 0;
-  debugI2CLevel         = 0;
-  debugTonGenLevel      = 0; 
-  debugRGLevel          = 0;
-  debugIMLevel          = 0;
+  debugSHKLevel         = 0; // Debug for SHKService
+  debugLmLevel          = 0; // Debug for LineManager
+  debugWSLevel          = 0; // Debug for WebServer
+  debugLALevel          = 0; // Debug for LineAction
+  debugMTLevel          = 0; // Debug for MT8816Driver
+  debugTRLevel          = 0; // Debug for ToneReader
+  debugMCPLevel         = 0; // Debug for MCPDriver
+  debugI2CLevel         = 0; // Debug for I2C
+  debugTonGenLevel      = 0; // Debug for ToneGenerator
+  debugRGLevel          = 0; // Debug for RingGenerator
+  debugIMLevel          = 0; // Debug for InterruptManager
+  debugLAC              = 0; // Debug for LineAudioConnections
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
@@ -63,9 +64,10 @@ void Settings::resetDefaults() {
   ringIterations        = 1;    // Iterations of ringing signal
 
   // --- ToneReader (DTMF) settings ---
-  dtmfDebounceMs        = 150;   // 150ms debounce between same digit detections
-  dtmfMinToneDurationMs = 40;    // Minimum 40ms tone duration (MT8870 spec: 40ms typical)
-  dtmfStdStableMs       = 15;    // STD signal must be stable for 15ms before reading Q pins
+  dtmfDebounceMs        = 100;   // Debounce time for DTMF detection (minimum time between detections of the same digit)
+  dtmfMinToneDurationMs = 25;    // Minimum duration of a valid DTMF tone (ms)
+  dtmfStdStableMs       = 15;    // Stability time for STD signal during DTMF detection (ms)
+  tmuxScanDwellMinMs    = 35;    // Minimum time to dwell on a line during TMUX scanning (ms)
 
   // --- Timers ---
   timer_Ready           = 240000;
@@ -116,6 +118,7 @@ bool Settings::load() {
     debugTonGenLevel      = prefs.getUChar ("debugTonGen", debugTonGenLevel);
     debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
     debugIMLevel          = prefs.getUChar ("debugIM",     debugIMLevel);
+    debugLAC              = prefs.getUChar ("debugLAC",    debugLAC);
   
 
     // --- Other settings ---    
@@ -137,6 +140,7 @@ bool Settings::load() {
     dtmfDebounceMs        = prefs.getUInt ("dtmfDebounce",      dtmfDebounceMs);
     dtmfMinToneDurationMs = prefs.getUInt ("dtmfMinTone",       dtmfMinToneDurationMs);
     dtmfStdStableMs       = prefs.getUInt ("dtmfStdStable",     dtmfStdStableMs);
+    tmuxScanDwellMinMs    = prefs.getUInt ("tmuxDwellMin",      tmuxScanDwellMinMs);
 
     // --- Timers ---
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
@@ -183,6 +187,7 @@ void Settings::save() const {
   prefs.putUChar ("debugTonGen",          debugTonGenLevel);
   prefs.putUChar ("debugRG",              debugRGLevel);
   prefs.putUChar ("debugIM",              debugIMLevel);
+  prefs.putUChar ("debugLAC",             debugLAC);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",           burstTickMs);
@@ -203,6 +208,7 @@ void Settings::save() const {
   prefs.putUInt ("dtmfDebounce",          dtmfDebounceMs);
   prefs.putUInt ("dtmfMinTone",           dtmfMinToneDurationMs);
   prefs.putUInt ("dtmfStdStable",         dtmfStdStableMs);
+  prefs.putUInt ("tmuxDwellMin",          tmuxScanDwellMinMs);
 
 
   // --- Timers ---

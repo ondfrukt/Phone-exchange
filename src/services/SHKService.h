@@ -7,7 +7,7 @@
 #include "drivers/InterruptManager.h"
 #include "drivers/MCPDriver.h"
 #include "services/RingGenerator.h"
-#include "settings.h"
+#include "settings/Settings.h"
 #include "model/Types.h"
 
 class SHKService {

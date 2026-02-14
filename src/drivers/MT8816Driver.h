@@ -9,11 +9,14 @@ class MT8816Driver {
   public:
     MT8816Driver(MCPDriver& mcpDriver, Settings& settings);
     void begin();
-    void SetConnection(uint8_t x, uint8_t y, bool state);
-    void setAddress(uint8_t x, uint8_t y);
+    void setConnection(uint8_t x, uint8_t y, bool state);
+    
+
   private:
-    void strobe();
+  
+    void setAddress(uint8_t x, uint8_t y);
     void reset();
+
     MCPDriver& mcpDriver_;
     Settings& settings_;
 };

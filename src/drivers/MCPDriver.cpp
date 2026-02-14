@@ -17,6 +17,7 @@ static constexpr uint8_t REG_DEFVALA   = 0x06;
 static constexpr uint8_t REG_DEFVALB   = 0x07;
 static constexpr uint8_t REG_GPPUA     = 0x0C;
 static constexpr uint8_t REG_GPPUB     = 0x0D;
+static constexpr uint8_t REG_OLATA     = 0x14;
 
 // Split a PinModeEntry table into separate mode and initial-value arrays
 static void splitPinTable(const cfg::mcp::PinModeEntry (&tbl)[16], uint8_t (&modes)[16], bool (&initial)[16]) {
@@ -92,24 +93,12 @@ bool MCPDriver::begin() {
 
   // Print MCP detection status
   if (settings.debugMCPLevel >= 1) {
-    Serial.println(F("MCP init:"));
-    util::UIConsole::log("MCP init:", "MCPDriver");
-    Serial.println(haveMain_   ? F(" - MCP_MAIN   hittad") : F(" - MCP_MAIN   saknas"));
-    util::UIConsole::log(String(haveMain_ ? " - MCP_MAIN   hittad" : " - MCP_MAIN   saknas"), "MCPDriver");
-    Serial.println(haveSlic1_  ? F(" - MCP_SLIC1  hittad") : F(" - MCP_SLIC1  saknas"));
-    util::UIConsole::log(String(haveSlic1_ ? " - MCP_SLIC1  hittad" : " - MCP_SLIC1  saknas"), "MCPDriver");
-    Serial.println(haveSlic2_  ? F(" - MCP_SLIC2  hittad") : F(" - MCP_SLIC2  saknas"));
-    util::UIConsole::log(String(haveSlic2_ ? " - MCP_SLIC2  hittad" : " - MCP_SLIC2  saknas"), "MCPDriver");
-    Serial.println(haveMT8816_ ? F(" - MCP_MT8816 hittad") : F(" - MCP_MT8816 saknas"));
-    util::UIConsole::log(String(haveMT8816_ ? " - MCP_MT8816 hittad" : " - MCP_MT8816 saknas"), "MCPDriver");
+    Serial.println(F("MCP init"));
   }
 
   // Abort if no MCP found
   if (!(haveMain_ || haveSlic1_ || haveSlic2_ || haveMT8816_ )) {
-    if (settings.debugMCPLevel >= 1) {
-      Serial.println(F("Ingen MCP hittades, avbryter."));
-      util::UIConsole::log("Ingen MCP hittades, avbryter.", "MCPDriver");
-    }
+    Serial.println(F("Ingen MCP hittades, avbryter."));
     return false;
   }
 
@@ -162,65 +151,61 @@ bool MCPDriver::begin() {
     enableMainInterrupts_(cfg::mcp::MCP_MAIN_ADDRESS, mcpMain_);
     if (settings.debugMCPLevel >= 3) dumpIntRegs("MAIN AFTER", cfg::mcp::MCP_MAIN_ADDRESS);
   }
+  // ...existing code...
   // Configure MCP_SLIC1 pins
   if (haveSlic1_) {
+    // ...existing code...
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_SLIC, modes, initial);
     if (!applyPinModes_(mcpSlic1_, modes, initial)) {
-      if (settings.debugMCPLevel >= 1) Serial.println(F("Fel vid konfiguration av SLIC1 pinlägen"));
+      Serial.println(F("Fel vid konfiguration av SLIC1 pinlägen"));
       return false;
     }
   }
 
   // Configure MCP_SLIC2 pins
+  // ...existing code...
   if (haveSlic2_) {
+    // ...existing code...
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_SLIC, modes, initial);
     if (!applyPinModes_(mcpSlic2_, modes, initial)) {
-      if (settings.debugMCPLevel >= 1) Serial.println(F("Fel vid konfiguration av SLIC2 pinlägen"));
+      Serial.println(F("Fel vid konfiguration av SLIC2 pinlägen"));
       return false;
     }
   }
 
   // Configure MCP_MT8816 pins
+  // ...existing code...
   if (haveMT8816_) {
+    // ...existing code...
     uint8_t modes[16]; bool initial[16];
     splitPinTable(mcp::MCP_MT8816, modes, initial);
     if (!applyPinModes_(mcpMT8816_, modes, initial)) {
-      if (settings.debugMCPLevel >= 1) Serial.println(F("Fel vid konfiguration av MT8816 pinlägen"));
+      Serial.println(F("Fel vid konfiguration av MT8816 pinlägen"));
       return false;
     }
     programIOCON(cfg::mcp::MCP_MT8816_ADDRESS, 0x4A);
-    if (settings.debugMCPLevel >= 3) dumpIntRegs("MT8816 AFTER", cfg::mcp::MCP_MT8816_ADDRESS);
+    // ...existing code...
   }
 
   // ------------------------------------------------------------
   // Configure interrupts
   // ------------------------------------------------------------
 
-  // SLIC1 interrupt configuration
   if (haveSlic1_) {
     // SLIC: active-low, open-drain, mirrored interrupts
     programIOCON(cfg::mcp::MCP_SLIC1_ADDRESS, 0x44);
-
-    if (settings.debugMCPLevel >= 3) dumpIntRegs("SLIC1 BEFORE", cfg::mcp::MCP_SLIC1_ADDRESS);
     enableSlicShkInterrupts_(cfg::mcp::MCP_SLIC1_ADDRESS, mcpSlic1_);
-    if (settings.debugMCPLevel >= 3) dumpIntRegs("SLIC1 AFTER ", cfg::mcp::MCP_SLIC1_ADDRESS);
-
     // Clear any pending interrupt latches (important: reading INTCAP or GPIO clears INT)
     uint16_t dummy = 0;
     (void)readRegPair16_OK_(cfg::mcp::MCP_SLIC1_ADDRESS, REG_INTCAPA, dummy);
     (void)readRegPair16_OK_(cfg::mcp::MCP_SLIC1_ADDRESS, REG_GPIOA,   dummy);
   }
 
-  // SLIC2 interrupt configuration
   if (haveSlic2_) {
     programIOCON(cfg::mcp::MCP_SLIC2_ADDRESS, 0x44);
-
-    if (settings.debugMCPLevel >= 3) dumpIntRegs("SLIC2 BEFORE", cfg::mcp::MCP_SLIC2_ADDRESS);
     enableSlicShkInterrupts_(cfg::mcp::MCP_SLIC2_ADDRESS, mcpSlic2_);
-    if (settings.debugMCPLevel >= 3) dumpIntRegs("SLIC2 AFTER ", cfg::mcp::MCP_SLIC2_ADDRESS);
-
     uint16_t dummy = 0;
     (void)readRegPair16_OK_(cfg::mcp::MCP_SLIC2_ADDRESS, REG_INTCAPA, dummy);
     (void)readRegPair16_OK_(cfg::mcp::MCP_SLIC2_ADDRESS, REG_GPIOA,   dummy);
@@ -233,42 +218,21 @@ bool MCPDriver::begin() {
     pinMode(mcp::MCP_MAIN_INT_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_MAIN_INT_PIN),
                        &MCPDriver::isrMainThunk, this, FALLING);
-    if (settings.debugMCPLevel >= 2) {
-      Serial.print(F("MCP INT: MCP_MAIN interrupt attached to ESP32 pin "));
-      Serial.println(mcp::MCP_MAIN_INT_PIN);
-      util::UIConsole::log("MCP INT: MCP_MAIN interrupt attached to ESP32 pin " +
-                           String(mcp::MCP_MAIN_INT_PIN), "MCPDriver");
-    }
   }
 
   if (haveSlic1_) {
     pinMode(mcp::MCP_SLIC_INT_1_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_1_PIN),
                        &MCPDriver::isrSlic1Thunk, this, FALLING);
-    if (settings.debugMCPLevel >= 2) {
-      Serial.print(F("MCP INT: MCP_SLIC1 interrupt attached to ESP32 pin "));
-      Serial.println(mcp::MCP_SLIC_INT_1_PIN);
-      util::UIConsole::log("MCP INT: MCP_SLIC1 interrupt attached to ESP32 pin " +
-                           String(mcp::MCP_SLIC_INT_1_PIN), "MCPDriver");
-    }
   }
   
   if (haveSlic2_) {
     pinMode(mcp::MCP_SLIC_INT_2_PIN, INPUT_PULLUP);
     attachInterruptArg(digitalPinToInterrupt(mcp::MCP_SLIC_INT_2_PIN),
                        &MCPDriver::isrSlic2Thunk, this, FALLING);
-    if (settings.debugMCPLevel >= 2) {
-      Serial.print(F("MCP INT: MCP_SLIC2 interrupt attached to ESP32 pin "));
-      Serial.println(mcp::MCP_SLIC_INT_2_PIN);
-      util::UIConsole::log("MCP INT: MCP_SLIC2 interrupt attached to ESP32 pin " +
-                           String(mcp::MCP_SLIC_INT_2_PIN), "MCPDriver");
-    }
   }
 
-  if (settings.debugMCPLevel >= 1) {
-    Serial.println(F("MCP init: All interrupts configured successfully"));
-    util::UIConsole::log("MCP init: All interrupts configured successfully", "MCPDriver");
-  }
+  // ...existing code...
   return true;
 }
 
@@ -306,6 +270,27 @@ bool MCPDriver::digitalReadMCP(uint8_t addr, uint8_t pin, bool& out) {
 
   out = m->digitalRead(pin);
   return true;
+}
+
+// Update TMUX address lines on MCP_MAIN GPA0..GPA2 in one register write.
+// Keeps GPA3..GPA7 unchanged.
+bool MCPDriver::writeMainTmuxAddress(uint8_t sel) {
+  if (!haveMain_) return false;
+
+  uint8_t oldA = 0;
+  if (!readReg8_OK_(cfg::mcp::MCP_MAIN_ADDRESS, REG_OLATA, oldA)) {
+    if (!readReg8_OK_(cfg::mcp::MCP_MAIN_ADDRESS, REG_GPIOA, oldA)) {
+      return false;
+    }
+  }
+
+  const uint8_t newA = static_cast<uint8_t>((oldA & static_cast<uint8_t>(~0x07u)) |
+                                            (sel & 0x07u));
+  if (newA == oldA) {
+    return true;
+  }
+
+  return writeReg8_(cfg::mcp::MCP_MAIN_ADDRESS, REG_OLATA, newA);
 }
 
 // Interrupt service routines for each MCP device (thunks set flags)

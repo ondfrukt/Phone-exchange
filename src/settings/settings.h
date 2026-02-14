@@ -36,6 +36,7 @@ public:
   uint8_t debugTonGenLevel;       // 0=none, 1=low, 2=high Debug level for ToneGenerator
   uint8_t debugRGLevel;           // 0=none, 1=low, 2=high Debug level for RingGenerator
   uint8_t debugIMLevel;           // 0=none, 1=low, 2=high Debug level for InterruptManager
+  uint8_t debugLAC;               // 0=none, 1=low, 2=high Debug level for LineAudioConnections   
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 
@@ -60,6 +61,7 @@ public:
   uint32_t dtmfDebounceMs;        // Minimum time between detections of the same digit (ms)
   uint32_t dtmfMinToneDurationMs; // Minimum tone duration to accept as valid (ms)
   uint32_t dtmfStdStableMs;       // Minimum time STD signal must be stable before reading (ms)
+  uint32_t tmuxScanDwellMinMs;    // Minimum TMUX dwell time per scanned line (ms)
 
   uint8_t allowMask;
 

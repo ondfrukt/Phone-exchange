@@ -21,8 +21,16 @@ void ToneReader::activate()
   lastStdLevel_ = false;
   stdRisingEdgePending_ = false;
   stdRisingEdgeTime_ = 0;
-  lastDtmfTime_ = 0;
-  lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
+  for (int i = 0; i < 8; ++i) {
+    lastDtmfTimeByLine_[i] = 0;
+    lastDtmfNibbleByLine_[i] = INVALID_DTMF_NIBBLE;
+  }
+  scanCursor_ = -1;
+  currentScanLine_ = -1;
+  stdLineIndex_ = -1;
+  lastTmuxSwitchAtMs_ = 0;
+  scanPauseLogged_ = false;
+  lastLoggedScanMask_ = 0xFF;
   
   // Clear any pending STD interrupts that might have accumulated
   int clearedCount = 0;
@@ -54,36 +62,58 @@ void ToneReader::deactivate()
   lastStdLevel_ = false;
   stdRisingEdgePending_ = false;
   stdRisingEdgeTime_ = 0;
+  currentScanLine_ = -1;
+  stdLineIndex_ = -1;
+  scanPauseLogged_ = false;
+  lastLoggedScanMask_ = 0xFF;
 }
 
 void ToneReader::update() {
+  if (!isActive) {
+    return;
+  }
 
   // Note: We now rely on interrupt-driven events from InterruptManager
   // instead of direct GPIO polling for more reliable edge detection
   
   unsigned long now = millis();
+  uint8_t scanMaskNow = lineManager_.toneScanMask;
+  uint8_t activeScanLines = 0;
+  for (int i = 0; i < 8; ++i) {
+    if (scanMaskNow & (1u << i)) {
+      activeScanLines++;
+    }
+  }
+  unsigned long requiredStdStableMs = settings_.dtmfStdStableMs;
+  if (activeScanLines > 1 && requiredStdStableMs > 8) {
+    requiredStdStableMs = 8;
+  }
   
   // Check if we have a pending rising edge that needs stability verification
   if (stdRisingEdgePending_) {
     unsigned long timeSinceRising = now - stdRisingEdgeTime_;
     
     // Check if STD signal has been stable for the required duration
-    if (timeSinceRising >= settings_.dtmfStdStableMs) {
+    if (timeSinceRising >= requiredStdStableMs) {
       if (settings_.debugTRLevel >= 2) {
         Serial.print(F("ToneReader: STD stable for "));
         Serial.print(timeSinceRising);
-        Serial.println(F("ms - attempting to read DTMF nibble"));
+        Serial.print(F("ms (required="));
+        Serial.print(requiredStdStableMs);
+        Serial.println(F("ms) - attempting to read DTMF nibble"));
         util::UIConsole::log("ToneReader: STD stable for " + String(timeSinceRising) + 
-                            "ms - attempting to read", "ToneReader");
+                            "ms (required=" + String(requiredStdStableMs) + "ms) - attempting to read",
+                            "ToneReader");
       }
       
       stdRisingEdgePending_ = false;
       
-      // Only process DTMF if we have a valid lastLineReady
-      if (lineManager_.lastLineReady < 0) {
+      // Only process DTMF if we know which line generated the current STD cycle.
+      int idx = stdLineIndex_;
+      if (idx < 0 || idx >= 8) {
         if (settings_.debugTRLevel >= 1) {
-          Serial.println(F("ToneReader: Ignoring DTMF - no valid lastLineReady"));
-          util::UIConsole::log("Ignoring DTMF - no valid lastLineReady", "ToneReader");
+          Serial.println(F("ToneReader: Ignoring DTMF - no scanned line associated with STD"));
+          util::UIConsole::log("Ignoring DTMF - no scanned line associated with STD", "ToneReader");
         }
         return;
       }
@@ -103,8 +133,8 @@ void ToneReader::update() {
         
         // Check debouncing: ignore if same digit detected within debounce period
         // Use unsigned subtraction which handles millis() rollover correctly
-        unsigned long timeSinceLastDtmf = now - lastDtmfTime_;
-        bool isSameDigit = (nibble == lastDtmfNibble_);
+        unsigned long timeSinceLastDtmf = now - lastDtmfTimeByLine_[idx];
+        bool isSameDigit = (nibble == lastDtmfNibbleByLine_[idx]);
         bool withinDebounceWindow = (timeSinceLastDtmf < settings_.dtmfDebounceMs);
         bool isDuplicate = isSameDigit && withinDebounceWindow;
         
@@ -120,8 +150,8 @@ void ToneReader::update() {
         }
         
         if (!isDuplicate) {
-          lastDtmfTime_ = now;
-          lastDtmfNibble_ = nibble;
+          lastDtmfTimeByLine_[idx] = now;
+          lastDtmfNibbleByLine_[idx] = nibble;
           
           char ch = decodeDtmf(nibble);
           if (settings_.debugTRLevel >= 2) {
@@ -136,13 +166,13 @@ void ToneReader::update() {
           }
 
           if (ch != '\0') {
-            int idx = lineManager_.lastLineReady; // "senast aktiv" (Ready)
-            
+            lineManager_.lastLineReady = idx;
+
             // Only set status to ToneDialing if the line is currently in Ready state and we have a valid digit
             if (idx >= 0 && lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready) {
               lineManager_.setStatus(idx, model::LineStatus::ToneDialing);
             }
-            lineManager_.resetLineTimer(lineManager_.lastLineReady); // Reset timer for last active line
+            lineManager_.resetLineTimer(idx);
 
             // To avoid strange signals thats detected as dtomf tones, only accept tones when line is in Ready or ToneDialing state
             if (idx >= 0 && (lineManager_.getLine(idx).currentLineStatus == model::LineStatus::Ready || 
@@ -167,8 +197,8 @@ void ToneReader::update() {
               }
             } else {
               if (settings_.debugTRLevel >= 1) {
-                Serial.println(F("ToneReader: WARNING - No lastLineReady available to store digit"));
-                util::UIConsole::log("WARNING - No lastLineReady available", "ToneReader");
+                Serial.println(F("ToneReader: WARNING - No valid scanned line to store digit"));
+                util::UIConsole::log("WARNING - No valid scanned line to store digit", "ToneReader");
               }
             }
           } else {
@@ -235,6 +265,19 @@ void ToneReader::update() {
     
     // STD blir hög när en giltig ton detekterats. Läs nibbeln på rising edge.
     if (risingEdge) {
+      const unsigned long sinceSwitchMs = millis() - lastTmuxSwitchAtMs_;
+      if (sinceSwitchMs < TMUX_POST_SWITCH_GUARD_MS) {
+        if (settings_.debugTRLevel >= 2) {
+          Serial.print(F("ToneReader: Rising edge ignored (post-switch guard), sinceSwitch="));
+          Serial.print(sinceSwitchMs);
+          Serial.println(F("ms"));
+          util::UIConsole::log("Rising edge ignored (post-switch guard), sinceSwitch=" +
+                                   String(sinceSwitchMs) + "ms",
+                               "ToneReader");
+        }
+        continue;
+      }
+
       if (settings_.debugTRLevel >= 1) {
         Serial.println(F("ToneReader: Rising edge detected - marking for stability check"));
         util::UIConsole::log("ToneReader: Rising edge detected - marking for stability check", "ToneReader");
@@ -263,6 +306,13 @@ void ToneReader::update() {
       // We'll process it after verifying STD is stable for the configured duration
       stdRisingEdgePending_ = true;
       stdRisingEdgeTime_ = millis();
+      stdLineIndex_ = currentScanLine_;
+      lineManager_.lastLineReady = stdLineIndex_;
+      if (settings_.debugTRLevel >= 2) {
+        Serial.print(F("ToneReader: Scan PAUSED - locked to line "));
+        Serial.println(stdLineIndex_);
+        util::UIConsole::log("Scan PAUSED - locked to line " + String(stdLineIndex_), "ToneReader");
+      }
       
     } else if (fallingEdge) {
       // If we get a falling edge before processing the rising edge, validate duration
@@ -288,6 +338,11 @@ void ToneReader::update() {
           }
           // Cancel the pending tone - don't process it
           stdRisingEdgePending_ = false;
+          stdLineIndex_ = -1;
+          if (settings_.debugTRLevel >= 2) {
+            Serial.println(F("ToneReader: Scan RESUMED - tone rejected (too short)"));
+            util::UIConsole::log("Scan RESUMED - tone rejected (too short)", "ToneReader");
+          }
           // Skip line timer and logging below, continue to next event
           continue;
         }
@@ -296,17 +351,22 @@ void ToneReader::update() {
       }
       
       // Only set timer if line is in ToneDialing state (meaning a valid digit was processed)
-      if (lineManager_.lastLineReady >= 0) {
-        auto& line = lineManager_.getLine(lineManager_.lastLineReady);
+      if (stdLineIndex_ >= 0) {
+        auto& line = lineManager_.getLine(stdLineIndex_);
         if (line.currentLineStatus == model::LineStatus::ToneDialing) {
-          lineManager_.setLineTimer(lineManager_.lastLineReady, settings_.timer_toneDialing);
+          lineManager_.setLineTimer(stdLineIndex_, settings_.timer_toneDialing);
         } else if (settings_.debugTRLevel >= 2) {
           Serial.println(F("ToneReader: Falling edge - line not in ToneDialing, no timer set"));
           util::UIConsole::log("Falling edge - line not in ToneDialing, no timer set", "ToneReader");
         }
       } else if (settings_.debugTRLevel >= 1) {
-        Serial.println(F("ToneReader: Falling edge - no valid lastLineReady to set timer"));
-        util::UIConsole::log("Falling edge - no valid lastLineReady to set timer", "ToneReader");
+        Serial.println(F("ToneReader: Falling edge - no scanned line associated with STD"));
+        util::UIConsole::log("Falling edge - no scanned line associated with STD", "ToneReader");
+      }
+      stdLineIndex_ = -1;
+      if (settings_.debugTRLevel >= 2) {
+        Serial.println(F("ToneReader: Scan RESUMED - STD returned LOW"));
+        util::UIConsole::log("Scan RESUMED - STD returned LOW", "ToneReader");
       }
       
       if (settings_.debugTRLevel >= 1) {
@@ -314,6 +374,79 @@ void ToneReader::update() {
         util::UIConsole::log("Falling edge detected (STD LOW)", "ToneReader");
       }
     }
+  }
+
+  // Fallback lock by level is only safe when scanning a single line.
+  // With multiple active scan lines it can mis-attribute a tone to the wrong line.
+  const bool allowEarlyLock = (activeScanLines <= 1);
+  if (!stdRisingEdgePending_ && stdLineIndex_ < 0 && currentScanLine_ >= 0 &&
+      allowEarlyLock &&
+      (now - lastTmuxSwitchAtMs_) >= TMUX_POST_SWITCH_GUARD_MS) {
+    uint16_t gpioAB = 0;
+    if (mcpDriver_.readGpioAB16(cfg::mcp::MCP_MAIN_ADDRESS, gpioAB)) {
+      const bool stdHigh = (gpioAB & (1u << cfg::mcp::STD)) != 0;
+      if (stdHigh) {
+        stdRisingEdgePending_ = true;
+        stdRisingEdgeTime_ = now;
+        stdLineIndex_ = currentScanLine_;
+        lastStdLevel_ = true;
+        if (settings_.debugTRLevel >= 2) {
+          Serial.print(F("ToneReader: Scan EARLY-LOCK - STD HIGH on line "));
+          Serial.println(stdLineIndex_);
+          util::UIConsole::log("Scan EARLY-LOCK - STD HIGH on line " + String(stdLineIndex_),
+                               "ToneReader");
+        }
+      }
+    }
+  }
+  else if (!allowEarlyLock && settings_.debugTRLevel >= 2) {
+    static bool loggedEarlyLockDisabled = false;
+    if (!loggedEarlyLockDisabled) {
+      Serial.println(F("ToneReader: EARLY-LOCK disabled while scanning multiple lines"));
+      util::UIConsole::log("EARLY-LOCK disabled while scanning multiple lines", "ToneReader");
+      loggedEarlyLockDisabled = true;
+    }
+  }
+
+  // Fallback: release lock if STD dropped LOW without a captured falling edge.
+  if (lastStdLevel_ && !stdRisingEdgePending_) {
+    uint16_t gpioAB = 0;
+    if (mcpDriver_.readGpioAB16(cfg::mcp::MCP_MAIN_ADDRESS, gpioAB)) {
+      const bool stdHigh = (gpioAB & (1u << cfg::mcp::STD)) != 0;
+      if (!stdHigh) {
+        if (stdLineIndex_ >= 0) {
+          auto& line = lineManager_.getLine(stdLineIndex_);
+          if (line.currentLineStatus == model::LineStatus::ToneDialing) {
+            lineManager_.setLineTimer(stdLineIndex_, settings_.timer_toneDialing);
+          }
+        }
+        stdLineIndex_ = -1;
+        lastStdLevel_ = false;
+        if (settings_.debugTRLevel >= 2) {
+          Serial.println(F("ToneReader: Scan EARLY-RELEASE - STD LOW"));
+          util::UIConsole::log("Scan EARLY-RELEASE - STD LOW", "ToneReader");
+        }
+      }
+    }
+  }
+
+  // Scan only when STD is idle and no tone is pending verification.
+  // This prevents changing TMUX channel before queued STD edges are processed.
+  if (!stdRisingEdgePending_ && !lastStdLevel_) {
+    if (scanPauseLogged_ && settings_.debugTRLevel >= 2) {
+      Serial.println(F("ToneReader: Scan loop active again"));
+      util::UIConsole::log("Scan loop active again", "ToneReader");
+    }
+    scanPauseLogged_ = false;
+    toneScan();
+  } else if (!scanPauseLogged_ && settings_.debugTRLevel >= 2) {
+    Serial.print(F("ToneReader: Scan HOLD - pending="));
+    Serial.print(stdRisingEdgePending_ ? F("1") : F("0"));
+    Serial.print(F(" stdLevel="));
+    Serial.println(lastStdLevel_ ? F("1") : F("0"));
+    util::UIConsole::log("Scan HOLD - pending=" + String(stdRisingEdgePending_ ? 1 : 0) +
+                         " stdLevel=" + String(lastStdLevel_ ? 1 : 0), "ToneReader");
+    scanPauseLogged_ = true;
   }
 }
 
@@ -384,4 +517,61 @@ bool ToneReader::readDtmfNibble(uint8_t& nibble) {
 char ToneReader::decodeDtmf(uint8_t nibble) {
   if (nibble < 16) return dtmf_map_[nibble];
   return '\0';
+}
+
+void ToneReader::toneScan(){
+  const uint8_t scanMask = lineManager_.toneScanMask;
+
+  if (settings_.debugTRLevel >= 2 && scanMask != lastLoggedScanMask_) {
+    Serial.print(F("ToneReader: Scan mask changed -> 0b"));
+    Serial.println(scanMask, BIN);
+    util::UIConsole::log("Scan mask changed -> 0b" + String(scanMask, BIN), "ToneReader");
+    lastLoggedScanMask_ = scanMask;
+  }
+
+  if (scanMask == 0) {
+    currentScanLine_ = -1;
+    return;
+  }
+
+  const unsigned long now = millis();
+  const unsigned long recommendedDwell =
+      settings_.dtmfMinToneDurationMs + settings_.dtmfStdStableMs + 8;
+  const unsigned long configuredMinDwell =
+      (settings_.tmuxScanDwellMinMs < 1) ? 1 : settings_.tmuxScanDwellMinMs;
+  const unsigned long dwellMs =
+      (recommendedDwell > configuredMinDwell) ? recommendedDwell : configuredMinDwell;
+
+  if ((now - lastTmuxSwitchAtMs_) < dwellMs && currentScanLine_ >= 0) {
+    return;
+  }
+
+  int nextLine = -1;
+  for (int offset = 1; offset <= 8; ++offset) {
+    const int candidate = (scanCursor_ + offset) & 0x07;
+    if ((scanMask & (1u << candidate)) != 0) {
+      nextLine = candidate;
+      break;
+    }
+  }
+
+  if (nextLine < 0) {
+    currentScanLine_ = -1;
+    return;
+  }
+
+  const auto& line = lineManager_.getLine(nextLine);
+  const uint8_t tmuxSel =
+      static_cast<uint8_t>((line.tmuxAddress[0] ? 0x4u : 0x0u) |
+                           (line.tmuxAddress[1] ? 0x2u : 0x0u) |
+                           (line.tmuxAddress[2] ? 0x1u : 0x0u));
+  if (!mcpDriver_.writeMainTmuxAddress(tmuxSel)) {
+    return;
+  }
+
+  scanCursor_ = nextLine;
+  currentScanLine_ = nextLine;
+  lastTmuxSwitchAtMs_ = now;
+
+  (void)dwellMs; // Kept for tuning logic; scan-line switch logging intentionally reduced.
 }

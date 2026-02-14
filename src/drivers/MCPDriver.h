@@ -32,6 +32,7 @@ public:
   bool digitalWriteMCP(uint8_t i2c_addr, uint8_t pin, bool value);
   bool digitalReadMCP (uint8_t i2c_addr, uint8_t pin, bool& out);
   bool readGpioAB16(uint8_t i2c_addr, uint16_t& out16);
+  bool writeMainTmuxAddress(uint8_t sel);
 
   // Snabbhjälp för kända kretsar
   inline Adafruit_MCP23X17& mainChip()   { return mcpMain_;   }

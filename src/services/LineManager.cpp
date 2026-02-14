@@ -10,16 +10,16 @@ LineManager::LineManager(Settings& settings)
   auto& s = Settings::instance();   // singleton
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
-
     lines.back().phoneNumber = s.linePhoneNumbers[i];
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
   lineStatusChangeFlag = 0;     // Intiate to zero (no changes)
-  lineHookChangeFlag = 0; // Intiate to zero (no hook changes)
-  activeTimersMask = 0;   // Intiate to zero (no active timers)
-  linesNotIdle = 0;       // Intiate to zero (all lines idle)
-  lastLineReady = -1;     // No line is ready at start
+  lineHookChangeFlag = 0;       // Intiate to zero (no hook changes)
+  activeTimersMask = 0;         // Intiate to zero (no active timers)
+  linesNotIdle = 0;             // Intiate to zero (all lines idle)
+  lastLineReady = -1;           // No line is ready at start
+  toneScanMask = 0;             // Intiate to zero (no lines to scan for tones)
 }
 
 void LineManager::begin() {
@@ -34,6 +34,7 @@ void LineManager::syncLineActive(size_t i) {
   lines[i].lineActive = isActive;
 }
 
+// Returns a reference to the LineHandler object for the specified line index
 LineHandler& LineManager::getLine(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::getLine - ogiltigt index: ");
@@ -45,6 +46,7 @@ LineHandler& LineManager::getLine(int index) {
   return lines[static_cast<size_t>(index)];
 }
 
+// Set the status for the specified line
 void LineManager::setStatus(int index, LineStatus newStatus) {
   // Validate index
   if (index < 0 || index >= static_cast<int>(lines.size())) {
@@ -60,53 +62,61 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   resetLineTimer(index); // Reset any existing timer for this line
 
 
-  // Handle specific actions based on new status
-  if (newStatus == LineStatus::Idle) {
-    
-    // Reset line variables when setting to Idle
-    lines[index].lineIdle();
+  // Setting up bitmasks and handling tone reader activation based on the new status
+  switch (newStatus) {
+    case LineStatus::Idle:
+      lines[index].lineIdle();          // Reset line variables when setting to Idle
+      linesNotIdle &= ~(1 << index);    // Clear the bit for this line
+      toneScanMask &= ~(1 << index);    // Clear the bit to stop scanning this line for tones
+      if (lastLineReady == index) {     // Reset lastLineReady if this was the line that was last ready
+        lastLineReady = -1;
+      }
 
-    // Clear the bit for this line
-    linesNotIdle &= ~(1 << index);
+      // Deactivate MT8870 if no lines need tone scanning
+      if (toneScanMask == 0 && toneReader_ != nullptr) {  
+        toneReader_->deactivate();
+      }
+      break;
     
-    // Reset lastLineReady if this was the line that was last ready
-    if (lastLineReady == index) {
-      lastLineReady = -1;
-    }
-    // Deactivate MT8870 if no lines are active
-    if (linesNotIdle == 0 && toneReader_ != nullptr) {
-      toneReader_->deactivate();
-    }
+    case LineStatus::Ready:
+    case LineStatus::ToneDialing:
+    case LineStatus::PulseDialing:
+      lastLineReady = index;             // Update the most recent line used for tone scanning
+      linesNotIdle |= (1 << index);      // Set the bit for this line
+      toneScanMask |= (1 << index);      // Set the bit to scan this line for tones
 
+      // Activate MT8870 if not already active
+      if (toneReader_ != nullptr && !toneReader_->isActive) {
+        toneReader_->activate();
+      }
+      break;
+  
+    default:
+      linesNotIdle &= ~(1 << index);     // Clear the bit for this line since we do not need to scan for 
+                                         // tones in lines that are not Ready or PulseDialing
+      toneScanMask &= ~(1 << index);
+      if (toneScanMask == 0 && toneReader_ != nullptr) {
+        toneReader_->deactivate();
+      }
+      break;
   }
-  else if (newStatus == LineStatus::Ready) {
-    lastLineReady = index;                   // Update the most recent Ready line
-    linesNotIdle |= (1 << index);            // Set the bit for this line
-    
-    // Activate MT8870 if not already active
-    if (toneReader_ != nullptr && !toneReader_->isActive) {
-      toneReader_->activate();
-    }
 
-  }
-  else {
-    linesNotIdle |= (1 << index);           // Set the bit for this line
-  } 
-
-  lineStatusChangeFlag |= (1 << index);           // Set the change flag for the specified line
-
+  // No matther what the new status is, we want to set the lineStatusChangeFlag so that LineAction 
+  // can handle any necessary actions based on the new status
+  lineStatusChangeFlag |= (1 << index);           
   if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
 
   if (settings_.debugLmLevel >= 0) {
     Serial.print(BLUE "LineManager: Line ");
     Serial.print(index);
     Serial.print(" status changed to ");
-    Serial.print(model::toString(newStatus));
+    Serial.print(model::LineStatusToString(newStatus));
     Serial.println(COLOR_RESET);
-    util::UIConsole::log("Line " + String(index) + " status changed to " + model::toString(newStatus), "LineManager");
+    util::UIConsole::log("Line " + String(index) + " status changed to " + model::LineStatusToString(newStatus), "LineManager");
   }
 }
 
+// Clear the status change flag for the specified line
 void LineManager::clearChangeFlag(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::clearChangeFlag - ogiltigt index: ");
@@ -118,6 +128,7 @@ void LineManager::clearChangeFlag(int index) {
   lineStatusChangeFlag &= ~(1 << index); 
 }
 
+// 
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
   pushStatusChanged_ = std::move(cb);
 }
@@ -165,6 +176,7 @@ void LineManager::resetLineTimer(int index) {
   activeTimersMask &= ~(1 << index); // Clear the timer active flag
 }
 
+// Set the phone number for the specified line
 void LineManager::setPhoneNumber(int index, const String& value) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     Serial.print("LineManager::setPhoneNumber - ogiltigt index: ");
@@ -180,10 +192,11 @@ void LineManager::setPhoneNumber(int index, const String& value) {
   settings_.linePhoneNumbers[index] = sanitized;
 }
 
+// Search for a line index based on the provided phone number. Returns -1 if not found.
 int LineManager::searchPhoneNumber(const String& phoneNumber) {
   // Trimma och förbered söksträngen
 
-
+  // Degbug output of current phone numbers
   if (settings_.debugLmLevel >= 2){
     Serial.print("Numbers: ");
     for (int i = 0; i < static_cast<int>(lines.size()); ++i) {
@@ -193,24 +206,25 @@ int LineManager::searchPhoneNumber(const String& phoneNumber) {
     Serial.println();
   }
   
-
+  // Debug output for search
   if (settings_.debugLmLevel >= 1){
     Serial.print("LineManager: Searching for phone number '");
     Serial.print(phoneNumber);
     Serial.println("'");
     util::UIConsole::log("LineManager: Searching for phone number '" + phoneNumber + "'", "LineManager");
   }
+
+  // Trim the input phone number for searching
   String searchNumber = phoneNumber;
   searchNumber.trim();
 
-  // Loopa genom alla linjer
+  // Loop through lines to find a matching phone number (skipping inactive lines)
   for (size_t i = 0; i < lines.size(); ++i) {
-    // Skippa inaktiva linjer (valfritt)
     if (!lines[i].lineActive) {
       continue;
     }
     
-    // Jämför telefonnummer
+    // compare the line's phone number with the search number
     if (lines[i].phoneNumber == searchNumber) {
       
       if (settings_.debugLmLevel >= 1){
@@ -219,13 +233,9 @@ int LineManager::searchPhoneNumber(const String& phoneNumber) {
         Serial.println();
         util::UIConsole::log("LineManager: Found matching phone number on line " + String(i), "LineManager");
       }
-      return static_cast<int>(i);  // Returnera linjens index
+      return static_cast<int>(i);  // Return the line index
     }
   }
   
-  if (settings_.debugLmLevel >= 1){
-    Serial.println("LineManager: No matching phone number found");
-    util::UIConsole::log("LineManager: No matching phone number found", "LineManager");
-  }
-  return -1;  // Ingen matchning hittades
+  return -1;  // No match found
 }
