@@ -13,17 +13,23 @@ class Provisioning {
 public:
   // OBS: passera in en referens till din WifiClient
   void begin(WifiClient& wifiClient, const char* hostname = "phoneexchange");
+  void loop();
 
   // Rensa Wi-Fi-uppgifter i NVS och boota om (för att starta omprovisionering)
   static void factoryReset();
 
 private:
+  static void stopProvisioning_();
 
   static void onSysEvent_(arduino_event_t *sys_event);
 
   static inline WifiClient* wifi_ = nullptr;  // pekare till din WifiClient
   static inline String host_;
   static inline bool   startedProvisioning_ = false;
+  static inline unsigned long provisioningStartedAtMs_ = 0;
+  static inline String pendingSsid_;
+  static inline String pendingPassword_;
+  static constexpr unsigned long kProvisioningWindowMs = 5UL * 60UL * 1000UL;
 };
 
 } // namespace net

@@ -21,7 +21,7 @@ void WifiClient::begin(const char* hostname) {
   }
 
   // 3) Registrera eventlyssnare (innan connect)
-  WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t){ onWiFiEvent_(event); });
+  WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info){ onWiFiEvent_(event, info); });
 
   // 4) Försök ansluta med sparade credentials
   String savedSsid, savedPass;
@@ -36,8 +36,10 @@ void WifiClient::begin(const char* hostname) {
 }
 
 void WifiClient::loop() {
-  // Automatisk reconnect
-  if (!isConnected() && !connecting_ && ssid_.length() > 0) {
+  // Automatisk reconnect med backoff så vi undviker tight loop vid fel credentials.
+  const unsigned long now = millis();
+  const bool timeToRetry = (reconnectDelayMs_ == 0) || ((now - lastConnectAttemptMs_) >= reconnectDelayMs_);
+  if (!isConnected() && !connecting_ && ssid_.length() > 0 && timeToRetry) {
     connect_();
   }
 }
@@ -75,10 +77,14 @@ void WifiClient::connect_() {
   util::UIConsole::log("Connecting to " + ssid_ + "...", "WifiClient");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid_.c_str(), password_.c_str());
+  lastConnectAttemptMs_ = millis();
+  if (reconnectDelayMs_ == 0) {
+    reconnectDelayMs_ = kInitialReconnectDelayMs;
+  }
   connecting_ = true;
 }
 
-void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
+void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
   switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("WifiClient: Connected to AP");
@@ -90,6 +96,7 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
       util::UIConsole::log("Got IP: " + WiFi.localIP().toString(), "WifiClient");
       Serial.println(WiFi.localIP());
       connecting_ = false;
+      reconnectDelayMs_ = 0;
 
       // Synkronisera klockan med NTP
       syncTime_();
@@ -110,9 +117,16 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
     }
 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Serial.println("WifiClient: Disconnected, retrying…");
-      util::UIConsole::log("Disconnected, retrying...", "WifiClient");
       connecting_ = false;
+      if (reconnectDelayMs_ == 0) {
+        reconnectDelayMs_ = kInitialReconnectDelayMs;
+      } else {
+        reconnectDelayMs_ = min(reconnectDelayMs_ * 2, kMaxReconnectDelayMs);
+      }
+      Serial.printf("WifiClient: Disconnected (reason=%d), will retry in %lu ms.\n",
+                    info.wifi_sta_disconnected.reason,
+                    reconnectDelayMs_);
+      util::UIConsole::log("Disconnected, retry with backoff...", "WifiClient");
       // Stäng mDNS tills vi åter har IP
       if (mdnsStarted_) {
         MDNS.end();

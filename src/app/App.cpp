@@ -81,6 +81,7 @@ void App::loop() {
   interruptManager_.collectInterrupts();
   
   wifiClient_.loop();   // Handle WiFi events and connection
+  provisioning_.loop(); // Auto-close provisioning window after timeout
   if (!webServerStarted_ && wifiClient_.isConnected()) {
     Serial.println("App: WiFi connected, starting WebServer...");
     const bool webReady = webServer_.begin();

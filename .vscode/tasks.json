@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PlatformIO: Build",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\platformio.exe",
+      "args": [
+        "run"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Build + Upload",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\platformio.exe",
+      "args": [
+        "run",
+        "-t",
+        "upload"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
