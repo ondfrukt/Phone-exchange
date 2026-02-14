@@ -17,7 +17,8 @@ class ToneReader {
     bool isActive = false;
 
   private:
-    static constexpr unsigned long TMUX_SCAN_DWELL_MS = 3;
+    // Ignore/avoid locking STD immediately after TMUX switch to reduce wrong-line locks.
+    static constexpr unsigned long TMUX_POST_SWITCH_GUARD_MS = 8;
 
     InterruptManager& interruptManager_;
     MCPDriver& mcpDriver_;
@@ -27,13 +28,18 @@ class ToneReader {
     // Debouncing state
     static constexpr uint8_t INVALID_DTMF_NIBBLE = 0xFF;
     
-    unsigned long lastDtmfTime_ = 0;
-    uint8_t lastDtmfNibble_ = INVALID_DTMF_NIBBLE;
+    unsigned long lastDtmfTimeByLine_[8] = {0};
+    uint8_t lastDtmfNibbleByLine_[8] = {
+      INVALID_DTMF_NIBBLE, INVALID_DTMF_NIBBLE, INVALID_DTMF_NIBBLE, INVALID_DTMF_NIBBLE,
+      INVALID_DTMF_NIBBLE, INVALID_DTMF_NIBBLE, INVALID_DTMF_NIBBLE, INVALID_DTMF_NIBBLE
+    };
     bool lastStdLevel_ = false;
     int scanCursor_ = -1;
     int currentScanLine_ = -1;
     int stdLineIndex_ = -1;
     unsigned long lastTmuxSwitchAtMs_ = 0;
+    bool scanPauseLogged_ = false;
+    uint8_t lastLoggedScanMask_ = 0xFF;
     
     // STD signal stability tracking
     unsigned long stdRisingEdgeTime_ = 0;  // When STD went high

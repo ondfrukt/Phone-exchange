@@ -64,9 +64,10 @@ void Settings::resetDefaults() {
   ringIterations        = 1;    // Iterations of ringing signal
 
   // --- ToneReader (DTMF) settings ---
-  dtmfDebounceMs        = 150;   // 150ms debounce between same digit detections
-  dtmfMinToneDurationMs = 40;    // Minimum 40ms tone duration (MT8870 spec: 40ms typical)
-  dtmfStdStableMs       = 15;    // STD signal must be stable for 15ms before reading Q pins
+  dtmfDebounceMs        = 100;   // Debounce time for DTMF detection (minimum time between detections of the same digit)
+  dtmfMinToneDurationMs = 25;    // Minimum duration of a valid DTMF tone (ms)
+  dtmfStdStableMs       = 15;    // Stability time for STD signal during DTMF detection (ms)
+  tmuxScanDwellMinMs    = 35;    // Minimum time to dwell on a line during TMUX scanning (ms)
 
   // --- Timers ---
   timer_Ready           = 240000;
@@ -139,6 +140,7 @@ bool Settings::load() {
     dtmfDebounceMs        = prefs.getUInt ("dtmfDebounce",      dtmfDebounceMs);
     dtmfMinToneDurationMs = prefs.getUInt ("dtmfMinTone",       dtmfMinToneDurationMs);
     dtmfStdStableMs       = prefs.getUInt ("dtmfStdStable",     dtmfStdStableMs);
+    tmuxScanDwellMinMs    = prefs.getUInt ("tmuxDwellMin",      tmuxScanDwellMinMs);
 
     // --- Timers ---
     timer_Ready           = prefs.getUInt ("timerReady",        timer_Ready);
@@ -206,6 +208,7 @@ void Settings::save() const {
   prefs.putUInt ("dtmfDebounce",          dtmfDebounceMs);
   prefs.putUInt ("dtmfMinTone",           dtmfMinToneDurationMs);
   prefs.putUInt ("dtmfStdStable",         dtmfStdStableMs);
+  prefs.putUInt ("tmuxDwellMin",          tmuxScanDwellMinMs);
 
 
   // --- Timers ---

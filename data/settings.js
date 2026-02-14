@@ -54,6 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const $shkSaveBtn = document.getElementById('shk-save');
   const $shkSettingsStatus = document.getElementById('shk-settings-status');
 
+  // --- ToneReader Settings UI ---
+  const $dtmfDebounceMs = document.getElementById('dtmf-debounce-ms');
+  const $dtmfMinToneMs = document.getElementById('dtmf-min-tone-ms');
+  const $dtmfStdStableMs = document.getElementById('dtmf-std-stable-ms');
+  const $tmuxScanDwellMinMs = document.getElementById('tmux-scan-dwell-min-ms');
+  const $toneReaderSaveBtn = document.getElementById('tonereader-save');
+  const $toneReaderStatus = document.getElementById('tonereader-status');
+
   // --- Timer Settings UI ---
   const $timerReady = document.getElementById('timer-ready');
   const $timerDialing = document.getElementById('timer-dialing');
@@ -76,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const setRingStatus = (t) => { if ($ringStatus) $ringStatus.textContent = t; };
   const setRingSettingsStatus = (t) => { if ($ringSettingsStatus) $ringSettingsStatus.textContent = t; };
   const setShkSettingsStatus = (t) => { if ($shkSettingsStatus) $shkSettingsStatus.textContent = t; };
+  const setToneReaderStatus = (t) => { if ($toneReaderStatus) $toneReaderStatus.textContent = t; };
   const setTimerStatus = (t) => { if ($timerStatus) $timerStatus.textContent = t; };
 
   const setToneEnabledUi = (enabled) => {
@@ -294,6 +303,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Load ToneReader settings from server
+  async function loadToneReaderSettings() {
+    try {
+      const r = await fetch('/api/settings/tone-reader');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (typeof d.dtmfDebounceMs === 'number') $dtmfDebounceMs.value = d.dtmfDebounceMs;
+      if (typeof d.dtmfMinToneDurationMs === 'number') $dtmfMinToneMs.value = d.dtmfMinToneDurationMs;
+      if (typeof d.dtmfStdStableMs === 'number') $dtmfStdStableMs.value = d.dtmfStdStableMs;
+      if (typeof d.tmuxScanDwellMinMs === 'number') $tmuxScanDwellMinMs.value = d.tmuxScanDwellMinMs;
+    } catch (e) {
+      console.warn('Could not read ToneReader settings', e);
+      setToneReaderStatus('Could not read ToneReader settings');
+    }
+  }
+
+  // Save ToneReader settings to server
+  async function saveToneReaderSettings() {
+    try {
+      $toneReaderSaveBtn.classList.add('working');
+      setToneReaderStatus('Saving…');
+      const body = new URLSearchParams({
+        dtmfDebounceMs: $dtmfDebounceMs.value,
+        dtmfMinToneDurationMs: $dtmfMinToneMs.value,
+        dtmfStdStableMs: $dtmfStdStableMs.value,
+        tmuxScanDwellMinMs: $tmuxScanDwellMinMs.value
+      }).toString();
+      const r = await fetch('/api/settings/tone-reader', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      await r.json();
+      setToneReaderStatus('Saved.');
+    } catch (e) {
+      setToneReaderStatus('Failed to save.');
+      console.warn(e);
+    } finally {
+      $toneReaderSaveBtn.classList.remove('working');
+      setTimeout(() => setToneReaderStatus(''), 1500);
+    }
+  }
+
   // Load timer settings from server
   async function loadTimerSettings() {
     try {
@@ -469,6 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $ringStopBtn?.addEventListener('click', stopRing);
   $ringSaveBtn?.addEventListener('click', saveRingSettings);
   $shkSaveBtn?.addEventListener('click', saveShkSettings);
+  $toneReaderSaveBtn?.addEventListener('click', saveToneReaderSettings);
   $timerSaveBtn?.addEventListener('click', saveTimerSettings);
 
   // Load current activeMask
@@ -537,5 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadToneGenerator();
   loadRingSettings();
   loadShkSettings();
+  loadToneReaderSettings();
   loadTimerSettings();
 });

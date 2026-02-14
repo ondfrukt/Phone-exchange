@@ -499,6 +499,50 @@ void WebServer::setupApiRoutes_() {
       req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
     }
   });
+  // Get ToneReader settings: GET /api/settings/tone-reader
+  server_.on("/api/settings/tone-reader", HTTP_GET, [this](AsyncWebServerRequest* req){
+    String json = "{";
+    json += "\"dtmfDebounceMs\":" + String(settings_.dtmfDebounceMs) + ",";
+    json += "\"dtmfMinToneDurationMs\":" + String(settings_.dtmfMinToneDurationMs) + ",";
+    json += "\"dtmfStdStableMs\":" + String(settings_.dtmfStdStableMs) + ",";
+    json += "\"tmuxScanDwellMinMs\":" + String(settings_.tmuxScanDwellMinMs);
+    json += "}";
+    req->send(200, "application/json", json);
+  });
+  // Set ToneReader settings: POST /api/settings/tone-reader
+  server_.on("/api/settings/tone-reader", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getParam = [req](const char* key) -> int {
+      if (req->hasParam(key)) return req->getParam(key)->value().toInt();
+      if (req->hasParam(key, true)) return req->getParam(key, true)->value().toInt();
+      return -1;
+    };
+
+    bool updated = false;
+    int val = -1;
+
+    val = getParam("dtmfDebounceMs");
+    if (val >= 20 && val <= 1000) { settings_.dtmfDebounceMs = (uint32_t)val; updated = true; }
+
+    val = getParam("dtmfMinToneDurationMs");
+    if (val >= 10 && val <= 200) { settings_.dtmfMinToneDurationMs = (uint32_t)val; updated = true; }
+
+    val = getParam("dtmfStdStableMs");
+    if (val >= 1 && val <= 100) { settings_.dtmfStdStableMs = (uint32_t)val; updated = true; }
+
+    val = getParam("tmuxScanDwellMinMs");
+    if (val >= 1 && val <= 500) { settings_.tmuxScanDwellMinMs = (uint32_t)val; updated = true; }
+
+    if (updated) {
+      settings_.save();
+      req->send(200, "application/json", "{\"ok\":true}");
+      if (settings_.debugWSLevel >= 1) {
+        Serial.println("WebServer: ToneReader settings updated");
+        util::UIConsole::log("ToneReader settings updated", "WebServer");
+      }
+    } else {
+      req->send(400, "application/json", "{\"error\":\"invalid parameters\"}");
+    }
+  });
   // Get timer settings: GET /api/settings/timers
   server_.on("/api/settings/timers", HTTP_GET, [this](AsyncWebServerRequest* req){
     String json = "{";

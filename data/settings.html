@@ -263,6 +263,51 @@
       </div>
     </section>
 
+    <!-- ToneReader Settings Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">ToneReader Settings</h2>
+      <p class="description">Tune DTMF detection and TMUX scanning sensitivity</p>
+
+      <div class="row">
+        <span class="k">DTMF Debounce (ms)</span>
+        <span class="v">
+          <input type="number" id="dtmf-debounce-ms" class="form-input" min="20" max="1000" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">DTMF Min Tone (ms)</span>
+        <span class="v">
+          <input type="number" id="dtmf-min-tone-ms" class="form-input" min="10" max="200" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">DTMF STD Stable (ms)</span>
+        <span class="v">
+          <input type="number" id="dtmf-std-stable-ms" class="form-input" min="1" max="100" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">TMUX Dwell Min (ms)</span>
+        <span class="v">
+          <input type="number" id="tmux-scan-dwell-min-ms" class="form-input" min="1" max="500" step="1" />
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="tonereader-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update ToneReader Settings
+        </button>
+        <div id="tonereader-status" class="status"></div>
+      </div>
+    </section>
+
     <!-- Timer Settings Section -->
     <section class="card">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Timer Settings</h2>
