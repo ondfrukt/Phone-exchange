@@ -1,11 +1,12 @@
 #include "Provisioning.h"
+#include <esp_err.h>
 using namespace net;
 
 // Justera vid behov
 static const char* kPop         = "abcd1234";         // Proof of Possession (PIN)
 static const char* kServiceName = "PHONE_EXCHANGE";   // Namn som syns i Espressifs app
 static const char* kServiceKey  = nullptr;            // Används bara för SoftAP
-static const bool  kResetProv   = true;               // Starta provisioning-fönster vid varje boot
+static const bool  kResetProv   = true;               // Starta med ren provisioning-state när inga app-creds finns
 
 static uint8_t kUuid[16] = {
   0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
@@ -17,17 +18,20 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   wifi_ = &wifiClient;
   pendingSsid_.clear();
   pendingPassword_.clear();
+  credentialsCommitted_ = false;
+  resetStatePending_ = false;
+  credFailAtMs_ = 0;
   provisioningStartedAtMs_ = 0;
   startedProvisioning_ = false;
 
   // Lyssna på systemhändelser (Wi-Fi + provisioning)
   WiFi.onEvent(&Provisioning::onSysEvent_);
 
-  // Om WifiClient redan har creds kör vi ändå provisioning-fönstret i 5 minuter,
-  // så användaren kan uppdatera nät utan reset.
+  // Om WifiClient redan har creds -> starta inte provisioning.
   if (wifi_->hasCredentials()) {
-    Serial.println("Provisioning: Saved SSID found. Opening 5-minute provisioning window.");
-    util::UIConsole::log("Saved SSID found. Opening 5-minute provisioning window.", "Provisioning");
+    Serial.println("Provisioning: Saved SSID found. Skipping provisioning.");
+    util::UIConsole::log("Saved SSID found. Skipping provisioning.", "Provisioning");
+    return;
   }
 
   // Annars startar vi BLE-provisionering så användaren kan mata in creds
@@ -44,13 +48,26 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
     kServiceName,                         // "PROV_..." gör det lätt för appen
     kServiceKey,                          // ej använd för BLE
     kUuid,                                // 16-byte UUID
-    kResetProv                            // true = öppna provisioningfönster även om enheten varit provisionerad tidigare
+    kResetProv                            // true = rensa tidigare provisioning-state för stabil ny scan-session
   );
 }
 
 void Provisioning::loop() {
   if (!startedProvisioning_) {
     return;
+  }
+
+  if (resetStatePending_ && (millis() - credFailAtMs_ >= kResetStateDelayMs)) {
+    const esp_err_t err = wifi_prov_mgr_reset_sm_state_on_failure();
+    if (err == ESP_OK) {
+      Serial.println("Provisioning: Reset to waiting state after credential failure.");
+      util::UIConsole::log("Reset to waiting state after credential failure.", "Provisioning");
+      resetStatePending_ = false;
+    } else {
+      Serial.printf("Provisioning: reset_sm_state_on_failure failed (%d), retrying...\n", static_cast<int>(err));
+      util::UIConsole::log("reset_sm_state_on_failure failed, retrying...", "Provisioning");
+      credFailAtMs_ = millis();
+    }
   }
 
   const unsigned long elapsed = millis() - provisioningStartedAtMs_;
@@ -70,6 +87,8 @@ void Provisioning::stopProvisioning_() {
   startedProvisioning_ = false;
   pendingSsid_.clear();
   pendingPassword_.clear();
+  credentialsCommitted_ = false;
+  resetStatePending_ = false;
 }
 
 void Provisioning::factoryReset() {
@@ -103,15 +122,16 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
       util::UIConsole::log("Received Wi-Fi creds. SSID=\"" + String(ssid) + "\"", "Provisioning");
       pendingSsid_ = ssid ? ssid : "";
       pendingPassword_ = pwd ? pwd : "";
+      credentialsCommitted_ = false;
       break;
     }
 
     case ARDUINO_EVENT_PROV_CRED_SUCCESS:
       Serial.println("Provisioning: Credentials accepted.");
       util::UIConsole::log("Credentials accepted.", "Provisioning");
-      if (wifi_ && pendingSsid_.length() > 0) {
+      if (wifi_ && pendingSsid_.length() > 0 && !credentialsCommitted_) {
         wifi_->saveCredentials(pendingSsid_.c_str(), pendingPassword_.c_str());
-        wifi_->connectNow();
+        credentialsCommitted_ = true;
       }
       break;
 
@@ -120,6 +140,9 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
       util::UIConsole::log("Credentials failed (wrong password or AP not found).", "Provisioning");
       pendingSsid_.clear();
       pendingPassword_.clear();
+      credentialsCommitted_ = false;
+      resetStatePending_ = true;
+      credFailAtMs_ = millis();
       break;
 
     case ARDUINO_EVENT_PROV_END:
@@ -128,10 +151,13 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
       startedProvisioning_ = false;
       pendingSsid_.clear();
       pendingPassword_.clear();
+      credentialsCommitted_ = false;
+      resetStatePending_ = false;
 
-      // INTE WiFi.begin() här. WifiClient tar det.
       if (wifi_) {
-        // Om du vill forcera direktförsök: wifi_->connectNow();
+        // Kicka en explicit connect efter provisioning så vi inte fastnar i
+        // "connected without valid IP"-läge tills manuell reboot.
+        wifi_->connectNow();
       }
       break;
 

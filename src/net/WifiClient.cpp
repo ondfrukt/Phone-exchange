@@ -45,7 +45,11 @@ void WifiClient::loop() {
 }
 
 bool WifiClient::isConnected() const {
-  return WiFi.status() == WL_CONNECTED;
+  if (WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+  const IPAddress ip = WiFi.localIP();
+  return ip != IPAddress((uint32_t)0);
 }
 
 String WifiClient::getIp() const {
@@ -67,8 +71,13 @@ void WifiClient::saveCredentials(const char* ssid, const char* password) {
 }
 
 bool WifiClient::loadCredentials(String& ssid, String& password) {
+  if (!prefs_.isKey("ssid")) {
+    ssid = "";
+    password = "";
+    return false;
+  }
   ssid = prefs_.getString("ssid", "");
-  password = prefs_.getString("pass", "");
+  password = prefs_.isKey("pass") ? prefs_.getString("pass", "") : "";
   return ssid.length() > 0;
 }
 
@@ -92,11 +101,18 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
       break;
 
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: {
+      const IPAddress ip = WiFi.localIP();
       Serial.print("WifiClient: Got IP: ");
-      util::UIConsole::log("Got IP: " + WiFi.localIP().toString(), "WifiClient");
-      Serial.println(WiFi.localIP());
+      util::UIConsole::log("Got IP: " + ip.toString(), "WifiClient");
+      Serial.println(ip);
       connecting_ = false;
       reconnectDelayMs_ = 0;
+
+      if (ip == IPAddress((uint32_t)0)) {
+        Serial.println("WifiClient: Got IP event but local IP is still 0.0.0.0, waiting...");
+        util::UIConsole::log("Got IP event but local IP is 0.0.0.0, waiting...", "WifiClient");
+        break;
+      }
 
       // Synkronisera klockan med NTP
       syncTime_();
