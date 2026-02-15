@@ -70,5 +70,5 @@ private:
     Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
-    
+
 };

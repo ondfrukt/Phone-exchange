@@ -32,7 +32,7 @@ App::App()
 
     // WebServer depends on line/ring/action + wifi.
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
-    functions_(interruptManager_, mcpDriver_) {
+    functions_(interruptManager_, mcpDriver_, wifiClient_, mqttClient_) {
     // Late wiring: optional callback dependency that cannot be injected in ctor
     // without circular include pressure.
     lineManager_.setToneReader(&toneReader_);
@@ -41,6 +41,7 @@ App::App()
 
 void App::begin() {
     Serial.begin(115200);
+    functions_.begin();
     util::UIConsole::init(200); 
     Serial.println();
     Serial.println("----- App starting -----");
