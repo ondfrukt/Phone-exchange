@@ -4,6 +4,19 @@
 #include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
+namespace {
+String escapeJson(const String& in) {
+  String out;
+  out.reserve(in.length());
+  for (size_t i = 0; i < in.length(); ++i) {
+    const char c = in.charAt(static_cast<unsigned int>(i));
+    if (c == '\\' || c == '"') out += '\\';
+    out += c;
+  }
+  return out;
+}
+} // namespace
+
 WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
 : settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), server_(port) {}
 
@@ -93,7 +106,7 @@ void WebServer::setupCallbacks_() {
 }
 
 void WebServer::setupLineManagerCallback_() {
-  lineManager_.setStatusChangedCallback([this](int index, LineStatus status){
+  lineManager_.addStatusChangedCallback([this](int index, LineStatus status){
     // Only send SSE if there are connected clients
     if (events_.count() > 0) {
       String json = "{\"line\":" + String(index) +
@@ -676,6 +689,115 @@ void WebServer::setupApiRoutes_() {
     }
   });
 
+  // Get MQTT settings: GET /api/settings/mqtt
+  server_.on("/api/settings/mqtt", HTTP_GET, [this](AsyncWebServerRequest* req){
+    req->send(200, "application/json", buildMqttJson_());
+  });
+  // Set MQTT settings: POST /api/settings/mqtt
+  server_.on("/api/settings/mqtt", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getStr = [req](const char* key, String& out) -> bool {
+      if (req->hasParam(key)) {
+        out = req->getParam(key)->value();
+        return true;
+      }
+      if (req->hasParam(key, true)) {
+        out = req->getParam(key, true)->value();
+        return true;
+      }
+      return false;
+    };
+
+    auto getInt = [req](const char* key, int& out) -> bool {
+      if (req->hasParam(key)) {
+        out = req->getParam(key)->value().toInt();
+        return true;
+      }
+      if (req->hasParam(key, true)) {
+        out = req->getParam(key, true)->value().toInt();
+        return true;
+      }
+      return false;
+    };
+
+    String host;
+    String user;
+    String pass;
+    String clientId;
+    String baseTopic;
+    int enabled = settings_.mqttEnabled ? 1 : 0;
+    int retain = settings_.mqttRetain ? 1 : 0;
+    int port = settings_.mqttPort;
+    int qos = settings_.mqttQos;
+
+    getInt("enabled", enabled);
+    getInt("retain", retain);
+    getInt("port", port);
+    getInt("qos", qos);
+    getStr("host", host);
+    getStr("username", user);
+    getStr("password", pass);
+    getStr("clientId", clientId);
+    getStr("baseTopic", baseTopic);
+
+    host.trim();
+    user.trim();
+    pass.trim();
+    clientId.trim();
+    baseTopic.trim();
+
+    if (enabled != 0 && enabled != 1) {
+      req->send(400, "application/json", "{\"error\":\"enabled must be 0 or 1\"}");
+      return;
+    }
+    if (retain != 0 && retain != 1) {
+      req->send(400, "application/json", "{\"error\":\"retain must be 0 or 1\"}");
+      return;
+    }
+    if (port < 1 || port > 65535) {
+      req->send(400, "application/json", "{\"error\":\"port must be 1..65535\"}");
+      return;
+    }
+    if (qos < 0 || qos > 2) {
+      req->send(400, "application/json", "{\"error\":\"qos must be 0..2\"}");
+      return;
+    }
+    if (enabled == 1 && host.isEmpty()) {
+      req->send(400, "application/json", "{\"error\":\"host is required when enabled\"}");
+      return;
+    }
+    if (clientId.length() > 64 || baseTopic.length() > 128 || host.length() > 128 ||
+        user.length() > 64 || pass.length() > 64) {
+      req->send(400, "application/json", "{\"error\":\"one or more fields are too long\"}");
+      return;
+    }
+    auto hasControl = [](const String& value) {
+      for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+        char c = value.charAt(static_cast<unsigned int>(i));
+        if (static_cast<unsigned char>(c) < 32u) return true;
+      }
+      return false;
+    };
+    if (hasControl(host) || hasControl(user) || hasControl(pass) || hasControl(clientId) || hasControl(baseTopic)) {
+      req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
+      return;
+    }
+
+    settings_.mqttEnabled = (enabled == 1);
+    settings_.mqttHost = host;
+    settings_.mqttPort = static_cast<uint16_t>(port);
+    settings_.mqttUsername = user;
+    settings_.mqttPassword = pass;
+    settings_.mqttClientId = clientId.length() ? clientId : "phoneexchange";
+    settings_.mqttBaseTopic = baseTopic.length() ? baseTopic : "phoneexchange";
+    settings_.mqttRetain = (retain == 1);
+    settings_.mqttQos = static_cast<uint8_t>(qos);
+    settings_.mqttConfigDirty = true;
+    settings_.save();
+    util::UIConsole::log("MQTT settings updated (reconfigure scheduled).", "WebServer");
+
+    req->send(200, "application/json", buildMqttJson_());
+  });
+
   // Statisk filserver
   if (fsMounted_) {
     server_.serveStatic("/", LittleFS, "/")
@@ -802,6 +924,21 @@ String WebServer::buildToneGeneratorJson_() const {
   String json = "{";
   json += "\"enabled\":";
   json += settings_.toneGeneratorEnabled ? "true" : "false";
+  json += "}";
+  return json;
+}
+
+String WebServer::buildMqttJson_() const {
+  String json = "{";
+  json += "\"enabled\":"; json += settings_.mqttEnabled ? "true" : "false";
+  json += ",\"host\":\"" + escapeJson(settings_.mqttHost) + "\"";
+  json += ",\"port\":" + String(settings_.mqttPort);
+  json += ",\"username\":\"" + escapeJson(settings_.mqttUsername) + "\"";
+  json += ",\"password\":\"" + escapeJson(settings_.mqttPassword) + "\"";
+  json += ",\"clientId\":\"" + escapeJson(settings_.mqttClientId) + "\"";
+  json += ",\"baseTopic\":\"" + escapeJson(settings_.mqttBaseTopic) + "\"";
+  json += ",\"retain\":"; json += settings_.mqttRetain ? "true" : "false";
+  json += ",\"qos\":" + String(settings_.mqttQos);
   json += "}";
   return json;
 }
