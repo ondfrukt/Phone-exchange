@@ -1,1 +1,0 @@
-Här läggs alla funktioner som hanterar nätverk och kommunikation utåt. WIFI, mqtt, json (eftersom det hanterar kommunikation utåt), webserver osv.
