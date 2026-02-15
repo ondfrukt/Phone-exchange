@@ -105,7 +105,9 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   // No matther what the new status is, we want to set the lineStatusChangeFlag so that LineAction 
   // can handle any necessary actions based on the new status
   lineStatusChangeFlag |= (1 << index);           
-  if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
+  for (auto& cb : statusChangedCallbacks_) {
+    if (cb) cb(index, newStatus);
+  }
 
   if (settings_.debugLmLevel >= 0) {
     Serial.print(BLUE "LineManager: Line ");
@@ -115,6 +117,8 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     Serial.println(COLOR_RESET);
     util::UIConsole::log("Line " + String(index) + " status changed to " + model::LineStatusToString(newStatus), "LineManager");
   }
+
+  
 }
 
 // Clear the status change flag for the specified line
@@ -131,7 +135,12 @@ void LineManager::clearChangeFlag(int index) {
 
 // 
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
-  pushStatusChanged_ = std::move(cb);
+  statusChangedCallbacks_.clear();
+  if (cb) statusChangedCallbacks_.push_back(std::move(cb));
+}
+
+void LineManager::addStatusChangedCallback(StatusChangedCallback cb) {
+  if (cb) statusChangedCallbacks_.push_back(std::move(cb));
 }
 
 // Set a timer for the specified line

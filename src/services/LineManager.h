@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <vector>
 #include "settings/settings.h"
 #include "model/Types.h"
 #include "util/UIConsole.h"
@@ -26,6 +27,7 @@ public:
 
   // Callback functions for webserver
   void setStatusChangedCallback(StatusChangedCallback cb);
+  void addStatusChangedCallback(StatusChangedCallback cb);
   void setActiveLinesChangedCallback(ActiveLinesChangedCallback cb);
 
   LineHandler& getLine(int index);
@@ -44,6 +46,6 @@ private:
   
   Settings& settings_;
   ToneReader* toneReader_ = nullptr;
-  StatusChangedCallback pushStatusChanged_{nullptr};
+  std::vector<StatusChangedCallback> statusChangedCallbacks_;
 
 };

@@ -19,6 +19,7 @@
 #include "net/WifiClient.h"
 #include "net/Provisioning.h"
 #include "net/WebServer.h"
+#include "net/MqttClient.h"
 
 #include "esp_system.h"
 
@@ -48,10 +49,11 @@ private:
     ToneReader toneReader_;
     RingGenerator ringGenerator_;
     SHKService SHKService_;
-    LineAction lineAction_;
 
     net::WifiClient wifiClient_;
     net::Provisioning provisioning_;
+    net::MqttClient mqttClient_;
+    LineAction lineAction_;
     WebServer webServer_;
 
     Functions functions_;

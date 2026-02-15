@@ -2,18 +2,21 @@
 #include <Arduino.h>
 #include "drivers/MT8816Driver.h"
 #include "model/Types.h"
-#include "settings/Settings.h"   // dubbelkolla filnamn/versaler
+#include "settings/Settings.h"
 #include "LineManager.h"
 #include "services/RingGenerator.h"
 #include "services/ToneReader.h"
 #include "services/ConnectionHandler.h"
 #include "services/ToneGenerator.h"
 
+namespace net { class MqttClient; }
+
 class LineAction {
 public:
   LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator,
              ToneReader& toneReader,
-             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3, ConnectionHandler& connectionHandler);
+             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3,
+             ConnectionHandler& connectionHandler, net::MqttClient& mqttClient);
   
   void begin();
   void update();
@@ -30,6 +33,7 @@ private:
   ToneGenerator& toneGen3_;
   ToneGenerator* toneGenerators[3];
   ConnectionHandler& connectionHandler_;
+  net::MqttClient& mqttClient_;
 
   void hookStatusCangeCheck();
   void statusChangeCheck();

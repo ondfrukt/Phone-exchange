@@ -14,8 +14,12 @@ App::App()
     toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
     ringGenerator_(mcpDriver_, Settings::instance(), lineManager_),
     SHKService_(lineManager_, interruptManager_, mcpDriver_, Settings::instance(), ringGenerator_),
+
+    wifiClient_(),
+    provisioning_(),
+    mqttClient_(Settings::instance(), wifiClient_, lineManager_),
     lineAction_(lineManager_, Settings::instance(), mt8816Driver_, ringGenerator_, toneReader_,
-                toneGenerator1_, toneGenerator2_, toneGenerator3_, connectionHandler_),
+                toneGenerator1_, toneGenerator2_, toneGenerator3_, connectionHandler_, mqttClient_),
 
     webServer_(Settings::instance(), lineManager_, wifiClient_, ringGenerator_, lineAction_, 80),
     functions_(interruptManager_, mcpDriver_) {
@@ -68,6 +72,7 @@ void App::begin() {
     // --- Net and webserver ---
     wifiClient_.begin("phoneexchange");
     provisioning_.begin(wifiClient_, "phoneexchange");
+    mqttClient_.begin();
     Serial.println("App: Deferring WebServer start until WiFi has IP");
 
     mcpDriver_.digitalWriteMCP(mcp::MCP_MAIN_ADDRESS, mcp::TM_A0, LOW);
@@ -88,6 +93,10 @@ void App::loop() {
   
   wifiClient_.loop();   // Handle WiFi events and connection
   provisioning_.loop(); // Auto-close provisioning window after timeout
+  if (settings.mqttConfigDirty) {
+    mqttClient_.reconfigureFromSettings();
+    settings.mqttConfigDirty = false;
+  }
   if (!webServerStarted_ && wifiClient_.isConnected()) {
     Serial.println("App: WiFi connected, starting WebServer...");
     const bool webReady = webServer_.begin();
@@ -101,6 +110,7 @@ void App::loop() {
   SHKService_.update(); // Check for SHK changes and process pulses
   toneReader_.update(); // Check for DTMF tones
   ringGenerator_.update(); // Update ring signal generation
+  mqttClient_.loop();
 
   if (toneGenerator1_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator1_.update();
   if (toneGenerator2_.isPlaying() && Settings::instance().toneGeneratorEnabled) toneGenerator2_.update();

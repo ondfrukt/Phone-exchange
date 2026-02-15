@@ -44,6 +44,18 @@ public:
   bool    toneGeneratorEnabled = true; // Enable tone generators
   uint8_t pulseAdjustment;         // Pulse adjustment (1 means 1 pulse = 0, 2 pulses = 1, etc.)
 
+  // ---- MQTT settings ----
+  bool mqttEnabled = false;
+  String mqttHost;
+  uint16_t mqttPort = 1883;
+  String mqttUsername;
+  String mqttPassword;
+  String mqttClientId;
+  String mqttBaseTopic;
+  bool mqttRetain = true;
+  uint8_t mqttQos = 0;
+  bool mqttConfigDirty = false; // Runtime flag, not saved in NVS
+
   // ---- Settings (adjust according to your settings class/constants) ----
   uint32_t burstTickMs;           // Time for a burst tick
   uint32_t hookStableMs;          // Time for stable hook state
@@ -99,5 +111,5 @@ private:
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 4;    // increase if layout changes
+  static constexpr uint16_t kVersion = 5;    // increase if layout changes
 };

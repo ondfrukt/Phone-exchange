@@ -42,6 +42,18 @@ void Settings::resetDefaults() {
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
 
+  // MQTT settings
+  mqttEnabled           = false;
+  mqttHost              = "";
+  mqttPort              = 1883;
+  mqttUsername          = "";
+  mqttPassword          = "";
+  mqttClientId          = "phoneexchange";
+  mqttBaseTopic         = "phoneexchange";
+  mqttRetain            = true;
+  mqttQos               = 0;
+  mqttConfigDirty       = false;
+
   // SHK detection settings
   burstTickMs           = 2;    // Time for a burst tick
   hookStableMs          = 50;   // Time for stable hook state
@@ -102,7 +114,7 @@ bool Settings::load() {
     return false;
   }
   uint16_t v = prefs.getUShort("ver", 0);
-  const bool supportedVersion = (v == kVersion || v == 3);
+  const bool supportedVersion = (v == kVersion || v == 4 || v == 3);
   const bool needsUpgrade = (v != kVersion) && supportedVersion;
   bool ok = supportedVersion;
   if (ok) {
@@ -134,6 +146,15 @@ bool Settings::load() {
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",     globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",         highMeansOffHook);
     toneGeneratorEnabled  = prefs.getBool ("toneGenEn",         toneGeneratorEnabled);
+    mqttEnabled           = prefs.getBool ("mqttEnabled",       mqttEnabled);
+    mqttHost              = prefs.getString("mqttHost",         mqttHost);
+    mqttPort              = prefs.getUShort("mqttPort",         mqttPort);
+    mqttUsername          = prefs.getString("mqttUser",         mqttUsername);
+    mqttPassword          = prefs.getString("mqttPass",         mqttPassword);
+    mqttClientId          = prefs.getString("mqttClientId",     mqttClientId);
+    mqttBaseTopic         = prefs.getString("mqttBaseTopic",    mqttBaseTopic);
+    mqttRetain            = prefs.getBool ("mqttRetain",        mqttRetain);
+    mqttQos               = prefs.getUChar ("mqttQos",          mqttQos);
 
     ringLengthMs          = prefs.getUInt ("ringLengthMs",      ringLengthMs);
     ringPauseMs           = prefs.getUInt ("ringPauseMs",       ringPauseMs);
@@ -165,6 +186,11 @@ bool Settings::load() {
       key = String("lineName") + i;
       lineNames[i] = prefs.getString(key.c_str(), lineNames[i]);
     }
+
+    if (mqttPort == 0) mqttPort = 1883;
+    if (mqttQos > 2) mqttQos = 0;
+    if (mqttBaseTopic.length() == 0) mqttBaseTopic = "phoneexchange";
+    if (mqttClientId.length() == 0) mqttClientId = "phoneexchange";
   }
   prefs.end();
   if (!ok || needsUpgrade) save();
@@ -204,6 +230,15 @@ void Settings::save() const {
   prefs.putUInt ("globalPulseTO",         globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",             highMeansOffHook);
   prefs.putBool ("toneGenEn",             toneGeneratorEnabled);
+  prefs.putBool ("mqttEnabled",           mqttEnabled);
+  prefs.putString("mqttHost",             mqttHost);
+  prefs.putUShort("mqttPort",             mqttPort);
+  prefs.putString("mqttUser",             mqttUsername);
+  prefs.putString("mqttPass",             mqttPassword);
+  prefs.putString("mqttClientId",         mqttClientId);
+  prefs.putString("mqttBaseTopic",        mqttBaseTopic);
+  prefs.putBool ("mqttRetain",            mqttRetain);
+  prefs.putUChar ("mqttQos",              mqttQos);
 
   prefs.putUInt ("ringLengthMs",          ringLengthMs);
   prefs.putUInt ("ringPauseMs",           ringPauseMs);

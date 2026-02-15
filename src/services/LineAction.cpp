@@ -1,10 +1,12 @@
 #include "LineAction.h"
+#include "net/MqttClient.h"
 
 
 LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator, ToneReader& toneReader,
-            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3, ConnectionHandler& connectionHandler)
+            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3,
+            ConnectionHandler& connectionHandler, net::MqttClient& mqttClient)
           : lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver), ringGenerator_(ringGenerator), toneReader_(toneReader),
-            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3), connectionHandler_(connectionHandler) {
+            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3), connectionHandler_(connectionHandler), mqttClient_(mqttClient) {
 };
 
 void LineAction::begin() {
@@ -129,6 +131,8 @@ void LineAction::action(int index) {
   LineHandler& line = lineManager_.getLine(index);
   LineStatus newStatus = line.currentLineStatus;
   LineStatus previousStatus = line.previousLineStatus;
+
+  mqttClient_.publishLineStatus(index); // Publish line status to MQTT
 
   switch (newStatus) {
     
