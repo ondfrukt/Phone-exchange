@@ -21,7 +21,7 @@ void WifiClient::begin(const char* hostname) {
   }
 
   // 3) Registrera eventlyssnare (innan connect)
-  WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t){ onWiFiEvent_(event); });
+  WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info){ onWiFiEvent_(event, info); });
 
   // 4) Försök ansluta med sparade credentials
   String savedSsid, savedPass;
@@ -36,14 +36,20 @@ void WifiClient::begin(const char* hostname) {
 }
 
 void WifiClient::loop() {
-  // Automatisk reconnect
-  if (!isConnected() && !connecting_ && ssid_.length() > 0) {
+  // Automatisk reconnect med backoff så vi undviker tight loop vid fel credentials.
+  const unsigned long now = millis();
+  const bool timeToRetry = (reconnectDelayMs_ == 0) || ((now - lastConnectAttemptMs_) >= reconnectDelayMs_);
+  if (!isConnected() && !connecting_ && ssid_.length() > 0 && timeToRetry) {
     connect_();
   }
 }
 
 bool WifiClient::isConnected() const {
-  return WiFi.status() == WL_CONNECTED;
+  if (WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+  const IPAddress ip = WiFi.localIP();
+  return ip != IPAddress((uint32_t)0);
 }
 
 String WifiClient::getIp() const {
@@ -65,8 +71,13 @@ void WifiClient::saveCredentials(const char* ssid, const char* password) {
 }
 
 bool WifiClient::loadCredentials(String& ssid, String& password) {
+  if (!prefs_.isKey("ssid")) {
+    ssid = "";
+    password = "";
+    return false;
+  }
   ssid = prefs_.getString("ssid", "");
-  password = prefs_.getString("pass", "");
+  password = prefs_.isKey("pass") ? prefs_.getString("pass", "") : "";
   return ssid.length() > 0;
 }
 
@@ -75,10 +86,14 @@ void WifiClient::connect_() {
   util::UIConsole::log("Connecting to " + ssid_ + "...", "WifiClient");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid_.c_str(), password_.c_str());
+  lastConnectAttemptMs_ = millis();
+  if (reconnectDelayMs_ == 0) {
+    reconnectDelayMs_ = kInitialReconnectDelayMs;
+  }
   connecting_ = true;
 }
 
-void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
+void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
   switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
       Serial.println("WifiClient: Connected to AP");
@@ -86,10 +101,18 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
       break;
 
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: {
+      const IPAddress ip = WiFi.localIP();
       Serial.print("WifiClient: Got IP: ");
-      util::UIConsole::log("Got IP: " + WiFi.localIP().toString(), "WifiClient");
-      Serial.println(WiFi.localIP());
+      util::UIConsole::log("Got IP: " + ip.toString(), "WifiClient");
+      Serial.println(ip);
       connecting_ = false;
+      reconnectDelayMs_ = 0;
+
+      if (ip == IPAddress((uint32_t)0)) {
+        Serial.println("WifiClient: Got IP event but local IP is still 0.0.0.0, waiting...");
+        util::UIConsole::log("Got IP event but local IP is 0.0.0.0, waiting...", "WifiClient");
+        break;
+      }
 
       // Synkronisera klockan med NTP
       syncTime_();
@@ -110,9 +133,16 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event) {
     }
 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Serial.println("WifiClient: Disconnected, retrying…");
-      util::UIConsole::log("Disconnected, retrying...", "WifiClient");
       connecting_ = false;
+      if (reconnectDelayMs_ == 0) {
+        reconnectDelayMs_ = kInitialReconnectDelayMs;
+      } else {
+        reconnectDelayMs_ = min(reconnectDelayMs_ * 2, kMaxReconnectDelayMs);
+      }
+      Serial.printf("WifiClient: Disconnected (reason=%d), will retry in %lu ms.\n",
+                    info.wifi_sta_disconnected.reason,
+                    reconnectDelayMs_);
+      util::UIConsole::log("Disconnected, retry with backoff...", "WifiClient");
       // Stäng mDNS tills vi åter har IP
       if (mdnsStarted_) {
         MDNS.end();

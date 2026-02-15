@@ -56,12 +56,11 @@ void Settings::resetDefaults() {
   highMeansOffHook      = true; // High signal means off-hook state
 
   // --- Ringing settings ---
-  // ringLengthMs          = 1000;  // Length of ringing signal in ms
-  // ringPauseMs           = 5000; // Pause between rings in ms
-  ringLengthMs          = 200;  // Length of ringing signal in ms
-  ringPauseMs           = 1000; // Pause between rings in ms
+  // Typical sequense is 1s ring, 5s pause
+  ringLengthMs          = 1000;  // Length of ringing signal in ms
+  ringPauseMs           = 5000; // Pause between rings in ms
 
-  ringIterations        = 1;    // Iterations of ringing signal
+  ringIterations        = 5;    // Iterations of ringing signal
 
   // --- ToneReader (DTMF) settings ---
   dtmfDebounceMs        = 100;   // Debounce time for DTMF detection (minimum time between detections of the same digit)
@@ -71,14 +70,14 @@ void Settings::resetDefaults() {
 
   // --- Timers ---
   timer_Ready           = 240000;
-  timer_Dialing         = 5000;
-  timer_Ringing         = 12000;
-  timer_incomming       = 12000;
+  timer_Dialing         = 30000;    // anänd ens denna?
+  timer_Ringing         = 30000;
+  timer_incomming       = 30000;
   timer_pulsDialing     = 3000;
   timer_toneDialing     = 3000;
   timer_fail            = 30000;
-  timer_disconnected    = 20000;
-  timer_timeout         = 20000;
+  timer_disconnected    = 30000;
+  timer_timeout         = 30000;
   timer_busy            = 30000;
 
 

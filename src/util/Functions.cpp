@@ -18,11 +18,26 @@ void Functions::update() {
     lastEvtMs = now;
 
     if (r.level == 0) {
-        btnDown     = true;
-        pressedAtMs = now;
-    } else {
-      restartDevice(now - pressedAtMs);
+      // Register button press edge.
+      btnDown = true;
+      pressedAtMs = now;
+      return;
     }
+
+    // Ignore stray release events if we never saw a valid press edge.
+    if (!btnDown) {
+      return;
+    }
+
+    btnDown = false;
+    const uint32_t held = now - pressedAtMs;
+
+    // Filter bounce/noise: release shorter than 50 ms is ignored.
+    if (held < 50) {
+      return;
+    }
+
+    restartDevice(held);
   }
 }
 

@@ -31,7 +31,7 @@ public:
 
 private:
     void connect_();
-    void onWiFiEvent_(WiFiEvent_t event);
+    void onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info);
     String makeDefaultHostname_();
     void syncTime_(); 
 
@@ -41,6 +41,10 @@ private:
     String hostname_;
     bool connecting_;
     bool mdnsStarted_ = false; 
+    unsigned long lastConnectAttemptMs_ = 0;
+    unsigned long reconnectDelayMs_ = 0;
+    static constexpr unsigned long kInitialReconnectDelayMs = 5000;
+    static constexpr unsigned long kMaxReconnectDelayMs = 60000;
 };
 
 } // namespace net
