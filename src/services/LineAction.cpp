@@ -156,6 +156,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Incoming:
+      ringGenerator_.generateRingSignal(index);
       lineManager_.setLineTimer(index, settings_.timer_incomming);
       break;
     
@@ -192,8 +193,6 @@ void LineAction::action(int index) {
       turnOffToneGenIfUsed(line);
       lineManager_.setLineTimer(index, settings_.timer_timeout);
       break;
-    
-
     
     case LineStatus::Operator:
       break;
