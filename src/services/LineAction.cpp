@@ -3,16 +3,13 @@
 
 
 LineAction::LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator, ToneReader& toneReader,
-            ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3,
+            ToneGenerator& toneGenerator,
             ConnectionHandler& connectionHandler, net::MqttClient& mqttClient)
           : lineManager_(lineManager), settings_(settings), mt8816Driver_(mt8816Driver), ringGenerator_(ringGenerator), toneReader_(toneReader),
-            toneGen1_(toneGen1), toneGen2_(toneGen2), toneGen3_(toneGen3), connectionHandler_(connectionHandler), mqttClient_(mqttClient) {
+            toneGenerator_(toneGenerator), connectionHandler_(connectionHandler), mqttClient_(mqttClient) {
 };
 
 void LineAction::begin() {
-  toneGenerators[0] = &toneGen1_;
-  toneGenerators[1] = &toneGen2_;
-  toneGenerators[2] = &toneGen3_;
 }
 
 // Main update loop to check for line status changes and timer expirations
@@ -302,41 +299,28 @@ void LineAction::timerExpired(LineHandler& line) {
 
 // Start tone generator for specific line status
 void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) {
+  if (!settings_.toneGeneratorEnabled) {
+    return;
+  }
+
   if (settings_.debugLALevel >= 2) {
     Serial.println("LineAction: Starting tone generator for line " + String(line.lineNumber) + " with toneId " + ToneIdToString(status));
     util::UIConsole::log("Starting tone generator for line " + String(line.lineNumber) + " with status " + ToneIdToString(status), "LineAction");
   }
 
-  if (!toneGen1_.isPlaying()){
-    toneGen1_.startToneSequence(status);
-    line.toneGenUsed = cfg::mt8816::DAC1;
-    connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC1); // Connect line to tone generator 1
-    if (settings_.debugLALevel >= 2) {
-      Serial.println("LineAction: Tone generator 1 is free, using it for line " + String(line.lineNumber));
-      util::UIConsole::log("Tone generator 1 is free, using it for line " + String(line.lineNumber), "LineAction");
-    }
-  }
-  else if (!toneGen2_.isPlaying()){
-    toneGen2_.startToneSequence(status);
-    line.toneGenUsed = cfg::mt8816::DAC2;
-    connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC2); // Connect line to tone generator 2
-    if (settings_.debugLALevel >= 2) {
-      Serial.println("LineAction: Tone generator 1 is busy, using tone generator 2 for line " + String(line.lineNumber));
-      util::UIConsole::log("Tone generator 1 is busy, using tone generator 2 for line " + String(line.lineNumber), "LineAction");
-    }
-  }
-  else if (!toneGen3_.isPlaying()){
-    toneGen3_.startToneSequence(status);
-    line.toneGenUsed = cfg::mt8816::DAC3;
-    connectionHandler_.connectAudioToLine(line.lineNumber, cfg::mt8816::DAC3); // Connect line to tone generator 3
-    if (settings_.debugLALevel >= 2) {
-      Serial.println("LineAction: Tone generator 1 and 2 are busy, using tone generator 3 for line " + String(line.lineNumber));
-      util::UIConsole::log("Tone generator 1 and 2 are busy, using tone generator 3 for line " + String(line.lineNumber), "LineAction");
-    }
-  }
-  else {
+  const uint8_t dac = toneGenerator_.startTone(status);
+  if (dac == 0) {
     Serial.println(RED "LineAction: All tone generators are busy! Cannot play tone for line " + String(line.lineNumber) + COLOR_RESET);
     util::UIConsole::log("All tone generators are busy! Cannot play tone for line " + String(line.lineNumber), "LineAction");
+    return;
+  }
+
+  line.toneGenUsed = dac;
+  connectionHandler_.connectAudioToLine(line.lineNumber, dac);
+
+  if (settings_.debugLALevel >= 2) {
+    Serial.println("LineAction: Assigned DAC " + String(dac) + " to line " + String(line.lineNumber));
+    util::UIConsole::log("Assigned DAC " + String(dac) + " to line " + String(line.lineNumber), "LineAction");
   }
 }
 
@@ -348,13 +332,9 @@ void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
 
   switch (line.toneGenUsed) {
     case cfg::mt8816::DAC1:
-      toneGen1_.stop();
-      break;
     case cfg::mt8816::DAC2:
-      toneGen2_.stop();
-      break;
     case cfg::mt8816::DAC3:
-      toneGen3_.stop();
+      toneGenerator_.stopTone(line.toneGenUsed);
       break;
     default:
       // Invalid mapping, clear state to avoid repeated faults.

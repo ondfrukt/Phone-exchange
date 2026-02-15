@@ -59,6 +59,11 @@ void MqttClient::reconfigureFromSettings() {
 }
 
 void MqttClient::loop() {
+  if (settings_.mqttConfigDirty) {
+    reconfigureFromSettings();
+    settings_.mqttConfigDirty = false;
+  }
+
   const bool wasConnectedBefore = wasConnected_;
   const bool nowConnected = mqtt_.connected();
   if (wasConnectedBefore && !nowConnected) {

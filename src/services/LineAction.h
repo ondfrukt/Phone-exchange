@@ -15,7 +15,7 @@ class LineAction {
 public:
   LineAction(LineManager& lineManager, Settings& settings, MT8816Driver& mt8816Driver, RingGenerator& ringGenerator,
              ToneReader& toneReader,
-             ToneGenerator& toneGen1, ToneGenerator& toneGen2, ToneGenerator& toneGen3,
+             ToneGenerator& toneGenerator,
              ConnectionHandler& connectionHandler, net::MqttClient& mqttClient);
   
   void begin();
@@ -28,10 +28,7 @@ private:
   MT8816Driver& mt8816Driver_;
   RingGenerator& ringGenerator_;
   ToneReader& toneReader_;
-  ToneGenerator& toneGen1_;
-  ToneGenerator& toneGen2_;
-  ToneGenerator& toneGen3_;
-  ToneGenerator* toneGenerators[3];
+  ToneGenerator& toneGenerator_;
   ConnectionHandler& connectionHandler_;
   net::MqttClient& mqttClient_;
 

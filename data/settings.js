@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgMcp = document.getElementById('dbg-mcp');
   const $dbgI2c = document.getElementById('dbg-i2c');
   const $dbgIm  = document.getElementById('dbg-im');
+  const $dbgLac = document.getElementById('dbg-lac');
 
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
@@ -163,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
       if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
       if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
+      if (typeof d.lac === 'number') $dbgLac.value = String(d.lac|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -185,7 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
         rg: $dbgRg.value,
         mcp: $dbgMcp.value,
         i2c: $dbgI2c.value,
-        im: $dbgIm.value
+        im: $dbgIm.value,
+        lac: $dbgLac.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -653,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
       if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
       if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
+      if (typeof d.lac === 'number') $dbgLac.value = String(d.lac|0);
     } catch {}
   });
 

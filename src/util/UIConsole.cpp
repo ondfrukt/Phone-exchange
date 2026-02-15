@@ -56,14 +56,6 @@ static void push_buffer_locked(const String& json) {
 
 // Bygg JSON och leverera antingen till sink eller buffra
 void UIConsole::log(const String& text, const char* source) {
-  // Mirror logs to Serial so UIConsole and Serial carry the same messages.
-  if (source && strlen(source) > 0) {
-    Serial.print("[");
-    Serial.print(source);
-    Serial.print("] ");
-  }
-  Serial.println(text);
-
   // skapa JSON
   const String escText = escapeJsonString(text);
   String json = "{\"text\":\"" + escText + "\"";

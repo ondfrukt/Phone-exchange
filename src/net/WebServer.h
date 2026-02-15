@@ -16,6 +16,7 @@ class WebServer {
 public:
   WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port = 80);
   bool begin();
+  void update();
   void listFS();
 
   bool isReady() const { return serverStarted_ && fsMounted_; }

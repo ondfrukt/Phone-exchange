@@ -3,10 +3,10 @@
 InterruptManager::InterruptManager(MCPDriver& mcpDriver, Settings& settings)
   : mcpDriver_(mcpDriver), settings_(settings) {}
 
-// Samla in alla väntande interrupts från MCPDriver och lägg i kön
+// Collect all pending interrupts from MCPDriver and enqueue them
 void InterruptManager::collectInterrupts() {
   uint8_t now = millis();
-  // Samla in alla MCP_MAIN interrupts
+  // Collect all MCP_MAIN interrupts
   while (true) {
     IntResult r = mcpDriver_.handleMainInterrupt();
     if (!r.hasEvent) break;
@@ -35,7 +35,7 @@ void InterruptManager::collectInterrupts() {
     }
   }
 
-  // Samla in alla MCP_SLIC1 interrupts
+  // Collect all MCP_SLIC1 interrupts
   while (true) {
     IntResult r = mcpDriver_.handleSlic1Interrupt();
     if (!r.hasEvent) break;
@@ -69,7 +69,7 @@ void InterruptManager::collectInterrupts() {
     }
   }
 
-  // Samla in alla MCP_SLIC2 interrupts
+  // Collect all MCP_SLIC2 interrupts
   while (true) {
     IntResult r = mcpDriver_.handleSlic2Interrupt();
     if (!r.hasEvent) break;
@@ -101,7 +101,7 @@ void InterruptManager::collectInterrupts() {
     }
   }
 
-  // Samla in alla MCP_MT8816 interrupts
+  // Collect all MCP_MT8816 interrupts
   while (true) {
     IntResult r = mcpDriver_.handleMT8816Interrupt();
     if (!r.hasEvent) break;
@@ -131,16 +131,16 @@ void InterruptManager::collectInterrupts() {
   }
 }
 
-// Polla nästa händelse för en specifik MCP-adress och pin
+// Poll the next event for a specific MCP address and pin
 // Note: This implementation has O(n) complexity but is acceptable for small queue sizes
 // and the expected low interrupt rate (typically < 100 events/sec).
 // Events are requeued if they don't match, which may alter ordering slightly.
 IntResult InterruptManager::pollEvent(uint8_t i2c_addr, uint8_t pin) {
   if (eventQueue_.empty()) {
-    return IntResult{}; // Tom händelse
+    return IntResult{}; // Empty event
   }
 
-  // Använd en temporär kö för att söka efter matchande händelse
+  // Use a temporary queue to find the matching event
   std::queue<IntResult> tempQueue;
   IntResult foundEvent;
   bool found = false;
@@ -166,12 +166,12 @@ IntResult InterruptManager::pollEvent(uint8_t i2c_addr, uint8_t pin) {
                             "InterruptManager");
       }
     } else {
-      // Spara händelser som inte matchade för att lägga tillbaka dem
+      // Store non-matching events so they can be put back
       tempQueue.push(current);
     }
   }
 
-  // Lägg tillbaka alla händelser som inte matchade
+  // Put back all non-matching events
   while (!tempQueue.empty()) {
     eventQueue_.push(tempQueue.front());
     tempQueue.pop();
@@ -180,13 +180,13 @@ IntResult InterruptManager::pollEvent(uint8_t i2c_addr, uint8_t pin) {
   return foundEvent;
 }
 
-// Polla nästa händelse för en specifik MCP-adress (oavsett pin)
+// Poll the next event for a specific MCP address (regardless of pin)
 IntResult InterruptManager::pollEventByAddress(uint8_t i2c_addr) {
   if (eventQueue_.empty()) {
-    return IntResult{}; // Tom händelse
+    return IntResult{}; // Empty event
   }
 
-  // Använd en temporär kö för att söka efter matchande händelse
+  // Use a temporary queue to find the matching event
   std::queue<IntResult> tempQueue;
   IntResult foundEvent;
   bool found = false;
@@ -212,12 +212,12 @@ IntResult InterruptManager::pollEventByAddress(uint8_t i2c_addr) {
                             "InterruptManager");
       }
     } else {
-      // Spara händelser som inte matchade för att lägga tillbaka dem
+      // Store non-matching events so they can be put back
       tempQueue.push(current);
     }
   }
 
-  // Lägg tillbaka alla händelser som inte matchade
+  // Put back all non-matching events
   while (!tempQueue.empty()) {
     eventQueue_.push(tempQueue.front());
     tempQueue.pop();
@@ -226,10 +226,10 @@ IntResult InterruptManager::pollEventByAddress(uint8_t i2c_addr) {
   return foundEvent;
 }
 
-// Polla alla händelser (FIFO-ordning)
+// Poll all events (FIFO order)
 IntResult InterruptManager::pollAnyEvent() {
   if (eventQueue_.empty()) {
-    return IntResult{}; // Tom händelse
+    return IntResult{}; // Empty event
   }
 
   IntResult event = eventQueue_.front();
@@ -251,7 +251,7 @@ IntResult InterruptManager::pollAnyEvent() {
   return event;
 }
 
-// Töm alla händelser i kön
+// Clear all queued events
 void InterruptManager::clearQueue() {
   size_t clearedCount = eventQueue_.size();
   

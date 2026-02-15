@@ -8,8 +8,10 @@ MT8816Driver::MT8816Driver(MCPDriver& mcpDriver, Settings& settings) : mcpDriver
 void MT8816Driver::begin(){
 	// Reset MCP
 	reset();
+  if (settings_.debugMTLevel >= 1) {
 	Serial.println("MT8816: Initialized successfully.");
     util::UIConsole::log("Initialized successfully.", "MT8816Driver");
+  }
 }
 
 void MT8816Driver::setConnection(uint8_t x, uint8_t y, bool state) {

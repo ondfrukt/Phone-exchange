@@ -47,6 +47,23 @@ bool WebServer::begin() {
   return serverStarted_ && fsMounted_;
 }
 
+void WebServer::update() {
+  if (serverStarted_) {
+    return;
+  }
+
+  if (!wifi_.isConnected()) {
+    return;
+  }
+
+  Serial.println("WebServer: WiFi connected, starting HTTP server...");
+  const bool webReady = begin();
+  Serial.printf("WebServer: ready=%s (server+LittleFS)\n", webReady ? "true" : "false");
+  if (!webReady) {
+    Serial.println("WebServer: Web UI may be unavailable. Check LittleFS upload.");
+  }
+}
+
 void WebServer::listFS() {
   File root = LittleFS.open("/");
   for (File f = root.openNextFile(); f; f = root.openNextFile()) {
@@ -325,7 +342,7 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1, mcp=-1, i2c=-1, im=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1, mcp=-1, i2c=-1, im=-1, lac=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
@@ -337,14 +354,15 @@ void WebServer::setupApiRoutes_() {
     bool hasMcp = getOptUChar("mcp", mcp);
     bool hasI2c = getOptUChar("i2c", i2c);
     bool hasIm  = getOptUChar("im",  im);
+    bool hasLac = getOptUChar("lac", lac);
 
-    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg && !hasMcp && !hasI2c && !hasIm) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg|mcp|i2c|im\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg && !hasMcp && !hasI2c && !hasIm && !hasLac) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg|mcp|i2c|im|lac\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg)) || (hasMcp && !inRange(mcp)) || (hasI2c && !inRange(i2c)) || (hasIm && !inRange(im))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg)) || (hasMcp && !inRange(mcp)) || (hasI2c && !inRange(i2c)) || (hasIm && !inRange(im)) || (hasLac && !inRange(lac))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -361,6 +379,7 @@ void WebServer::setupApiRoutes_() {
     if (hasMcp) settings_.debugMCPLevel = (uint8_t)mcp;
     if (hasI2c) settings_.debugI2CLevel = (uint8_t)i2c;
     if (hasIm)  settings_.debugIMLevel  = (uint8_t)im;
+    if (hasLac) settings_.debugLAC      = (uint8_t)lac;
 
     // Spara till NVS
     settings_.save();
@@ -904,6 +923,7 @@ String WebServer::buildDebugJson_() const {
   json += ",\"mcp\":" + String(settings_.debugMCPLevel);
   json += ",\"i2c\":" + String(settings_.debugI2CLevel);
   json += ",\"im\":" + String(settings_.debugIMLevel);
+  json += ",\"lac\":" + String(settings_.debugLAC);
   json += "}";
   return json;
 }

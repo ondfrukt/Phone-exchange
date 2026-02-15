@@ -1,23 +1,22 @@
 #pragma once
 
 #include <Arduino.h>
-#include <MD_AD9833.h>
-#include <SPI.h>
 #include <cstddef>
 #include <cstdint>
 
 #include "config.h"
+#include "drivers/AD9833Driver.h"
 #include "model/Types.h"
-#include "settings/Settings.h" 
+#include "settings/Settings.h"
 
 class ToneGenerator {
 public:
-  explicit ToneGenerator(uint8_t csPin, SPIClass& spi = SPI);
+  ToneGenerator(AD9833Driver& driver1, AD9833Driver& driver2, AD9833Driver& driver3);
   void begin();
-  void startToneSequence(model::ToneId sequence);
-  void stop();
+  uint8_t startTone(model::ToneId sequence);
+  void stopTone(uint8_t dac);
   void update();
-  bool isPlaying();
+  bool isPlaying() const;
 
 private:
   struct Step {
@@ -30,17 +29,21 @@ private:
     std::size_t length;
   };
 
-  void ensureStarted_();
-  void applyStep_(const Step& step);
+  struct ChannelState {
+    AD9833Driver* driver = nullptr;
+    uint8_t dac = 0;
+    bool playing = false;
+    StepSequence currentSequence{nullptr, 0};
+    std::size_t currentStepIndex = 0;
+    uint32_t stepStartTimeMs = 0;
+  };
+
+  void applyStep_(ChannelState& channel, const Step& step);
+  ChannelState* findChannelByDac_(uint8_t dac);
+  ChannelState* findFreeChannel_();
   StepSequence getSequence_(model::ToneId sequence) const;
+  void stopChannel_(ChannelState& channel);
 
 private:
-  SPIClass&   spi_;
-  MD_AD9833   ad9833_;
-  uint8_t     csPin_;
-  bool        started_ = false;
-  bool        playing_ = false;
-  StepSequence currentSequence_{nullptr, 0};
-  std::size_t currentStepIndex_ = 0;
-  uint32_t    stepStartTimeMs_ = 0;
+  ChannelState channels_[3];
 };
