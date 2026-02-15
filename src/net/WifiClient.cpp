@@ -38,7 +38,9 @@ void WifiClient::begin(const char* hostname) {
 void WifiClient::loop() {
   // Automatisk reconnect med backoff så vi undviker tight loop vid fel credentials.
   const unsigned long now = millis();
-  const bool timeToRetry = (reconnectDelayMs_ == 0) || ((now - lastConnectAttemptMs_) >= reconnectDelayMs_);
+  const bool timeToRetry =
+      (reconnectDelayMs_ == 0) ||
+      ((long)(now - lastConnectAttemptMs_) >= (long)reconnectDelayMs_);
   if (!isConnected() && !connecting_ && ssid_.length() > 0 && timeToRetry) {
     connect_();
   }
@@ -71,13 +73,15 @@ void WifiClient::saveCredentials(const char* ssid, const char* password) {
 }
 
 bool WifiClient::loadCredentials(String& ssid, String& password) {
-  if (!prefs_.isKey("ssid")) {
+  const bool hasSsid = prefs_.isKey("ssid");
+  const bool hasPass = prefs_.isKey("pass");
+  if (!hasSsid || !hasPass) {
     ssid = "";
     password = "";
     return false;
   }
   ssid = prefs_.getString("ssid", "");
-  password = prefs_.isKey("pass") ? prefs_.getString("pass", "") : "";
+  password = prefs_.getString("pass", "");
   return ssid.length() > 0;
 }
 

@@ -56,7 +56,7 @@ void Settings::resetDefaults() {
   highMeansOffHook      = true; // High signal means off-hook state
 
   // --- Ringing settings ---
-  // Typical sequense is 1s ring, 5s pause
+  // Typical sequence is 1s ring, 5s pause
   ringLengthMs          = 1000;  // Length of ringing signal in ms
   ringPauseMs           = 5000; // Pause between rings in ms
 
@@ -70,7 +70,7 @@ void Settings::resetDefaults() {
 
   // --- Timers ---
   timer_Ready           = 240000;
-  timer_Dialing         = 30000;    // anänd ens denna?
+  timer_Dialing         = 30000;    // TODO: Verify whether this timer is still used.
   timer_Ringing         = 30000;
   timer_incomming       = 30000;
   timer_pulsDialing     = 3000;

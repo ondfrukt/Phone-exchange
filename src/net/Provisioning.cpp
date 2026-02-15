@@ -6,7 +6,7 @@ using namespace net;
 static const char* kPop         = "abcd1234";         // Proof of Possession (PIN)
 static const char* kServiceName = "PHONE_EXCHANGE";   // Namn som syns i Espressifs app
 static const char* kServiceKey  = nullptr;            // Används bara för SoftAP
-static const bool  kResetProv   = true;               // Starta med ren provisioning-state när inga app-creds finns
+static const bool  kResetProv   = false;              // Behåll provisioning-state; rensa bara vid explicit factory reset
 
 static uint8_t kUuid[16] = {
   0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
