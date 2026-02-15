@@ -52,8 +52,10 @@ void WebServer::initSse_() {
   // AsyncEventSource handles client management internally
   
   events_.onConnect([this](AsyncEventSourceClient* client){
-    Serial.println("WebServer: SSE-klient ansluten 📡");
-    util::UIConsole::log("SSE client connected.", "WebServer");
+    if (settings_.debugWSLevel >= 2) {
+      Serial.printf("WebServer: SSE connected (open streams=%u)\n", (unsigned)events_.count());
+      util::UIConsole::log("SSE connected (likely page load or page switch).", "WebServer");
+    }
     // Skicka initial data till den nya klienten
     client->send(buildStatusJson_().c_str(), nullptr, millis());
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
@@ -62,6 +64,11 @@ void WebServer::initSse_() {
     util::UIConsole::forEachBuffered([client](const String& json) {
       client->send(json.c_str(), "console", millis());
     });
+  });
+  events_.onDisconnect([this](AsyncEventSourceClient*){
+    if (settings_.debugWSLevel >= 2) {
+      Serial.printf("WebServer: SSE disconnected (open streams=%u)\n", (unsigned)events_.count());
+    }
   });
   server_.addHandler(&events_);
 }
@@ -612,6 +619,7 @@ void WebServer::setupApiRoutes_() {
   if (fsMounted_) {
     server_.serveStatic("/", LittleFS, "/")
            .setDefaultFile("index.html")
+           .setTryGzipFirst(false)
            .setCacheControl("max-age=60");
   } else {
     server_.on("/", HTTP_GET, [](AsyncWebServerRequest *req){

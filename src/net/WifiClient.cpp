@@ -6,6 +6,9 @@ WifiClient::WifiClient() : connecting_(false) {}
 
 void WifiClient::begin(const char* hostname) {
   prefs_.begin("wifi", false);
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);
 
   // 1) Välj hostname (antingen given, eller auto baserat på MAC)
   if (hostname && strlen(hostname) > 0) {
@@ -36,8 +39,16 @@ void WifiClient::begin(const char* hostname) {
 }
 
 void WifiClient::loop() {
-  // Automatisk reconnect med backoff så vi undviker tight loop vid fel credentials.
   const unsigned long now = millis();
+
+  // If we are "connecting" for too long without a valid IP, force a reconnect.
+  if (connecting_ && ((long)(now - lastConnectAttemptMs_) >= (long)kConnectAttemptTimeoutMs)) {
+    Serial.println("WifiClient: Connect timeout, forcing reconnect.");
+    util::UIConsole::log("Connect timeout, forcing reconnect.", "WifiClient");
+    forceReconnect_();
+  }
+
+  // Automatisk reconnect med backoff så vi undviker tight loop vid fel credentials.
   const bool timeToRetry =
       (reconnectDelayMs_ == 0) ||
       ((long)(now - lastConnectAttemptMs_) >= (long)reconnectDelayMs_);
@@ -89,12 +100,24 @@ void WifiClient::connect_() {
   Serial.printf("WifiClient: Connecting to %s… (host=%s)\n", ssid_.c_str(), hostname_.c_str());
   util::UIConsole::log("Connecting to " + ssid_ + "...", "WifiClient");
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect(false, false);
   WiFi.begin(ssid_.c_str(), password_.c_str());
   lastConnectAttemptMs_ = millis();
   if (reconnectDelayMs_ == 0) {
     reconnectDelayMs_ = kInitialReconnectDelayMs;
   }
   connecting_ = true;
+}
+
+void WifiClient::forceReconnect_() {
+  connecting_ = false;
+  WiFi.disconnect(false, false);
+  if (reconnectDelayMs_ == 0) {
+    reconnectDelayMs_ = kInitialReconnectDelayMs;
+  } else {
+    reconnectDelayMs_ = min(reconnectDelayMs_ * 2, kMaxReconnectDelayMs);
+  }
+  lastConnectAttemptMs_ = millis();
 }
 
 void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
@@ -152,6 +175,12 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
         MDNS.end();
         mdnsStarted_ = false;
       }
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+      Serial.println("WifiClient: Lost IP, forcing reconnect.");
+      util::UIConsole::log("Lost IP, forcing reconnect.", "WifiClient");
+      forceReconnect_();
       break;
 
     default:
