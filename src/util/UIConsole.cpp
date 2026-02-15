@@ -66,7 +66,7 @@ void UIConsole::log(const String& text, const char* source) {
   
   // Använd verklig tid om tillgänglig, annars millis()
   struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
+  if (getLocalTime(&timeinfo, 0)) {
     // Formatera som Unix timestamp (sekunder sedan 1970-01-01)
     time_t now;
     time(&now);
