@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Bitmask representing active/inactive lines (0..255)
   let activeMask = 0;
-  // Cache of line objects for quick lookup and rendering: [{id, status, phone}, ...]
+  // Cache of line objects for quick lookup and rendering: [{id, status, phone, name}, ...]
   let linesCache = [];
 
   // Helpers
@@ -60,6 +60,22 @@ document.addEventListener('DOMContentLoaded', () => {
     input.value = entry.phone || '';
   }
 
+  function updateNameInput(entry){
+    if (!entry) return;
+    const input = document.getElementById(`line-${entry.id}-name`);
+    if (!input) return;
+    if (document.activeElement === input) return;
+    input.value = entry.name || '';
+  }
+
+  function updateLineLabel(entry){
+    if (!entry) return;
+    const label = document.getElementById(`line-${entry.id}-label`);
+    if (!label) return;
+    const cleanName = (entry.name || '').trim();
+    label.textContent = cleanName.length > 0 ? `${cleanName} (Linje ${entry.id})` : `Linje ${entry.id}`;
+  }
+
   // Build or update a single line entry in cache and DOM.
   function upsertLine(line){
     if (!line) return;
@@ -67,12 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let entry = linesCache.find(x => x.id === lineId);
     if (!entry) {
-      entry = { id: lineId, status: '', phone: '' };
+      entry = { id: lineId, status: '', phone: '', name: '' };
       linesCache.push(entry);
     }
 
     if (typeof line.status === 'string') entry.status = line.status;
     if (typeof line.phone === 'string') entry.phone = line.phone.trim();
+    if (typeof line.name === 'string') entry.name = line.name.trim();
 
     let row = document.getElementById('line-' + lineId);
     if (!row) {
@@ -80,7 +97,14 @@ document.addEventListener('DOMContentLoaded', () => {
       row.className = 'row';
       row.id = 'line-' + lineId;
       row.innerHTML = `
-        <span class="k">Linje ${lineId}</span>
+        <div class="k line-col">
+          <span class="line-label" id="line-${lineId}-label">Linje ${lineId}</span>
+          <div class="name-editor">
+            <input type="text" id="line-${lineId}-name" autocomplete="off"
+                   placeholder="Name" maxlength="32" />
+            <button class="badge clickable" id="line-${lineId}-name-save" type="button">Save Name</button>
+          </div>
+        </div>
         <span class="v" id="line-${lineId}-status"></span>
         <div class="phone-editor">
           <input type="text" id="line-${lineId}-phone" inputmode="tel" autocomplete="tel"
@@ -99,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const saveBtn = row.querySelector(`#line-${lineId}-save`);
       const phoneInput = row.querySelector(`#line-${lineId}-phone`);
+      const nameSaveBtn = row.querySelector(`#line-${lineId}-name-save`);
+      const nameInput = row.querySelector(`#line-${lineId}-name`);
       if (saveBtn) {
         saveBtn.addEventListener('click', () => persistPhoneNumber(lineId, saveBtn));
       }
@@ -110,10 +136,23 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
+      if (nameSaveBtn) {
+        nameSaveBtn.addEventListener('click', () => persistLineName(lineId, nameSaveBtn));
+      }
+      if (nameInput) {
+        nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            persistLineName(lineId, nameSaveBtn);
+          }
+        });
+      }
     }
 
     updateStatusVisibility(lineId);
     updatePhoneInput(entry);
+    updateNameInput(entry);
+    updateLineLabel(entry);
     updateActiveCell(lineId);
   }
 
@@ -250,6 +289,81 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const entry = linesCache.find(x => x.id === lineId);
       updatePhoneInput(entry);
+    }
+  }
+
+  async function persistLineName(lineId, buttonEl){
+    const input = document.getElementById(`line-${lineId}-name`);
+    if (!input) return;
+    const btn = buttonEl || document.getElementById(`line-${lineId}-name-save`);
+    const originalText = btn ? btn.textContent : '';
+
+    const value = input.value.trim();
+    if (value.length > 32) {
+      if (btn) {
+        btn.textContent = 'Too long';
+        setTimeout(() => { if (btn) btn.textContent = originalText; }, 2000);
+      }
+      setStatus('Namnet är för långt (max 32 tecken).');
+      return;
+    }
+
+    try {
+      if (btn) {
+        btn.classList.add('working');
+        btn.disabled = true;
+      }
+
+      const body = new URLSearchParams({
+        line: String(lineId),
+        name: value
+      }).toString();
+
+      const r = await fetch('/api/line/name', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+        body
+      });
+
+      if (!r.ok) {
+        let msg = 'HTTP ' + r.status;
+        try {
+          const data = await r.json();
+          if (data && typeof data.error === 'string') msg = data.error;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const entry = linesCache.find(x => x.id === lineId);
+      if (entry) {
+        entry.name = value;
+        updateLineLabel(entry);
+      }
+      if (btn) {
+        btn.textContent = 'Saved';
+        setTimeout(() => { if (btn) btn.textContent = originalText; }, 1500);
+      }
+    } catch (e) {
+      console.warn('persistLineName error', e);
+      let friendly = 'Kunde inte spara namnet.';
+      if (e && typeof e.message === 'string') {
+        if (e.message.includes('name too long')) friendly = 'Namnet är för långt (max 32 tecken).';
+        else if (e.message.includes('invalid characters')) friendly = 'Namnet innehåller ogiltiga tecken.';
+        else if (!e.message.startsWith('HTTP')) friendly += ` (${e.message})`;
+      }
+      setStatus(friendly);
+      if (btn) {
+        btn.textContent = 'Error';
+        setTimeout(() => { if (btn) btn.textContent = originalText; }, 2000);
+      }
+    } finally {
+      if (btn) {
+        btn.classList.remove('working');
+        btn.disabled = false;
+      }
+      const entry = linesCache.find(x => x.id === lineId);
+      updateNameInput(entry);
+      updateLineLabel(entry);
     }
   }
 

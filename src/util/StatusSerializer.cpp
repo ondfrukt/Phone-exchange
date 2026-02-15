@@ -28,6 +28,7 @@ String buildLinesStatusJson(const LineManager& lm) {
     out += "{\"id\":" + String(i);
     out += ",\"status\":\""; out += model::LineStatusToString(line.currentLineStatus); out += "\"";
     out += ",\"phone\":\""; out += escapeJson(line.phoneNumber); out += "\"";
+    out += ",\"name\":\""; out += escapeJson(line.lineName); out += "\"";
     // Lägg till fler fält här när du vill skala upp:
     // out += ",\"active\":"; out += (line.lineActive ? "true" : "false");
     // out += ",\"hook\":\"";  out += (line.SHK ? "Off" : "On"); out += "\"";

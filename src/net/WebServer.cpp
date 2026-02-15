@@ -238,6 +238,67 @@ void WebServer::setupApiRoutes_() {
 
     req->send(200, "application/json", "{\"ok\":true}");
   });
+  // Set line name: POST /api/line/name (body: line=3&name=Kitchen)
+  server_.on("/api/line/name", HTTP_POST, [this](AsyncWebServerRequest* req){
+    const AsyncWebParameter* lineParam = nullptr;
+    const AsyncWebParameter* nameParam = nullptr;
+
+    if (req->hasParam("line", true)) {
+      lineParam = req->getParam("line", true);
+    } else if (req->hasParam("line")) {
+      lineParam = req->getParam("line");
+    }
+
+    if (req->hasParam("name", true)) {
+      nameParam = req->getParam("name", true);
+    } else if (req->hasParam("name")) {
+      nameParam = req->getParam("name");
+    }
+
+    if (!lineParam || !nameParam) {
+      req->send(400, "application/json", "{\"error\":\"missing line/name\"}");
+      return;
+    }
+
+    int line = lineParam->value().toInt();
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    String value = nameParam->value();
+    value.trim();
+    if (value.length() > 32) {
+      req->send(400, "application/json", "{\"error\":\"name too long\"}");
+      return;
+    }
+
+    bool hasControlChars = false;
+    for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+      char c = value.charAt(static_cast<unsigned int>(i));
+      if (static_cast<unsigned char>(c) < 32u) {
+        hasControlChars = true;
+        break;
+      }
+    }
+
+    if (hasControlChars) {
+      req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
+      return;
+    }
+
+    lineManager_.setLineName(line, value);
+    settings_.save();
+
+    sendFullStatusSse();
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Line %d name set to %s\n", line, value.c_str());
+      util::UIConsole::log("Name for line " + String(line) + " updated", "WebServer");
+    }
+
+    req->send(200, "application/json", "{\"ok\":true}");
+  });
   // Debug nivåer: GET /api/debug , POST /api/debug/set
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
@@ -644,7 +705,7 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   settings_.adjustActiveLines();
 
   // Spara till NVS
-  //settings_.save();
+  settings_.save();
 
   // Spegla in masken i LineManager direkt (så UI och logik följer med)
   lineManager_.syncLineActive(line);

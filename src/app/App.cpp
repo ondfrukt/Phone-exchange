@@ -33,8 +33,14 @@ void App::begin() {
 
 		// ----  Settings ----
     auto& settings = Settings::instance();
-    settings.resetDefaults(); 
-    //settings.load();
+    const bool settingsLoaded = settings.load();
+    if (settingsLoaded) {
+      Serial.println("App: Settings loaded from NVS.");
+      util::UIConsole::log("Settings loaded from NVS.", "App");
+    } else {
+      Serial.println("App: Using default settings (stored to NVS if needed).");
+      util::UIConsole::log("Using default settings (stored to NVS if needed).", "App");
+    }
 
 		// ---- I2C ----
 		Wire.begin(ESP_PINS::SDA_PIN, ESP_PINS::SCL_PIN);

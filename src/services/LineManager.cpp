@@ -11,6 +11,7 @@ LineManager::LineManager(Settings& settings)
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
     lines.back().phoneNumber = s.linePhoneNumbers[i];
+    lines.back().lineName = s.lineNames[i];
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
@@ -190,6 +191,21 @@ void LineManager::setPhoneNumber(int index, const String& value) {
 
   lines[index].phoneNumber = sanitized;
   settings_.linePhoneNumbers[index] = sanitized;
+}
+
+void LineManager::setLineName(int index, const String& value) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setLineName - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setLineName - ogiltigt index: " + String(index), "LineManager");
+    return;
+  }
+
+  String sanitized = value;
+  sanitized.trim();
+
+  lines[index].lineName = sanitized;
+  settings_.lineNames[index] = sanitized;
 }
 
 // Search for a line index based on the provided phone number. Returns -1 if not found.

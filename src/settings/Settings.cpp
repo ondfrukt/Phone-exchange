@@ -84,6 +84,7 @@ void Settings::resetDefaults() {
   // --- Phone numbers ---
   for (int i = 0; i < 8; ++i) {
     linePhoneNumbers[i] = String(i);
+    lineNames[i] = "";
   }
 
   // Runtime flags kept false here; set by MCPDriver::begin()
@@ -95,12 +96,15 @@ void Settings::resetDefaults() {
 bool Settings::load() {
   Preferences prefs;
   if (!prefs.begin(kNamespace, true)) {
-    Serial.println("No NVS namespace found for settings");
-    util::UIConsole::log("No NVS namespace found for settings", "Settings");
+    Serial.println("Settings: No readable NVS namespace found, saving defaults.");
+    util::UIConsole::log("No readable NVS namespace found, saving defaults.", "Settings");
+    save();
     return false;
   }
   uint16_t v = prefs.getUShort("ver", 0);
-  bool ok = (v == kVersion);
+  const bool supportedVersion = (v == kVersion || v == 3);
+  const bool needsUpgrade = (v != kVersion) && supportedVersion;
+  bool ok = supportedVersion;
   if (ok) {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
     pulseDebounceMs        = prefs.getUShort("pulseDebounceMs", pulseDebounceMs);
@@ -158,10 +162,12 @@ bool Settings::load() {
     for (int i = 0; i < 8; ++i) {
       String key = String("linePhone") + i;
       linePhoneNumbers[i] = prefs.getString(key.c_str(), linePhoneNumbers[i]);
+      key = String("lineName") + i;
+      lineNames[i] = prefs.getString(key.c_str(), lineNames[i]);
     }
   }
   prefs.end();
-  if (!ok) save();
+  if (!ok || needsUpgrade) save();
   return ok;
 }
 
@@ -226,6 +232,8 @@ void Settings::save() const {
   for (int i = 0; i < 8; ++i) {
     String key = String("linePhone") + i;
     prefs.putString(key.c_str(), linePhoneNumbers[i]);
+    key = String("lineName") + i;
+    prefs.putString(key.c_str(), lineNames[i]);
   }
 
   prefs.end();

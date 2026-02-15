@@ -18,6 +18,7 @@ public:
   void setLineTimer(int index, unsigned int limit);
   void resetLineTimer(int index);
   void setPhoneNumber(int index, const String& value);
+  void setLineName(int index, const String& value);
   int searchPhoneNumber(const String& phoneNumber);
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
