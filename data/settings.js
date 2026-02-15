@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgMcp = document.getElementById('dbg-mcp');
   const $dbgI2c = document.getElementById('dbg-i2c');
   const $dbgIm  = document.getElementById('dbg-im');
+  const $dbgLac = document.getElementById('dbg-lac');
 
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
@@ -75,6 +76,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const $timerSaveBtn = document.getElementById('timer-save');
   const $timerStatus = document.getElementById('timer-status');
 
+  // --- MQTT Settings UI ---
+  const $mqttEnabled = document.getElementById('mqtt-enabled');
+  const $mqttEnabledLabel = document.getElementById('mqtt-enabled-label');
+  const $mqttHost = document.getElementById('mqtt-host');
+  const $mqttPort = document.getElementById('mqtt-port');
+  const $mqttUsername = document.getElementById('mqtt-username');
+  const $mqttPassword = document.getElementById('mqtt-password');
+  const $mqttClientId = document.getElementById('mqtt-client-id');
+  const $mqttBaseTopic = document.getElementById('mqtt-base-topic');
+  const $mqttQos = document.getElementById('mqtt-qos');
+  const $mqttRetain = document.getElementById('mqtt-retain');
+  const $mqttRetainLabel = document.getElementById('mqtt-retain-label');
+  const $mqttSaveBtn = document.getElementById('mqtt-save');
+  const $mqttStatus = document.getElementById('mqtt-status');
+
   // Bitmask representing active/inactive lines (0..255)
   let activeMask = 0;
 
@@ -86,10 +102,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const setShkSettingsStatus = (t) => { if ($shkSettingsStatus) $shkSettingsStatus.textContent = t; };
   const setToneReaderStatus = (t) => { if ($toneReaderStatus) $toneReaderStatus.textContent = t; };
   const setTimerStatus = (t) => { if ($timerStatus) $timerStatus.textContent = t; };
+  const setMqttStatus = (t) => { if ($mqttStatus) $mqttStatus.textContent = t; };
 
   const setToneEnabledUi = (enabled) => {
     if ($toneEnabled) $toneEnabled.checked = !!enabled;
     if ($toneEnabledLabel) $toneEnabledLabel.textContent = enabled ? 'Enabled' : 'Disabled';
+  };
+
+  const setMqttUiState = (enabled, retain) => {
+    if ($mqttEnabled) $mqttEnabled.checked = !!enabled;
+    if ($mqttEnabledLabel) $mqttEnabledLabel.textContent = enabled ? 'Enabled' : 'Disabled';
+    if ($mqttRetain) $mqttRetain.checked = !!retain;
+    if ($mqttRetainLabel) $mqttRetainLabel.textContent = retain ? 'On' : 'Off';
   };
 
   // Update the ring line selector with active lines
@@ -140,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
       if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
       if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
+      if (typeof d.lac === 'number') $dbgLac.value = String(d.lac|0);
     } catch(e){
       setDbgMsg('Could not read debug levels');
       console.warn(e);
@@ -162,7 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
         rg: $dbgRg.value,
         mcp: $dbgMcp.value,
         i2c: $dbgI2c.value,
-        im: $dbgIm.value
+        im: $dbgIm.value,
+        lac: $dbgLac.value
       }).toString();
       const r = await fetch('/api/debug/set', {
         method:'POST',
@@ -401,6 +427,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Load MQTT settings from server
+  async function loadMqttSettings() {
+    try {
+      const r = await fetch('/api/settings/mqtt');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      setMqttUiState(!!d.enabled, !!d.retain);
+      if (typeof d.host === 'string') $mqttHost.value = d.host;
+      if (typeof d.port === 'number') $mqttPort.value = d.port;
+      if (typeof d.username === 'string') $mqttUsername.value = d.username;
+      if (typeof d.password === 'string') $mqttPassword.value = d.password;
+      if (typeof d.clientId === 'string') $mqttClientId.value = d.clientId;
+      if (typeof d.baseTopic === 'string') $mqttBaseTopic.value = d.baseTopic;
+      if (typeof d.qos === 'number') $mqttQos.value = String(d.qos);
+    } catch (e) {
+      console.warn('Could not read MQTT settings', e);
+      setMqttStatus('Could not read MQTT settings');
+    }
+  }
+
+  // Save MQTT settings to server
+  async function saveMqttSettings() {
+    try {
+      $mqttSaveBtn.classList.add('working');
+      setMqttStatus('Saving…');
+      const body = new URLSearchParams({
+        enabled: $mqttEnabled.checked ? '1' : '0',
+        host: ($mqttHost.value || '').trim(),
+        port: ($mqttPort.value || '1883').trim(),
+        username: ($mqttUsername.value || '').trim(),
+        password: ($mqttPassword.value || '').trim(),
+        clientId: ($mqttClientId.value || '').trim(),
+        baseTopic: ($mqttBaseTopic.value || '').trim(),
+        qos: ($mqttQos.value || '0').trim(),
+        retain: $mqttRetain.checked ? '1' : '0'
+      }).toString();
+      const r = await fetch('/api/settings/mqtt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      setMqttUiState(!!d.enabled, !!d.retain);
+      setMqttStatus('Saved.');
+    } catch (e) {
+      setMqttStatus('Failed to save.');
+      console.warn(e);
+    } finally {
+      $mqttSaveBtn.classList.remove('working');
+      setTimeout(() => setMqttStatus(''), 1500);
+    }
+  }
+
   // Test ring on selected line
   async function testRing() {
     const line = $ringLineSelect.value;
@@ -524,6 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $shkSaveBtn?.addEventListener('click', saveShkSettings);
   $toneReaderSaveBtn?.addEventListener('click', saveToneReaderSettings);
   $timerSaveBtn?.addEventListener('click', saveTimerSettings);
+  $mqttSaveBtn?.addEventListener('click', saveMqttSettings);
+  $mqttEnabled?.addEventListener('change', () => setMqttUiState($mqttEnabled.checked, $mqttRetain.checked));
+  $mqttRetain?.addEventListener('change', () => setMqttUiState($mqttEnabled.checked, $mqttRetain.checked));
 
   // Load current activeMask
   fetch('/api/active')
@@ -573,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mcp === 'number') $dbgMcp.value = String(d.mcp|0);
       if (typeof d.i2c === 'number') $dbgI2c.value = String(d.i2c|0);
       if (typeof d.im  === 'number') $dbgIm.value  = String(d.im|0);
+      if (typeof d.lac === 'number') $dbgLac.value = String(d.lac|0);
     } catch {}
   });
 
@@ -593,4 +677,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadShkSettings();
   loadToneReaderSettings();
   loadTimerSettings();
+  loadMqttSettings();
 });

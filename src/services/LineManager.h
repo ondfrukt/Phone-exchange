@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <vector>
 #include "settings/settings.h"
 #include "model/Types.h"
 #include "util/UIConsole.h"
@@ -18,6 +19,7 @@ public:
   void setLineTimer(int index, unsigned int limit);
   void resetLineTimer(int index);
   void setPhoneNumber(int index, const String& value);
+  void setLineName(int index, const String& value);
   int searchPhoneNumber(const String& phoneNumber);
 
   using StatusChangedCallback = std::function<void(int /*lineIndex*/, model::LineStatus)>;
@@ -25,6 +27,7 @@ public:
 
   // Callback functions for webserver
   void setStatusChangedCallback(StatusChangedCallback cb);
+  void addStatusChangedCallback(StatusChangedCallback cb);
   void setActiveLinesChangedCallback(ActiveLinesChangedCallback cb);
 
   LineHandler& getLine(int index);
@@ -43,6 +46,6 @@ private:
   
   Settings& settings_;
   ToneReader* toneReader_ = nullptr;
-  StatusChangedCallback pushStatusChanged_{nullptr};
+  std::vector<StatusChangedCallback> statusChangedCallbacks_;
 
 };

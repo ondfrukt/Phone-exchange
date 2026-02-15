@@ -24,6 +24,7 @@ public:
   uint8_t activeLinesMask;        // Bitmask for active lines (1-4)
   uint16_t pulseDebounceMs;            // Debounce time for line state changes
   String linePhoneNumbers[8];     // Stored phone number per line
+  String lineNames[8];            // Stored display name per line
 
   // ---- Debugging ----
   uint8_t debugSHKLevel;          // 0=none, 1=low, 2=high Debug level for SHK service
@@ -42,6 +43,18 @@ public:
 
   bool    toneGeneratorEnabled = true; // Enable tone generators
   uint8_t pulseAdjustment;         // Pulse adjustment (1 means 1 pulse = 0, 2 pulses = 1, etc.)
+
+  // ---- MQTT settings ----
+  bool mqttEnabled = false;
+  String mqttHost;
+  uint16_t mqttPort = 1883;
+  String mqttUsername;
+  String mqttPassword;
+  String mqttClientId;
+  String mqttBaseTopic;
+  bool mqttRetain = true;
+  uint8_t mqttQos = 0;
+  bool mqttConfigDirty = false; // Runtime flag, not saved in NVS
 
   // ---- Settings (adjust according to your settings class/constants) ----
   uint32_t burstTickMs;           // Time for a burst tick
@@ -98,5 +111,5 @@ private:
   Settings& operator=(const Settings&) = delete;
 
   static constexpr const char* kNamespace = "myapp";
-  static constexpr uint16_t kVersion = 3;    // increase if layout changes
+  static constexpr uint16_t kVersion = 5;    // increase if layout changes
 };

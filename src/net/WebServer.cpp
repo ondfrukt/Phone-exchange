@@ -4,6 +4,19 @@
 #include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
+namespace {
+String escapeJson(const String& in) {
+  String out;
+  out.reserve(in.length());
+  for (size_t i = 0; i < in.length(); ++i) {
+    const char c = in.charAt(static_cast<unsigned int>(i));
+    if (c == '\\' || c == '"') out += '\\';
+    out += c;
+  }
+  return out;
+}
+} // namespace
+
 WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
 : settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), server_(port) {}
 
@@ -34,6 +47,23 @@ bool WebServer::begin() {
   return serverStarted_ && fsMounted_;
 }
 
+void WebServer::update() {
+  if (serverStarted_) {
+    return;
+  }
+
+  if (!wifi_.isConnected()) {
+    return;
+  }
+
+  Serial.println("WebServer: WiFi connected, starting HTTP server...");
+  const bool webReady = begin();
+  Serial.printf("WebServer: ready=%s (server+LittleFS)\n", webReady ? "true" : "false");
+  if (!webReady) {
+    Serial.println("WebServer: Web UI may be unavailable. Check LittleFS upload.");
+  }
+}
+
 void WebServer::listFS() {
   File root = LittleFS.open("/");
   for (File f = root.openNextFile(); f; f = root.openNextFile()) {
@@ -52,8 +82,10 @@ void WebServer::initSse_() {
   // AsyncEventSource handles client management internally
   
   events_.onConnect([this](AsyncEventSourceClient* client){
-    Serial.println("WebServer: SSE-klient ansluten 📡");
-    util::UIConsole::log("SSE client connected.", "WebServer");
+    if (settings_.debugWSLevel >= 2) {
+      Serial.printf("WebServer: SSE connected (open streams=%u)\n", (unsigned)events_.count());
+      util::UIConsole::log("SSE connected (likely page load or page switch).", "WebServer");
+    }
     // Skicka initial data till den nya klienten
     client->send(buildStatusJson_().c_str(), nullptr, millis());
     client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
@@ -62,6 +94,11 @@ void WebServer::initSse_() {
     util::UIConsole::forEachBuffered([client](const String& json) {
       client->send(json.c_str(), "console", millis());
     });
+  });
+  events_.onDisconnect([this](AsyncEventSourceClient*){
+    if (settings_.debugWSLevel >= 2) {
+      Serial.printf("WebServer: SSE disconnected (open streams=%u)\n", (unsigned)events_.count());
+    }
   });
   server_.addHandler(&events_);
 }
@@ -86,7 +123,7 @@ void WebServer::setupCallbacks_() {
 }
 
 void WebServer::setupLineManagerCallback_() {
-  lineManager_.setStatusChangedCallback([this](int index, LineStatus status){
+  lineManager_.addStatusChangedCallback([this](int index, LineStatus status){
     // Only send SSE if there are connected clients
     if (events_.count() > 0) {
       String json = "{\"line\":" + String(index) +
@@ -231,6 +268,67 @@ void WebServer::setupApiRoutes_() {
 
     req->send(200, "application/json", "{\"ok\":true}");
   });
+  // Set line name: POST /api/line/name (body: line=3&name=Kitchen)
+  server_.on("/api/line/name", HTTP_POST, [this](AsyncWebServerRequest* req){
+    const AsyncWebParameter* lineParam = nullptr;
+    const AsyncWebParameter* nameParam = nullptr;
+
+    if (req->hasParam("line", true)) {
+      lineParam = req->getParam("line", true);
+    } else if (req->hasParam("line")) {
+      lineParam = req->getParam("line");
+    }
+
+    if (req->hasParam("name", true)) {
+      nameParam = req->getParam("name", true);
+    } else if (req->hasParam("name")) {
+      nameParam = req->getParam("name");
+    }
+
+    if (!lineParam || !nameParam) {
+      req->send(400, "application/json", "{\"error\":\"missing line/name\"}");
+      return;
+    }
+
+    int line = lineParam->value().toInt();
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+
+    String value = nameParam->value();
+    value.trim();
+    if (value.length() > 32) {
+      req->send(400, "application/json", "{\"error\":\"name too long\"}");
+      return;
+    }
+
+    bool hasControlChars = false;
+    for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+      char c = value.charAt(static_cast<unsigned int>(i));
+      if (static_cast<unsigned char>(c) < 32u) {
+        hasControlChars = true;
+        break;
+      }
+    }
+
+    if (hasControlChars) {
+      req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
+      return;
+    }
+
+    lineManager_.setLineName(line, value);
+    settings_.save();
+
+    sendFullStatusSse();
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Line %d name set to %s\n", line, value.c_str());
+      util::UIConsole::log("Name for line " + String(line) + " updated", "WebServer");
+    }
+
+    req->send(200, "application/json", "{\"ok\":true}");
+  });
   // Debug nivåer: GET /api/debug , POST /api/debug/set
   server_.on("/api/debug", HTTP_GET, [this](AsyncWebServerRequest *req){
     req->send(200, "application/json", buildDebugJson_());
@@ -244,7 +342,7 @@ void WebServer::setupApiRoutes_() {
       return (out >= 0);
     };
 
-    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1, mcp=-1, i2c=-1, im=-1;
+    int shk=-1, lm=-1, ws=-1, la=-1, mt=-1, tr=-1, tg=-1, rg=-1, mcp=-1, i2c=-1, im=-1, lac=-1;
     bool hasShk = getOptUChar("shk", shk);
     bool hasLm  = getOptUChar("lm",  lm);
     bool hasWs  = getOptUChar("ws",  ws);
@@ -256,14 +354,15 @@ void WebServer::setupApiRoutes_() {
     bool hasMcp = getOptUChar("mcp", mcp);
     bool hasI2c = getOptUChar("i2c", i2c);
     bool hasIm  = getOptUChar("im",  im);
+    bool hasLac = getOptUChar("lac", lac);
 
-    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg && !hasMcp && !hasI2c && !hasIm) {
-      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg|mcp|i2c|im\"}");
+    if (!hasShk && !hasLm && !hasWs && !hasLa && !hasMt && !hasTr && !hasTg && !hasRg && !hasMcp && !hasI2c && !hasIm && !hasLac) {
+      req->send(400, "application/json", "{\"error\":\"provide at least one of shk|lm|ws|la|mt|tr|tg|rg|mcp|i2c|im|lac\"}");
       return;
     }
 
     auto inRange = [](int v){ return v>=0 && v<=2; };
-    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg)) || (hasMcp && !inRange(mcp)) || (hasI2c && !inRange(i2c)) || (hasIm && !inRange(im))) {
+    if ((hasShk && !inRange(shk)) || (hasLm && !inRange(lm)) || (hasWs && !inRange(ws)) || (hasLa && !inRange(la)) || (hasMt && !inRange(mt)) || (hasTr && !inRange(tr)) || (hasTg && !inRange(tg)) || (hasRg && !inRange(rg)) || (hasMcp && !inRange(mcp)) || (hasI2c && !inRange(i2c)) || (hasIm && !inRange(im)) || (hasLac && !inRange(lac))) {
       req->send(400, "application/json", "{\"error\":\"values must be 0..2\"}");
       return;
     }
@@ -280,6 +379,7 @@ void WebServer::setupApiRoutes_() {
     if (hasMcp) settings_.debugMCPLevel = (uint8_t)mcp;
     if (hasI2c) settings_.debugI2CLevel = (uint8_t)i2c;
     if (hasIm)  settings_.debugIMLevel  = (uint8_t)im;
+    if (hasLac) settings_.debugLAC      = (uint8_t)lac;
 
     // Spara till NVS
     settings_.save();
@@ -608,10 +708,120 @@ void WebServer::setupApiRoutes_() {
     }
   });
 
+  // Get MQTT settings: GET /api/settings/mqtt
+  server_.on("/api/settings/mqtt", HTTP_GET, [this](AsyncWebServerRequest* req){
+    req->send(200, "application/json", buildMqttJson_());
+  });
+  // Set MQTT settings: POST /api/settings/mqtt
+  server_.on("/api/settings/mqtt", HTTP_POST, [this](AsyncWebServerRequest* req){
+    auto getStr = [req](const char* key, String& out) -> bool {
+      if (req->hasParam(key)) {
+        out = req->getParam(key)->value();
+        return true;
+      }
+      if (req->hasParam(key, true)) {
+        out = req->getParam(key, true)->value();
+        return true;
+      }
+      return false;
+    };
+
+    auto getInt = [req](const char* key, int& out) -> bool {
+      if (req->hasParam(key)) {
+        out = req->getParam(key)->value().toInt();
+        return true;
+      }
+      if (req->hasParam(key, true)) {
+        out = req->getParam(key, true)->value().toInt();
+        return true;
+      }
+      return false;
+    };
+
+    String host;
+    String user;
+    String pass;
+    String clientId;
+    String baseTopic;
+    int enabled = settings_.mqttEnabled ? 1 : 0;
+    int retain = settings_.mqttRetain ? 1 : 0;
+    int port = settings_.mqttPort;
+    int qos = settings_.mqttQos;
+
+    getInt("enabled", enabled);
+    getInt("retain", retain);
+    getInt("port", port);
+    getInt("qos", qos);
+    getStr("host", host);
+    getStr("username", user);
+    getStr("password", pass);
+    getStr("clientId", clientId);
+    getStr("baseTopic", baseTopic);
+
+    host.trim();
+    user.trim();
+    pass.trim();
+    clientId.trim();
+    baseTopic.trim();
+
+    if (enabled != 0 && enabled != 1) {
+      req->send(400, "application/json", "{\"error\":\"enabled must be 0 or 1\"}");
+      return;
+    }
+    if (retain != 0 && retain != 1) {
+      req->send(400, "application/json", "{\"error\":\"retain must be 0 or 1\"}");
+      return;
+    }
+    if (port < 1 || port > 65535) {
+      req->send(400, "application/json", "{\"error\":\"port must be 1..65535\"}");
+      return;
+    }
+    if (qos < 0 || qos > 2) {
+      req->send(400, "application/json", "{\"error\":\"qos must be 0..2\"}");
+      return;
+    }
+    if (enabled == 1 && host.isEmpty()) {
+      req->send(400, "application/json", "{\"error\":\"host is required when enabled\"}");
+      return;
+    }
+    if (clientId.length() > 64 || baseTopic.length() > 128 || host.length() > 128 ||
+        user.length() > 64 || pass.length() > 64) {
+      req->send(400, "application/json", "{\"error\":\"one or more fields are too long\"}");
+      return;
+    }
+    auto hasControl = [](const String& value) {
+      for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+        char c = value.charAt(static_cast<unsigned int>(i));
+        if (static_cast<unsigned char>(c) < 32u) return true;
+      }
+      return false;
+    };
+    if (hasControl(host) || hasControl(user) || hasControl(pass) || hasControl(clientId) || hasControl(baseTopic)) {
+      req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
+      return;
+    }
+
+    settings_.mqttEnabled = (enabled == 1);
+    settings_.mqttHost = host;
+    settings_.mqttPort = static_cast<uint16_t>(port);
+    settings_.mqttUsername = user;
+    settings_.mqttPassword = pass;
+    settings_.mqttClientId = clientId.length() ? clientId : "phoneexchange";
+    settings_.mqttBaseTopic = baseTopic.length() ? baseTopic : "phoneexchange";
+    settings_.mqttRetain = (retain == 1);
+    settings_.mqttQos = static_cast<uint8_t>(qos);
+    settings_.mqttConfigDirty = true;
+    settings_.save();
+    util::UIConsole::log("MQTT settings updated (reconfigure scheduled).", "WebServer");
+
+    req->send(200, "application/json", buildMqttJson_());
+  });
+
   // Statisk filserver
   if (fsMounted_) {
     server_.serveStatic("/", LittleFS, "/")
            .setDefaultFile("index.html")
+           .setTryGzipFirst(false)
            .setCacheControl("max-age=60");
   } else {
     server_.on("/", HTTP_GET, [](AsyncWebServerRequest *req){
@@ -636,7 +846,7 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   settings_.adjustActiveLines();
 
   // Spara till NVS
-  //settings_.save();
+  settings_.save();
 
   // Spegla in masken i LineManager direkt (så UI och logik följer med)
   lineManager_.syncLineActive(line);
@@ -713,6 +923,7 @@ String WebServer::buildDebugJson_() const {
   json += ",\"mcp\":" + String(settings_.debugMCPLevel);
   json += ",\"i2c\":" + String(settings_.debugI2CLevel);
   json += ",\"im\":" + String(settings_.debugIMLevel);
+  json += ",\"lac\":" + String(settings_.debugLAC);
   json += "}";
   return json;
 }
@@ -733,6 +944,21 @@ String WebServer::buildToneGeneratorJson_() const {
   String json = "{";
   json += "\"enabled\":";
   json += settings_.toneGeneratorEnabled ? "true" : "false";
+  json += "}";
+  return json;
+}
+
+String WebServer::buildMqttJson_() const {
+  String json = "{";
+  json += "\"enabled\":"; json += settings_.mqttEnabled ? "true" : "false";
+  json += ",\"host\":\"" + escapeJson(settings_.mqttHost) + "\"";
+  json += ",\"port\":" + String(settings_.mqttPort);
+  json += ",\"username\":\"" + escapeJson(settings_.mqttUsername) + "\"";
+  json += ",\"password\":\"" + escapeJson(settings_.mqttPassword) + "\"";
+  json += ",\"clientId\":\"" + escapeJson(settings_.mqttClientId) + "\"";
+  json += ",\"baseTopic\":\"" + escapeJson(settings_.mqttBaseTopic) + "\"";
+  json += ",\"retain\":"; json += settings_.mqttRetain ? "true" : "false";
+  json += ",\"qos\":" + String(settings_.mqttQos);
   json += "}";
   return json;
 }

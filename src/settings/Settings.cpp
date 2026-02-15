@@ -42,6 +42,18 @@ void Settings::resetDefaults() {
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
 
+  // MQTT settings
+  mqttEnabled           = false;
+  mqttHost              = "";
+  mqttPort              = 1883;
+  mqttUsername          = "";
+  mqttPassword          = "";
+  mqttClientId          = "phoneexchange";
+  mqttBaseTopic         = "phoneexchange";
+  mqttRetain            = true;
+  mqttQos               = 0;
+  mqttConfigDirty       = false;
+
   // SHK detection settings
   burstTickMs           = 2;    // Time for a burst tick
   hookStableMs          = 50;   // Time for stable hook state
@@ -56,7 +68,7 @@ void Settings::resetDefaults() {
   highMeansOffHook      = true; // High signal means off-hook state
 
   // --- Ringing settings ---
-  // Typical sequense is 1s ring, 5s pause
+  // Typical sequence is 1s ring, 5s pause
   ringLengthMs          = 1000;  // Length of ringing signal in ms
   ringPauseMs           = 5000; // Pause between rings in ms
 
@@ -70,7 +82,7 @@ void Settings::resetDefaults() {
 
   // --- Timers ---
   timer_Ready           = 240000;
-  timer_Dialing         = 30000;    // anänd ens denna?
+  timer_Dialing         = 30000;    // TODO: Verify whether this timer is still used.
   timer_Ringing         = 30000;
   timer_incomming       = 30000;
   timer_pulsDialing     = 3000;
@@ -84,6 +96,7 @@ void Settings::resetDefaults() {
   // --- Phone numbers ---
   for (int i = 0; i < 8; ++i) {
     linePhoneNumbers[i] = String(i);
+    lineNames[i] = "";
   }
 
   // Runtime flags kept false here; set by MCPDriver::begin()
@@ -95,12 +108,15 @@ void Settings::resetDefaults() {
 bool Settings::load() {
   Preferences prefs;
   if (!prefs.begin(kNamespace, true)) {
-    Serial.println("No NVS namespace found for settings");
-    util::UIConsole::log("No NVS namespace found for settings", "Settings");
+    Serial.println("Settings: No readable NVS namespace found, saving defaults.");
+    util::UIConsole::log("No readable NVS namespace found, saving defaults.", "Settings");
+    save();
     return false;
   }
   uint16_t v = prefs.getUShort("ver", 0);
-  bool ok = (v == kVersion);
+  const bool supportedVersion = (v == kVersion || v == 4 || v == 3);
+  const bool needsUpgrade = (v != kVersion) && supportedVersion;
+  bool ok = supportedVersion;
   if (ok) {
     activeLinesMask       = prefs.getUChar ("activeMask", activeLinesMask);
     pulseDebounceMs        = prefs.getUShort("pulseDebounceMs", pulseDebounceMs);
@@ -130,6 +146,15 @@ bool Settings::load() {
     globalPulseTimeoutMs  = prefs.getUInt ("globalPulseTO",     globalPulseTimeoutMs);
     highMeansOffHook      = prefs.getBool ("hiOffHook",         highMeansOffHook);
     toneGeneratorEnabled  = prefs.getBool ("toneGenEn",         toneGeneratorEnabled);
+    mqttEnabled           = prefs.getBool ("mqttEnabled",       mqttEnabled);
+    mqttHost              = prefs.getString("mqttHost",         mqttHost);
+    mqttPort              = prefs.getUShort("mqttPort",         mqttPort);
+    mqttUsername          = prefs.getString("mqttUser",         mqttUsername);
+    mqttPassword          = prefs.getString("mqttPass",         mqttPassword);
+    mqttClientId          = prefs.getString("mqttClientId",     mqttClientId);
+    mqttBaseTopic         = prefs.getString("mqttBaseTopic",    mqttBaseTopic);
+    mqttRetain            = prefs.getBool ("mqttRetain",        mqttRetain);
+    mqttQos               = prefs.getUChar ("mqttQos",          mqttQos);
 
     ringLengthMs          = prefs.getUInt ("ringLengthMs",      ringLengthMs);
     ringPauseMs           = prefs.getUInt ("ringPauseMs",       ringPauseMs);
@@ -158,10 +183,17 @@ bool Settings::load() {
     for (int i = 0; i < 8; ++i) {
       String key = String("linePhone") + i;
       linePhoneNumbers[i] = prefs.getString(key.c_str(), linePhoneNumbers[i]);
+      key = String("lineName") + i;
+      lineNames[i] = prefs.getString(key.c_str(), lineNames[i]);
     }
+
+    if (mqttPort == 0) mqttPort = 1883;
+    if (mqttQos > 2) mqttQos = 0;
+    if (mqttBaseTopic.length() == 0) mqttBaseTopic = "phoneexchange";
+    if (mqttClientId.length() == 0) mqttClientId = "phoneexchange";
   }
   prefs.end();
-  if (!ok) save();
+  if (!ok || needsUpgrade) save();
   return ok;
 }
 
@@ -198,6 +230,15 @@ void Settings::save() const {
   prefs.putUInt ("globalPulseTO",         globalPulseTimeoutMs);
   prefs.putBool ("hiOffHook",             highMeansOffHook);
   prefs.putBool ("toneGenEn",             toneGeneratorEnabled);
+  prefs.putBool ("mqttEnabled",           mqttEnabled);
+  prefs.putString("mqttHost",             mqttHost);
+  prefs.putUShort("mqttPort",             mqttPort);
+  prefs.putString("mqttUser",             mqttUsername);
+  prefs.putString("mqttPass",             mqttPassword);
+  prefs.putString("mqttClientId",         mqttClientId);
+  prefs.putString("mqttBaseTopic",        mqttBaseTopic);
+  prefs.putBool ("mqttRetain",            mqttRetain);
+  prefs.putUChar ("mqttQos",              mqttQos);
 
   prefs.putUInt ("ringLengthMs",          ringLengthMs);
   prefs.putUInt ("ringPauseMs",           ringPauseMs);
@@ -226,6 +267,8 @@ void Settings::save() const {
   for (int i = 0; i < 8; ++i) {
     String key = String("linePhone") + i;
     prefs.putString(key.c_str(), linePhoneNumbers[i]);
+    key = String("lineName") + i;
+    prefs.putString(key.c_str(), lineNames[i]);
   }
 
   prefs.end();

@@ -182,6 +182,18 @@
         <span></span>
       </div>
 
+      <div class="row">
+        <span class="k">LineAudioConnections</span>
+        <span class="v">
+          <select id="dbg-lac" class="form-select">
+            <option value="0">0 – Off</option>
+            <option value="1">1 – Low</option>
+            <option value="2">2 – High</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
           Update Debug Settings
@@ -389,6 +401,89 @@
           Update Timer Settings
         </button>
         <div id="timer-status" class="status"></div>
+      </div>
+    </section>
+
+    <!-- MQTT Settings Section -->
+    <section class="card">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">MQTT Settings</h2>
+      <p class="description">Configure broker connection and topic settings</p>
+
+      <div class="row">
+        <span class="k">Enable MQTT</span>
+        <span class="v">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="mqtt-enabled" />
+            <span id="mqtt-enabled-label">Disabled</span>
+          </label>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Broker Host</span>
+        <span class="v"><input type="text" id="mqtt-host" class="form-input" maxlength="128" /></span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Broker Port</span>
+        <span class="v"><input type="number" id="mqtt-port" class="form-input" min="1" max="65535" step="1" /></span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Username</span>
+        <span class="v"><input type="text" id="mqtt-username" class="form-input" maxlength="64" /></span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Password</span>
+        <span class="v"><input type="password" id="mqtt-password" class="form-input" maxlength="64" /></span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Client ID</span>
+        <span class="v"><input type="text" id="mqtt-client-id" class="form-input" maxlength="64" /></span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Base Topic</span>
+        <span class="v"><input type="text" id="mqtt-base-topic" class="form-input" maxlength="128" /></span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">QoS</span>
+        <span class="v">
+          <select id="mqtt-qos" class="form-select">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">Retain state</span>
+        <span class="v">
+          <label style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="mqtt-retain" />
+            <span id="mqtt-retain-label">On</span>
+          </label>
+        </span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="mqtt-save" class="badge clickable" style="border:1px solid var(--accent)">
+          Update MQTT Settings
+        </button>
+        <div id="mqtt-status" class="status"></div>
       </div>
     </section>
 

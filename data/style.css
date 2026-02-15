@@ -122,6 +122,45 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 .row > .k { max-width: 200px; }       /* namn-kolumn */
 .row > .v { max-width: 140px; }       /* status-kolumn */
 
+.row > .k.line-col {
+  white-space: normal;
+  overflow: visible;
+  max-width: none;
+}
+
+.line-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.name-editor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.name-editor input {
+  width: 120px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--fg);
+}
+
+.name-editor input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.name-editor .badge {
+  min-width: 90px;
+  max-width: 90px;
+}
+
 /* Telefon-editor (tredje kolumn) */
 .phone-editor{
   display:flex;

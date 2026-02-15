@@ -11,6 +11,7 @@ LineManager::LineManager(Settings& settings)
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
     lines.back().phoneNumber = s.linePhoneNumbers[i];
+    lines.back().lineName = s.lineNames[i];
     bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
     lines.back().lineActive = isActive;
   }
@@ -104,7 +105,9 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   // No matther what the new status is, we want to set the lineStatusChangeFlag so that LineAction 
   // can handle any necessary actions based on the new status
   lineStatusChangeFlag |= (1 << index);           
-  if (pushStatusChanged_) pushStatusChanged_(index, newStatus);  // Call the callback if set
+  for (auto& cb : statusChangedCallbacks_) {
+    if (cb) cb(index, newStatus);
+  }
 
   if (settings_.debugLmLevel >= 0) {
     Serial.print(BLUE "LineManager: Line ");
@@ -114,6 +117,8 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
     Serial.println(COLOR_RESET);
     util::UIConsole::log("Line " + String(index) + " status changed to " + model::LineStatusToString(newStatus), "LineManager");
   }
+
+  
 }
 
 // Clear the status change flag for the specified line
@@ -130,7 +135,12 @@ void LineManager::clearChangeFlag(int index) {
 
 // 
 void LineManager::setStatusChangedCallback(StatusChangedCallback cb) {
-  pushStatusChanged_ = std::move(cb);
+  statusChangedCallbacks_.clear();
+  if (cb) statusChangedCallbacks_.push_back(std::move(cb));
+}
+
+void LineManager::addStatusChangedCallback(StatusChangedCallback cb) {
+  if (cb) statusChangedCallbacks_.push_back(std::move(cb));
 }
 
 // Set a timer for the specified line
@@ -190,6 +200,21 @@ void LineManager::setPhoneNumber(int index, const String& value) {
 
   lines[index].phoneNumber = sanitized;
   settings_.linePhoneNumbers[index] = sanitized;
+}
+
+void LineManager::setLineName(int index, const String& value) {
+  if (index < 0 || index >= static_cast<int>(lines.size())) {
+    Serial.print("LineManager::setLineName - ogiltigt index: ");
+    Serial.println(index);
+    util::UIConsole::log("LineManager::setLineName - ogiltigt index: " + String(index), "LineManager");
+    return;
+  }
+
+  String sanitized = value;
+  sanitized.trim();
+
+  lines[index].lineName = sanitized;
+  settings_.lineNames[index] = sanitized;
 }
 
 // Search for a line index based on the provided phone number. Returns -1 if not found.

@@ -31,6 +31,7 @@ public:
 
 private:
     void connect_();
+    void forceReconnect_();
     void onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info);
     String makeDefaultHostname_();
     void syncTime_(); 
@@ -45,6 +46,7 @@ private:
     unsigned long reconnectDelayMs_ = 0;
     static constexpr unsigned long kInitialReconnectDelayMs = 5000;
     static constexpr unsigned long kMaxReconnectDelayMs = 60000;
+    static constexpr unsigned long kConnectAttemptTimeoutMs = 20000;
 };
 
 } // namespace net

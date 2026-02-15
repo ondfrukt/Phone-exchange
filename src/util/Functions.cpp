@@ -1,8 +1,14 @@
 #include "util/Functions.h"
+#include "net/WifiClient.h"
+#include "net/MqttClient.h"
 
-
+void Functions::begin() {
+  initStatusLeds_();
+}
 
 void Functions::update() {
+    updateStatusLeds_();
+
     // Static variables for debouncing and tracking button state:
     // btnDown: tracks if the button is currently pressed
     // pressedAtMs: timestamp when the button was pressed
@@ -39,6 +45,27 @@ void Functions::update() {
 
     restartDevice(held);
   }
+}
+
+void Functions::initStatusLeds_() {
+    pinMode(cfg::ESP_PINS::Status_LED_PIN, OUTPUT);
+    pinMode(cfg::ESP_PINS::WiFi_LED_PIN, OUTPUT);
+    pinMode(cfg::ESP_PINS::MQTT_LED_PIN, OUTPUT);
+
+    digitalWrite(cfg::ESP_PINS::Status_LED_PIN, LOW);
+    digitalWrite(cfg::ESP_PINS::WiFi_LED_PIN, LOW);
+    digitalWrite(cfg::ESP_PINS::MQTT_LED_PIN, LOW);
+}
+
+void Functions::updateStatusLeds_() {
+    const bool wifiConnected = wifiClient_.isConnected();
+    const bool mqttConnected = mqttClient_.isConnected();
+    const bool mqttEnabled = Settings::instance().mqttEnabled;
+    const bool systemOk = wifiConnected && (!mqttEnabled || mqttConnected);
+
+    digitalWrite(cfg::ESP_PINS::WiFi_LED_PIN, wifiConnected ? HIGH : LOW);
+    digitalWrite(cfg::ESP_PINS::MQTT_LED_PIN, mqttConnected ? HIGH : LOW);
+    digitalWrite(cfg::ESP_PINS::Status_LED_PIN, systemOk ? HIGH : LOW);
 }
 
 void Functions::restartDevice(uint32_t held) {

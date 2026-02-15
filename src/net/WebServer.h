@@ -16,6 +16,7 @@ class WebServer {
 public:
   WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port = 80);
   bool begin();
+  void update();
   void listFS();
 
   bool isReady() const { return serverStarted_ && fsMounted_; }
@@ -60,6 +61,7 @@ private:
   String buildActiveJson_(uint8_t mask);
   String buildDebugJson_() const;
   String buildToneGeneratorJson_() const;
+  String buildMqttJson_() const;
 
   // Bind the util::Console sink to forward JSON messages to SSE "console"
   void bindConsoleSink_();

@@ -19,6 +19,7 @@ LineHandler::LineHandler(int line) {
     }
 
     phoneNumber = "";
+    lineName = "";
     lineActive = false;   
     currentLineStatus = LineStatus::Idle;
     previousLineStatus = LineStatus::Idle;

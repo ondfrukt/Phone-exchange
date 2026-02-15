@@ -1,111 +1,111 @@
 #include "ToneGenerator.h"
+#include "util/UIConsole.h"
 
-ToneGenerator::ToneGenerator(uint8_t csPin, SPIClass& spi)
-  : spi_(spi),
-    ad9833_(csPin),
-    csPin_(csPin) {
+ToneGenerator::ToneGenerator(AD9833Driver& driver1, AD9833Driver& driver2, AD9833Driver& driver3) {
+  channels_[0].driver = &driver1;
+  channels_[0].dac = cfg::mt8816::DAC1;
+  channels_[1].driver = &driver2;
+  channels_[1].dac = cfg::mt8816::DAC2;
+  channels_[2].driver = &driver3;
+  channels_[2].dac = cfg::mt8816::DAC3;
 }
 
 void ToneGenerator::begin() {
-  if (started_) {
-    return;
+  for (auto& channel : channels_) {
+    if (channel.driver != nullptr) {
+      channel.driver->begin();
+    }
+    stopChannel_(channel);
   }
-
-  pinMode(csPin_, OUTPUT);
-  digitalWrite(csPin_, HIGH);
-
-#ifdef ARDUINO_ARCH_ESP32
-  spi_.begin(cfg::ESP_PINS::SCLK_PIN, -1, cfg::ESP_PINS::MOSI_PIN, csPin_);
-#else
-  spi_.begin();
-#endif
-
-  ad9833_.begin();
-  ad9833_.setMode(MD_AD9833::MODE_OFF);
-  started_ = true;
-  playing_ = false;
-  currentSequence_ = StepSequence{nullptr, 0};
 }
 
-void ToneGenerator::startToneSequence(model::ToneId sequence) {
+uint8_t ToneGenerator::startTone(model::ToneId sequence) {
+  if (!Settings::instance().toneGeneratorEnabled) return 0;
 
-  if (!Settings::instance().toneGeneratorEnabled) return;
-
-  ensureStarted_();
-
-  currentSequence_ = getSequence_(sequence);
-  currentStepIndex_ = 0;
-  stepStartTimeMs_ = millis();
-
-  if (currentSequence_.steps == nullptr || currentSequence_.length == 0) {
-    stop();
-    return;
+  ChannelState* channel = findFreeChannel_();
+  if (channel == nullptr) {
+    return 0;
   }
 
-  playing_ = true;
-  applyStep_(currentSequence_.steps[currentStepIndex_]);
-  stepStartTimeMs_ = millis();
+  channel->currentSequence = getSequence_(sequence);
+  channel->currentStepIndex = 0;
+  channel->stepStartTimeMs = millis();
+
+  if (channel->currentSequence.steps == nullptr || channel->currentSequence.length == 0) {
+    stopChannel_(*channel);
+    return 0;
+  }
+
+  channel->playing = true;
+  applyStep_(*channel, channel->currentSequence.steps[channel->currentStepIndex]);
+  channel->stepStartTimeMs = millis();
 
   if (Settings::instance().debugTonGenLevel >= 1) {
-    Serial.println("ToneGenerator: Started tone sequence " + String(ToneIdToString(sequence)) + " on CS pin " + String(csPin_));
-    util::UIConsole::log("Started tone sequence " + String(ToneIdToString(sequence)) + " on CS pin " + String(csPin_), "ToneGenerator");
+    Serial.println("ToneGenerator: Started tone sequence " + String(ToneIdToString(sequence)) + " on DAC " + String(channel->dac));
+    util::UIConsole::log("Started tone sequence " + String(ToneIdToString(sequence)) + " on DAC " + String(channel->dac), "ToneGenerator");
   }
-
+  return channel->dac;
 }
 
-void ToneGenerator::stop() {
-  ensureStarted_();
-
-  playing_ = false;
-  currentSequence_ = StepSequence{nullptr, 0};
-  currentStepIndex_ = 0;
-  stepStartTimeMs_ = 0;
-  ad9833_.setMode(MD_AD9833::MODE_OFF);
+void ToneGenerator::stopTone(uint8_t dac) {
+  ChannelState* channel = findChannelByDac_(dac);
+  if (channel == nullptr) {
+    return;
+  }
+  stopChannel_(*channel);
 
   if (Settings::instance().debugTonGenLevel >= 1) {
-    Serial.println("ToneGenerator: Stopped tone sequence on CS pin " + String(csPin_));
-    util::UIConsole::log("Stopped tone sequence on CS pin " + String(csPin_), "ToneGenerator");
+    Serial.println("ToneGenerator: Stopped tone sequence on DAC " + String(dac));
+    util::UIConsole::log("Stopped tone sequence on DAC " + String(dac), "ToneGenerator");
   }
 }
 
-bool ToneGenerator::isPlaying() {
-  return playing_;
+bool ToneGenerator::isPlaying() const {
+  for (const auto& channel : channels_) {
+    if (channel.playing) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void ToneGenerator::update() {
-  if (!playing_ || currentSequence_.steps == nullptr || currentSequence_.length == 0) {
+  if (!Settings::instance().toneGeneratorEnabled) {
+    for (auto& channel : channels_) {
+      if (channel.playing) {
+        stopChannel_(channel);
+      }
+    }
     return;
   }
-  const Step& step = currentSequence_.steps[currentStepIndex_];
-  if (step.durationMs == 0) {
-    return;
+
+  for (auto& channel : channels_) {
+    if (!channel.playing || channel.currentSequence.steps == nullptr || channel.currentSequence.length == 0) {
+      continue;
+    }
+
+    const Step& step = channel.currentSequence.steps[channel.currentStepIndex];
+    if (step.durationMs == 0) {
+      continue;
+    }
+
+    const uint32_t now = millis();
+    const uint32_t elapsed = now - channel.stepStartTimeMs;
+    if (elapsed < step.durationMs) {
+      continue;
+    }
+
+    channel.currentStepIndex = (channel.currentStepIndex + 1) % channel.currentSequence.length;
+    applyStep_(channel, channel.currentSequence.steps[channel.currentStepIndex]);
+    channel.stepStartTimeMs = millis();
   }
-  uint32_t now = millis();
-  uint32_t elapsed = now - stepStartTimeMs_;
-  if (elapsed < step.durationMs) {
-    return;
-  }
-  currentStepIndex_ = (currentStepIndex_ + 1) % currentSequence_.length;
-  applyStep_(currentSequence_.steps[currentStepIndex_]);
-  stepStartTimeMs_ = millis();
 }
 
-void ToneGenerator::ensureStarted_() {
-  if (!started_) {
-    begin();
-  }
-}
-
-void ToneGenerator::applyStep_(const Step& step) {
-  ensureStarted_();
-
-  if (step.frequencyHz <= 0.0f) {
-    ad9833_.setMode(MD_AD9833::MODE_OFF);
+void ToneGenerator::applyStep_(ChannelState& channel, const Step& step) {
+  if (channel.driver == nullptr) {
     return;
   }
-
-  ad9833_.setFrequency(MD_AD9833::CHAN_0, step.frequencyHz);
-  ad9833_.setMode(MD_AD9833::MODE_SINE);
+  channel.driver->setToneFrequency(step.frequencyHz);
 }
 
 ToneGenerator::StepSequence ToneGenerator::getSequence_(model::ToneId sequence) const {
@@ -143,4 +143,32 @@ ToneGenerator::StepSequence ToneGenerator::getSequence_(model::ToneId sequence) 
       break;
   }
   return {nullptr, 0};
+}
+
+ToneGenerator::ChannelState* ToneGenerator::findChannelByDac_(uint8_t dac) {
+  for (auto& channel : channels_) {
+    if (channel.dac == dac) {
+      return &channel;
+    }
+  }
+  return nullptr;
+}
+
+ToneGenerator::ChannelState* ToneGenerator::findFreeChannel_() {
+  for (auto& channel : channels_) {
+    if (!channel.playing) {
+      return &channel;
+    }
+  }
+  return nullptr;
+}
+
+void ToneGenerator::stopChannel_(ChannelState& channel) {
+  if (channel.driver != nullptr) {
+    channel.driver->stopOutput();
+  }
+  channel.playing = false;
+  channel.currentSequence = StepSequence{nullptr, 0};
+  channel.currentStepIndex = 0;
+  channel.stepStartTimeMs = 0;
 }

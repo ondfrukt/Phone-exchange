@@ -6,28 +6,28 @@
 #include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
-// InterruptManager: Centralt samlingspunkt för alla MCP-interrupts
-// Hardware → MCPDriver → InterruptManager (queue) → Components (poll)
+// InterruptManager: Central collection point for all MCP interrupts
+// Hardware -> MCPDriver -> InterruptManager (queue) -> Components (poll)
 class InterruptManager {
 public:
   InterruptManager(MCPDriver& mcpDriver, Settings& settings);
 
-  // Samla in interrupts från MCPDriver och lägg i kön
+  // Collect interrupts from MCPDriver and enqueue them
   void collectInterrupts();
 
-  // Polla nästa händelse för en specifik MCP-adress och pin (returnerar tom IntResult om ingen finns)
+  // Poll the next event for a specific MCP address and pin (returns empty IntResult if none exists)
   IntResult pollEvent(uint8_t i2c_addr, uint8_t pin);
 
-  // Polla nästa händelse för en specifik MCP-adress (returnerar tom IntResult om ingen finns)
+  // Poll the next event for a specific MCP address (returns empty IntResult if none exists)
   IntResult pollEventByAddress(uint8_t i2c_addr);
 
-  // Polla alla händelser (används när komponenter vill hantera alla typer av events)
+  // Poll all events (used when components want to handle all event types)
   IntResult pollAnyEvent();
 
-  // Töm alla händelser i kön
+  // Clear all queued events
   void clearQueue();
 
-  // Returnera antalet väntande händelser
+  // Return the number of pending events
   size_t queueSize() const { return eventQueue_.size(); }
 
 private:

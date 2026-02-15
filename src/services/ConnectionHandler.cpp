@@ -1,7 +1,7 @@
 #include "services/ConnectionHandler.h"
 
+// Connect two lines
 void ConnectionHandler::connectLines(uint8_t lineA, uint8_t lineB) {
-
   // Check if already connected
   if (isConnected(lineA, lineB)) {
     return;
@@ -11,49 +11,58 @@ void ConnectionHandler::connectLines(uint8_t lineA, uint8_t lineB) {
   mt8816Driver_.setConnection(lineB, lineA, true);
   addConnection(lineA, lineB);
 
-  if (settings.debugLAC <= 1) {
+  if (settings.debugLAC >= 1) {
     Serial.print("ConnectionHandler: ");
     Serial.print("Connected line ");
     Serial.print(lineA);
     Serial.print(" to line ");
     Serial.println(lineB);
+    util::UIConsole::log("Connected line " + String(lineA) + " to line " + String(lineB), "ConnectionHandler");
   }
-  util::UIConsole::log("Connected line " + String(lineA) + " to line " + String(lineB), "ConnectionHandler");
+  
 }
+
+// Disconnect two lines
 void ConnectionHandler::disconnectLines(uint8_t lineA, uint8_t lineB) {
 
   mt8816Driver_.setConnection(lineA, lineB, false);
   mt8816Driver_.setConnection(lineB, lineA, false);
   removeConnection(lineA, lineB);
 
-  if (settings.debugLAC <= 1) {
+  if (settings.debugLAC >= 1) {
     Serial.print("ConnectionHandler: ");
     Serial.print("Disconnected line ");
     Serial.print(lineA);
     Serial.print(" from line ");
     Serial.println(lineB);
+    util::UIConsole::log("Disconnected line " + String(lineA) + " from line " + String(lineB), "ConnectionHandler");
   }
-  util::UIConsole::log("Disconnected line " + String(lineA) + " from line " + String(lineB), "ConnectionHandler");
+  
 }
 
+// Connect audio source to line
 void ConnectionHandler::connectAudioToLine(uint8_t line, uint8_t audioSource) {
   mt8816Driver_.setConnection(audioSource, line, true);
-  if (settings.debugLAC <= 1) {
+  if (settings.debugLAC >= 1) {
     Serial.print("ConnectionHandler: ");
     Serial.print("Connected audio source ");
     Serial.print(audioSource);
     Serial.print(" to line ");
     Serial.println(line);
+    util::UIConsole::log("Connected audio source " + String(audioSource) + " to line " + String(line), "ConnectionHandler");
   }
 }
+
+// Disconnect audio source from line
 void ConnectionHandler::disconnectAudioToLine(uint8_t line, uint8_t audioSource) {
   mt8816Driver_.setConnection(audioSource, line, false);
-  if (settings.debugLAC <= 1) {
+  if (settings.debugLAC >= 1) {
     Serial.print("ConnectionHandler: ");
     Serial.print("Disconnected audio source ");
     Serial.print(audioSource);
     Serial.print(" from line ");
     Serial.println(line);
+    util::UIConsole::log("Disconnected audio source " + String(audioSource) + " from line " + String(line), "ConnectionHandler");
   }
 }
 
@@ -73,22 +82,23 @@ void ConnectionHandler::removeConnection(uint8_t lineA, uint8_t lineB) {
   }
 }
 
-// Conntrolls connections
+// Controls connections
 bool ConnectionHandler::isConnected(uint8_t lineA, uint8_t lineB) const {
-    for (const auto& conn : activeConnections) {
-        if ((conn.first == lineA && conn.second == lineB) ||
-            (conn.first == lineB && conn.second == lineA))
-            return true;
-    }
-    return false;
+  for (const auto& conn : activeConnections) {
+    if ((conn.first == lineA && conn.second == lineB) ||
+      (conn.first == lineB && conn.second == lineA))
+      return true;
+  }
+  return false;
 }
 
 // Print active connections in a compact format
 void ConnectionHandler::printConnections() const {
-    for (const auto& conn : activeConnections) {
-        Serial.print("Connection: ");
-        Serial.print(conn.first);
-        Serial.print(" <--> ");
-        Serial.println(conn.second);
-    }
+  for (const auto& conn : activeConnections) {
+    Serial.print("Connection: ");
+    Serial.print(conn.first);
+    Serial.print(" <--> ");
+    Serial.println(conn.second);
+    util::UIConsole::log("Connection: " + String(conn.first) + " <--> " + String(conn.second), "ConnectionHandler");
+  }
 }
