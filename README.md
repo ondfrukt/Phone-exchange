@@ -28,7 +28,7 @@ A typical procedure of the system will be as shown below.
 
 ## Hardware ##
 <p align="center">
-<img src="docs/Block Diagram Hardware.drawio.svg" alt="System Overview" width="600">
+<img src="docs/Block Diagram Hardware.svg" alt="System Overview" width="600">
 </p>
 
 | Component   | Description |
@@ -39,6 +39,10 @@ A typical procedure of the system will be as shown below.
 | MCP23017<img src="docs/MCP23017.jpg" width="180">            | GPIO expanders because the ESP32 do not have enough GPIO ports to control all devices                  |
 | AD9833 module<img src="docs/AD9833.jpg" width="180">         | The AD9833 module, which I have three of in the exchange Is sending out tones into the swich matrix and then thuther to lines.               |
 | KS0835F<br><img src="docs/KS0835F.jpg" width="180">          | This module may be the most important one on the breadboard. It handles the phone's behavior and converts it into signals that my ESP can process. It detects whether the phone's hook is on or off and can generate a ring frequency, which would otherwise be very complicated to produce.     |
+| PCM5102<br><img src="docs/PCM5102.jpg" width="180">     | Audio files stored on the ESP are sent to this digital-to-analog converter to output audio messages to the lines when needed. The converter uses I²S communication with the ESP and outputs an analog representation of short, pre-stored audio clips. |
+| TMUX4051<br><img src="docs/TMUX4051.jpg" width="180">     | This audio multiplexer acts like a large switch, allowing the audio-out channel of each line to be selectively connected to the MT8870 DTMF detector. Only one channel at a time is connected to the DTMF decoder, and the system continuously sweeps through all lines that are in a state where tone detection is required.
+
+In this way, it is possible to determine which line a tone originates from while using only a single DTMF detector.  |
 
 ## Webserver ##
 I thought it would be good to have an interface where you could manage the phone system in some way, such as assigning a phone number to a specific line, activating/deactivating lines, changing the ring tone length, and adding some more features. During operation, access to the serial monitor will be limited, so having a way to easily tweak settings and access some debugging information would be useful.
