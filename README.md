@@ -50,7 +50,7 @@ I thought it would be good to have an interface where you could manage the phone
 The webserver can be reached at http://phoneexchange.local/ after the provisioning is completed
 
 ## MQTT ##
-Having an MQTT function is also a goal so that the server can potentially interact with a smart home system such as Home Assistant, opening up the possibility to control home functions — just for fun!
+Since I plan to integrate the exchange with my local Home Assistant service, I have implemented MQTT functionality so that, for example, every status change of a line results in a publication to the MQTT server. The server settings can be configured in the user interface after Wi-Fi has been set up.
 
 ## Line Statuses ##
 
