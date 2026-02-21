@@ -6,7 +6,7 @@
 #include "services/RingGenerator.h"
 #include "util/UIConsole.h"
 
-// InterruptManager: Central collection point for all MCP interrupts
+// InterruptManager:   Central collection point for all MCP interrupts
 // Hardware -> MCPDriver -> InterruptManager (queue) -> Components (poll)
 class InterruptManager {
 public:

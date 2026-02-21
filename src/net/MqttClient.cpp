@@ -22,20 +22,23 @@ MqttClient::MqttClient(Settings& settings, net::WifiClient& wifi, LineManager& l
   : settings_(settings), wifi_(wifi), lineManager_(lineManager), mqtt_(tcpClient_) {}
 
 void MqttClient::begin() {
+  const bool debug = settings_.debugMQTTLevel >= 1;
   loadConfig_();
   mqtt_.setKeepAlive(30);
   mqtt_.setSocketTimeout(5);
   mqtt_.setServer(host_.c_str(), port_);
   const bool hasUser = user_.length() > 0;
-  util::UIConsole::log(
-    "Startup config: enabled=" + String(settings_.mqttEnabled ? "true" : "false") +
-    ", host=\"" + host_ + "\", port=" + String(port_) +
-    ", clientId=\"" + clientId_ + "\", user=" + String(hasUser ? "set" : "empty"),
-    "MqttClient");
-  if (settings_.mqttEnabled && host_.length() > 0) {
-    util::UIConsole::log("MQTT settings found in NVS and ready for connect.", "MqttClient");
-  } else {
-    util::UIConsole::log("No usable MQTT settings yet (disabled or host missing).", "MqttClient");
+  if (debug) {
+    util::UIConsole::log(
+      "Startup config: enabled=" + String(settings_.mqttEnabled ? "true" : "false") +
+      ", host=\"" + host_ + "\", port=" + String(port_) +
+      ", clientId=\"" + clientId_ + "\", user=" + String(hasUser ? "set" : "empty"),
+      "MqttClient");
+    if (settings_.mqttEnabled && host_.length() > 0) {
+      util::UIConsole::log("MQTT settings found in NVS and ready for connect.", "MqttClient");
+    } else {
+      util::UIConsole::log("No usable MQTT settings yet (disabled or host missing).", "MqttClient");
+    }
   }
 
   if (!registeredCallbacks_) {
@@ -47,7 +50,9 @@ void MqttClient::begin() {
 }
 
 void MqttClient::reconfigureFromSettings() {
-  util::UIConsole::log("Reconfigure requested from updated settings.", "MqttClient");
+  if (settings_.debugMQTTLevel >= 1) {
+    util::UIConsole::log("Reconfigure requested from updated settings.", "MqttClient");
+  }
   disconnect_();
   loadConfig_();
   mqtt_.setServer(host_.c_str(), port_);
@@ -59,6 +64,7 @@ void MqttClient::reconfigureFromSettings() {
 }
 
 void MqttClient::loop() {
+  const bool debug = settings_.debugMQTTLevel >= 1;
   if (settings_.mqttConfigDirty) {
     reconfigureFromSettings();
     settings_.mqttConfigDirty = false;
@@ -73,23 +79,29 @@ void MqttClient::loop() {
     if (!wifi_.isConnected()) {
       reason += ", WiFi not connected";
     }
-    util::UIConsole::log(reason, "MqttClient");
+    if (debug) {
+      util::UIConsole::log(reason, "MqttClient");
+    }
   }
   wasConnected_ = nowConnected;
 
   if (!shouldRun_()) {
     const int reason = blockedReason_();
     if (reason != lastBlockedReason_) {
-      if (reason == 1) util::UIConsole::log("MQTT is disabled in settings.", "MqttClient");
-      else if (reason == 2) util::UIConsole::log("MQTT host is empty; waiting for settings.", "MqttClient");
-      else if (reason == 3) util::UIConsole::log("Waiting for WiFi before MQTT connect.", "MqttClient");
+      if (debug) {
+        if (reason == 1) util::UIConsole::log("MQTT is disabled in settings.", "MqttClient");
+        else if (reason == 2) util::UIConsole::log("MQTT host is empty; waiting for settings.", "MqttClient");
+        else if (reason == 3) util::UIConsole::log("Waiting for WiFi before MQTT connect.", "MqttClient");
+      }
       lastBlockedReason_ = reason;
     }
     if (mqtt_.connected()) disconnect_();
     return;
   }
   if (lastBlockedReason_ == 3) {
-    util::UIConsole::log("WiFi is back; resuming MQTT connect attempts.", "MqttClient");
+    if (debug) {
+      util::UIConsole::log("WiFi is back; resuming MQTT connect attempts.", "MqttClient");
+    }
   }
   lastBlockedReason_ = 0;
 
@@ -103,14 +115,16 @@ void MqttClient::loop() {
                         ((long)(now - lastConnectAttemptMs_) >= (long)reconnectDelayMs_);
   if (!retryNow) return;
 
-  util::UIConsole::log(
-    "Trying to connect to " + host_ + ":" + String(port_) +
-    " (clientId=" + clientId_ + ")",
-    "MqttClient");
+  if (debug) {
+    util::UIConsole::log(
+      "Trying to connect to " + host_ + ":" + String(port_) +
+      " (clientId=" + clientId_ + ")",
+      "MqttClient");
+  }
   if (connect_()) {
     reconnectDelayMs_ = 0;
     failedConnectAttempts_ = 0;
-    if (!wasConnectedBefore) util::UIConsole::log("Connection established.", "MqttClient");
+    if (debug && !wasConnectedBefore) util::UIConsole::log("Connection established.", "MqttClient");
     publishFullSnapshot();
   } else {
     failedConnectAttempts_++;
@@ -121,10 +135,12 @@ void MqttClient::loop() {
       reconnectDelayMs_ = kLongRetryDelayMs;
     }
     lastConnectAttemptMs_ = now;
-    util::UIConsole::log(
-      "Connect failed; next retry in " + String(reconnectDelayMs_) + " ms (attempt " +
-      String(failedConnectAttempts_) + ").",
-      "MqttClient");
+    if (debug) {
+      util::UIConsole::log(
+        "Connect failed; next retry in " + String(reconnectDelayMs_) + " ms (attempt " +
+        String(failedConnectAttempts_) + ").",
+        "MqttClient");
+    }
   }
 }
 
@@ -192,13 +208,17 @@ bool MqttClient::connect_() {
 
   if (ok) {
     mqtt_.publish(lwtTopic.c_str(), "online", settings_.mqttRetain);
-    util::UIConsole::log("Connected to broker " + host_ + ":" + String(port_), "MqttClient");
+    if (settings_.debugMQTTLevel >= 1) {
+      util::UIConsole::log("Connected to broker " + host_ + ":" + String(port_), "MqttClient");
+    }
     wasConnected_ = true;
   } else {
     const int state = mqtt_.state();
-    util::UIConsole::log(
-      "Connect failed, state=" + String(state) + " (" + String(stateToText_(state)) + ")",
-      "MqttClient");
+    if (settings_.debugMQTTLevel >= 1) {
+      util::UIConsole::log(
+        "Connect failed, state=" + String(state) + " (" + String(stateToText_(state)) + ")",
+        "MqttClient");
+    }
   }
   return ok;
 }
@@ -208,7 +228,9 @@ void MqttClient::disconnect_() {
   const String topic = makeTopic_("status");
   mqtt_.publish(topic.c_str(), "offline", settings_.mqttRetain);
   mqtt_.disconnect();
-  util::UIConsole::log("Disconnected from broker.", "MqttClient");
+  if (settings_.debugMQTTLevel >= 1) {
+    util::UIConsole::log("Disconnected from broker.", "MqttClient");
+  }
   wasConnected_ = false;
 }
 

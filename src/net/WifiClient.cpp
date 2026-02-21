@@ -1,4 +1,5 @@
 #include "WifiClient.h"
+#include "settings/settings.h"
 #include <time.h>
 using namespace net;
 
@@ -10,30 +11,32 @@ void WifiClient::begin(const char* hostname) {
   WiFi.setAutoReconnect(true);
   WiFi.setSleep(false);
 
-  // 1) Välj hostname (antingen given, eller auto baserat på MAC)
+  // 1) Choose hostname (either given, or auto based on MAC)
   if (hostname && strlen(hostname) > 0) {
     hostname_ = hostname;
   } else {
     hostname_ = makeDefaultHostname_(); // ex: phoneexchange-7A3F
   }
 
-  // 2) Sätt hostname FÖRE WiFi.begin()
+  // 2) Set hostname BEFORE WiFi.begin()
   if (!WiFi.setHostname(hostname_.c_str())) {
-    Serial.println("WifiClient: Failed to set hostname.");
-    util::UIConsole::log("Failed to set hostname.", "WifiClient");
+    if (Settings::instance().debugWSLevel >= 1) {
+      Serial.println("WifiClient:         Failed to set hostname.");
+      util::UIConsole::log("Failed to set hostname.", "WifiClient");
+    }
   }
 
-  // 3) Registrera eventlyssnare (innan connect)
+  // 3) Register event listener (before connect)
   WiFi.onEvent([this](WiFiEvent_t event, WiFiEventInfo_t info){ onWiFiEvent_(event, info); });
 
-  // 4) Försök ansluta med sparade credentials
+  // 4) Try to connect with saved credentials
   String savedSsid, savedPass;
   if (loadCredentials(savedSsid, savedPass)) {
     ssid_ = savedSsid;
     password_ = savedPass;
     connect_();
   } else {
-    Serial.println("WifiClient: No saved credentials, waiting for provisioning...");
+    Serial.println("WifiClient:         No saved credentials, waiting for provisioning...");
     util::UIConsole::log("No saved credentials, waiting for provisioning...", "WifiClient");
   }
 }
@@ -43,12 +46,14 @@ void WifiClient::loop() {
 
   // If we are "connecting" for too long without a valid IP, force a reconnect.
   if (connecting_ && ((long)(now - lastConnectAttemptMs_) >= (long)kConnectAttemptTimeoutMs)) {
-    Serial.println("WifiClient: Connect timeout, forcing reconnect.");
-    util::UIConsole::log("Connect timeout, forcing reconnect.", "WifiClient");
+    if (Settings::instance().debugWSLevel >= 1) {
+      Serial.println("WifiClient:         Connect timeout, forcing reconnect.");
+      util::UIConsole::log("Connect timeout, forcing reconnect.", "WifiClient");
+    }
     forceReconnect_();
   }
 
-  // Automatisk reconnect med backoff så vi undviker tight loop vid fel credentials.
+  // Automatic reconnect with backoff to avoid tight loop with wrong credentials.
   const bool timeToRetry =
       (reconnectDelayMs_ == 0) ||
       ((long)(now - lastConnectAttemptMs_) >= (long)reconnectDelayMs_);
@@ -79,25 +84,25 @@ void WifiClient::saveCredentials(const char* ssid, const char* password) {
   prefs_.putString("pass", password);
   ssid_ = ssid;
   password_ = password;
-  Serial.println("WifiClient: Credentials saved");
+  Serial.println("WifiClient:         Credentials saved");
   util::UIConsole::log("Credentials saved", "WifiClient");
 }
 
 bool WifiClient::loadCredentials(String& ssid, String& password) {
   const bool hasSsid = prefs_.isKey("ssid");
-  const bool hasPass = prefs_.isKey("pass");
-  if (!hasSsid || !hasPass) {
+  if (!hasSsid) {
     ssid = "";
     password = "";
     return false;
   }
   ssid = prefs_.getString("ssid", "");
+  // Password is optional: if not stored, default to empty string (open networks).
   password = prefs_.getString("pass", "");
   return ssid.length() > 0;
 }
 
 void WifiClient::connect_() {
-  Serial.printf("WifiClient: Connecting to %s… (host=%s)\n", ssid_.c_str(), hostname_.c_str());
+  Serial.printf("WifiClient:         Connecting to %s... (host=%s)\n", ssid_.c_str(), hostname_.c_str());
   util::UIConsole::log("Connecting to " + ssid_ + "...", "WifiClient");
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(false, false);
@@ -123,37 +128,43 @@ void WifiClient::forceReconnect_() {
 void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
   switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-      Serial.println("WifiClient: Connected to AP");
+      Serial.println("WifiClient:         Connected to AP");
       util::UIConsole::log("Connected to AP", "WifiClient");
       break;
 
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: {
       const IPAddress ip = WiFi.localIP();
-      Serial.print("WifiClient: Got IP: ");
+      Serial.print("WifiClient:         Got IP: ");
       util::UIConsole::log("Got IP: " + ip.toString(), "WifiClient");
       Serial.println(ip);
       connecting_ = false;
       reconnectDelayMs_ = 0;
 
       if (ip == IPAddress((uint32_t)0)) {
-        Serial.println("WifiClient: Got IP event but local IP is still 0.0.0.0, waiting...");
-        util::UIConsole::log("Got IP event but local IP is 0.0.0.0, waiting...", "WifiClient");
+        if (Settings::instance().debugWSLevel >= 1) {
+          Serial.println("WifiClient:         Got IP event but local IP is still 0.0.0.0, waiting...");
+          util::UIConsole::log("Got IP event but local IP is 0.0.0.0, waiting...", "WifiClient");
+        }
         break;
       }
 
-      // Synkronisera klockan med NTP
+      // Synchronize clock with NTP
       syncTime_();
 
-      // Starta mDNS när IP är klart
+      // Start mDNS when IP is ready
       if (!mdnsStarted_) {
         if (MDNS.begin(hostname_.c_str())) {
           mdnsStarted_ = true;
           MDNS.addService("http", "tcp", 80);
-          Serial.printf("WifiClient: mDNS igång → http://%s.local/\n", hostname_.c_str());
-          util::UIConsole::log("mDNS running → http://" + hostname_ + ".local/", "WifiClient");
+          if (Settings::instance().debugWSLevel >= 1) {
+            Serial.printf("WifiClient:         mDNS running -> http://%s.local/\n", hostname_.c_str());
+            util::UIConsole::log("mDNS running -> http://" + hostname_ + ".local/", "WifiClient");
+          }
         } else {
-          Serial.println("WifiClient: ⚠️ MDNS.begin misslyckades");
-          util::UIConsole::log("⚠️ MDNS.begin failed", "WifiClient");
+          if (Settings::instance().debugWSLevel >= 1) {
+            Serial.println("WifiClient:         MDNS.begin failed");
+            util::UIConsole::log("MDNS.begin failed", "WifiClient");
+          }
         }
       }
       break;
@@ -166,11 +177,13 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
       } else {
         reconnectDelayMs_ = min(reconnectDelayMs_ * 2, kMaxReconnectDelayMs);
       }
-      Serial.printf("WifiClient: Disconnected (reason=%d), will retry in %lu ms.\n",
-                    info.wifi_sta_disconnected.reason,
-                    reconnectDelayMs_);
-      util::UIConsole::log("Disconnected, retry with backoff...", "WifiClient");
-      // Stäng mDNS tills vi åter har IP
+      Serial.printf("WifiClient:         Disconnected (reason=%d)\n", info.wifi_sta_disconnected.reason);
+      util::UIConsole::log("Disconnected, retrying connection...", "WifiClient");
+      if (Settings::instance().debugWSLevel >= 1) {
+        Serial.printf("WifiClient:         Retry in %lu ms.\n", reconnectDelayMs_);
+        util::UIConsole::log("Retry in " + String(reconnectDelayMs_) + " ms", "WifiClient");
+      }
+      // Stop mDNS until we have IP again
       if (mdnsStarted_) {
         MDNS.end();
         mdnsStarted_ = false;
@@ -178,7 +191,7 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
       break;
 
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-      Serial.println("WifiClient: Lost IP, forcing reconnect.");
+      Serial.println("WifiClient:         Lost IP, forcing reconnect.");
       util::UIConsole::log("Lost IP, forcing reconnect.", "WifiClient");
       forceReconnect_();
       break;
@@ -197,16 +210,18 @@ String WifiClient::makeDefaultHostname_() {
 }
 
 void WifiClient::syncTime_() {
-  // Konfigurera tidszon för svensk tid (CET/CEST med automatisk sommartid)
-  // CET-1CEST,M3.5.0,M10.5.0/3 = CET är UTC+1, CEST börjar sista söndagen i mars, slutar sista söndagen i oktober
+  // Configure timezone for Swedish time (CET/CEST with automatic daylight saving)
+  // CET-1CEST,M3.5.0,M10.5.0/3 = CET is UTC+1, CEST starts last Sunday in March, ends last Sunday in October
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
   tzset();
   
-  Serial.println("WifiClient: Syncing time with NTP...");
-  util::UIConsole::log("Syncing time with NTP...", "WifiClient");
+  if (Settings::instance().debugWSLevel >= 1) {
+    Serial.println("WifiClient:         Syncing time with NTP...");
+    util::UIConsole::log("Syncing time with NTP...", "WifiClient");
+  }
   
-  // Vänta lite för att NTP ska hinna synka
+  // Wait a bit for NTP to sync
   struct tm timeinfo;
   int retries = 0;
   while (!getLocalTime(&timeinfo) && retries < 10) {
@@ -217,10 +232,14 @@ void WifiClient::syncTime_() {
   if (retries < 10) {
     char timeStr[64];
     strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
-    Serial.printf("WifiClient: Time synced: %s\n", timeStr);
-    util::UIConsole::log("Time synced: " + String(timeStr), "WifiClient");
+    if (Settings::instance().debugWSLevel >= 1) {
+      Serial.printf("WifiClient:         Time synced: %s\n", timeStr);
+      util::UIConsole::log("Time synced: " + String(timeStr), "WifiClient");
+    }
   } else {
-    Serial.println("WifiClient: Failed to sync time");
-    util::UIConsole::log("Failed to sync time", "WifiClient");
+    if (Settings::instance().debugWSLevel >= 1) {
+      Serial.println("WifiClient:         Failed to sync time");
+      util::UIConsole::log("Failed to sync time", "WifiClient");
+    }
   }
 }

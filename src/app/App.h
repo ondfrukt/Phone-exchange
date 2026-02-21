@@ -41,6 +41,8 @@ public:
 
 private:
     void GPIOTest(uint8_t addr, int pin);
+    void startNetwork_();
+    void reportStatus_(const char* name, bool running, const String& detail = "");
 
     // ===== Core drivers (owned by App) =====
     // Concrete instances: App creates and owns lifetime.
@@ -70,5 +72,6 @@ private:
     Functions functions_;
     I2CScanner i2cScanner{Wire, Serial};
     util::UIConsole uiConsole_;
+    bool networkStarted_ = false;
 
 };

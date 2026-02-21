@@ -101,10 +101,10 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   box-shadow:0 6px 30px rgba(0,0,0,.25);
 }
 
-/* Namn | Status | Telefon | Aktiv-knapp */
+/* Namn+Telefon | Status | Aktiv-knapp */
 .row{
   display:grid;
-  grid-template-columns: 1fr auto minmax(calc(var(--badge-w) * 2 + 8px), 320px) auto;
+  grid-template-columns: 1fr auto auto;
   gap:10px;
   align-items:center;
   padding:8px 0;
@@ -134,13 +134,14 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   margin-bottom: 4px;
 }
 
-.name-editor {
+.line-editors {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.name-editor input {
+.line-editors input {
   width: 120px;
   min-width: 0;
   padding: 4px 8px;
@@ -148,73 +149,110 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.04);
   color: var(--fg);
-}
-
-.name-editor input:focus {
+.line-editors input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-.name-editor .badge {
-  min-width: 90px;
-  max-width: 90px;
-}
-
-/* Telefon-editor (tredje kolumn) */
-.phone-editor{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  /* Säkerställ att phone-editor inte växer för stort:
-     max-width = två badges + gap */
-  max-width: calc(var(--badge-w) * 2 + 8px);
-  /* Ge ett litet minne så den inte kollapsar helt */
-  min-width: calc(var(--badge-w) + 8px);
-}
-
-/* När vi "döljer" phone-editor vill vi reservera utrymmet så att layout inte hoppar.
-   Används istället för display:none i JS. */
-.phone-editor.hidden {
+.line-editors.hidden {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
 }
 
-/* FAST BREDD PÅ TELEFONFÄLTET
-   Vi använder CSS-variabeln --phone-input-w (se :root högst upp). Ändra där.
-   Inputen är nu en fast bredd (ingen flexibel växling) så den blir alltid exakt
-   den angivna bredden (100px som standard).
-*/
-.phone-editor input{
-  /* Fixed width: change --phone-input-w in :root to alter this */
+.line-editors input[id$='-phone']{
   flex: 0 0 var(--phone-input-w);
   width: var(--phone-input-w);
   max-width: var(--phone-input-w);
-
-  min-width: 0;
-  padding:4px 8px;
-  border-radius:8px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.04);
-  color:var(--fg);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
 }
 
-.phone-editor input:focus{
-  outline:none;
-  border-color:var(--accent);
-  box-shadow:0 0 0 1px var(--accent);
+.status-pad {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  max-width: 140px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--fg);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.phone-editor .badge{
-  min-width:var(--badge-w);
-  max-width:var(--badge-w);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.status-pad.hidden {
+  visibility: hidden;
+}
+
+.status-pad.state-idle {
+  border-color: rgba(107, 114, 128, 0.5);
+  background: rgba(107, 114, 128, 0.15);
+  color: #d1d5db;
+}
+
+.status-pad.state-ready {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(96, 165, 250, 0.16);
+  color: #bfdbfe;
+}
+
+.status-pad.state-ringing {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+}
+
+.status-pad.state-connected {
+  border-color: rgba(22, 163, 74, 0.5);
+  background: rgba(22, 163, 74, 0.16);
+  color: #86efac;
+}
+
+.status-pad.state-alert {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+}
+
+.status-pad.state-other {
+  border-color: rgba(156, 163, 175, 0.4);
+  background: rgba(156, 163, 175, 0.12);
+  color: #e5e7eb;
+}
+
+.line-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.line-footer-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.connections-view {
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .line-footer {
+    align-items: stretch;
+  }
+
+  .line-editors input {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .status{ margin-top:10px; color:var(--muted); font-size:.9rem }
@@ -235,6 +273,16 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   white-space:nowrap;
 }
 
+.badge.active-toggle {
+  min-width: 108px;
+  max-width: 108px;
+  font-weight: 600;
+  border-width: 2px;
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.55);
+  color: #e5e7eb;
+}
+
 /* Placera sista badge (Active/Inactivate) längst till höger i raden */
 .row > .badge:last-child {
   justify-self: end;
@@ -244,6 +292,18 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 .badge.no{ border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.12) }
 .badge.clickable{ cursor:pointer }
 .badge.working{ opacity:.6; pointer-events:none }
+
+.badge.active-toggle.ok{
+  border-color: #22c55e !important;
+  background: rgba(34, 197, 94, 0.30) !important;
+  color: #dcfce7 !important;
+}
+
+.badge.active-toggle.no{
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.30) !important;
+  color: #fee2e2 !important;
+}
 
 /* ============ BUTTON SYSTEM (new) ============ */
 /* Base button styling */
@@ -462,7 +522,7 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
   font-size:0.85rem;
   line-height:1.4;
-  max-height:280px;
+  max-height:560px;
   overflow:auto;
   white-space:pre-wrap;
   word-break:break-word;

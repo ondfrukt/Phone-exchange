@@ -12,7 +12,7 @@ void ConnectionHandler::connectLines(uint8_t lineA, uint8_t lineB) {
   addConnection(lineA, lineB);
 
   if (settings.debugLAC >= 1) {
-    Serial.print("ConnectionHandler: ");
+    Serial.print("ConnectionHandler:  ");
     Serial.print("Connected line ");
     Serial.print(lineA);
     Serial.print(" to line ");
@@ -30,7 +30,7 @@ void ConnectionHandler::disconnectLines(uint8_t lineA, uint8_t lineB) {
   removeConnection(lineA, lineB);
 
   if (settings.debugLAC >= 1) {
-    Serial.print("ConnectionHandler: ");
+    Serial.print("ConnectionHandler:  ");
     Serial.print("Disconnected line ");
     Serial.print(lineA);
     Serial.print(" from line ");
@@ -44,7 +44,7 @@ void ConnectionHandler::disconnectLines(uint8_t lineA, uint8_t lineB) {
 void ConnectionHandler::connectAudioToLine(uint8_t line, uint8_t audioSource) {
   mt8816Driver_.setConnection(audioSource, line, true);
   if (settings.debugLAC >= 1) {
-    Serial.print("ConnectionHandler: ");
+    Serial.print("ConnectionHandler:  ");
     Serial.print("Connected audio source ");
     Serial.print(audioSource);
     Serial.print(" to line ");
@@ -57,7 +57,7 @@ void ConnectionHandler::connectAudioToLine(uint8_t line, uint8_t audioSource) {
 void ConnectionHandler::disconnectAudioToLine(uint8_t line, uint8_t audioSource) {
   mt8816Driver_.setConnection(audioSource, line, false);
   if (settings.debugLAC >= 1) {
-    Serial.print("ConnectionHandler: ");
+    Serial.print("ConnectionHandler:  ");
     Serial.print("Disconnected audio source ");
     Serial.print(audioSource);
     Serial.print(" from line ");

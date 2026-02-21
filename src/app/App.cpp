@@ -38,54 +38,55 @@ App::App()
     lineManager_.setToneReader(&toneReader_);
 }
 
-
 void App::begin() {
     Serial.begin(115200);
     functions_.begin();
-    util::UIConsole::init(200); 
+    util::UIConsole::init(200);
     Serial.println();
-    Serial.println("----- App starting -----");
+    Serial.println("-------------------- App starting --------------------");
     util::UIConsole::log("", "App");
-    util::UIConsole::log("----- App starting -----", "App");
+    util::UIConsole::log("-------------------- App starting --------------------", "App");
 
-		// ----  Settings ----
+    // ----  Settings ----
     auto& settings = Settings::instance();
     const bool settingsLoaded = settings.load();
     if (settingsLoaded) {
-      Serial.println("App: Settings loaded from NVS.");
+      Serial.println("App:                Settings loaded from NVS.");
       util::UIConsole::log("Settings loaded from NVS.", "App");
     } else {
-      Serial.println("App: Using default settings (stored to NVS if needed).");
+      Serial.println("App:                Using default settings (stored to NVS if needed).");
       util::UIConsole::log("Using default settings (stored to NVS if needed).", "App");
     }
 
-		// ---- I2C ----
-		Wire.begin(ESP_PINS::SDA_PIN, ESP_PINS::SCL_PIN);
+    // ---- I2C ----
+    Wire.begin(ESP_PINS::SDA_PIN, ESP_PINS::SCL_PIN);
 
     // I2C-scanner if debug is enabled
     if (settings.debugI2CLevel >= 1) i2cScanner.scan();
-		
-		// ---- Drivers setup ----
+
+    // ---- Drivers setup ----
     mcpDriver_.begin();
-		mt8816Driver_.begin();
+    reportStatus_("MCP", settings.mcpMainPresent || settings.mcpSlic1Present || settings.mcpSlic2Present || settings.mcpMt8816Present);
+    mt8816Driver_.begin();
+    reportStatus_("MT8816", true);
     toneGenerator_.begin();
+    reportStatus_("ToneGenerator", settings.toneGeneratorEnabled);
     Serial.println("----- Drivers initialized -----");
-    
-    //----- Service setup -----
+
+    // ----- Service setup -----
     lineAction_.begin();
+    reportStatus_("LineAction", true);
     lineManager_.begin();
-    settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
+    reportStatus_("LineManager", true);
+    reportStatus_("SHKService", true);
+    reportStatus_("ToneReader", true);
+    reportStatus_("RingGenerator", true);
+    settings.adjustActiveLines(); // Ensure at least one valid line is active
     Serial.println("----- Services initialized -----");
 
-    // ----- Net applications -----
-    wifiClient_.begin("phoneexchange");
-    provisioning_.begin(wifiClient_, "phoneexchange");
-    mqttClient_.begin();
-    Serial.println("App: Deferring WebServer start until WiFi has IP");
-
-    Serial.println("----- App setup complete -----");
+    Serial.println("--------------------- App setup complete ---------------------");
     Serial.println();
-    util::UIConsole::log("----- App setup complete -----", "App");
+    util::UIConsole::log("--------------------- App setup complete ---------------------", "App");
     util::UIConsole::log("", "App");
 }
 
@@ -97,6 +98,10 @@ void App::update() {
   
   // ---- Interrupt handling ----
   interruptManager_.collectInterrupts();  // Collect all interrupts from MCP devices into InterruptManager queue
+
+  if (!networkStarted_) {
+    startNetwork_();
+  }
   
   // ---- Network and services updates ----
   wifiClient_.loop();       // Handle WiFi events and connection
@@ -111,4 +116,31 @@ void App::update() {
   ringGenerator_.update();  // Update ring signal steps and timing
   toneGenerator_.update();  // Update tone generation steps and timing
   functions_.update();      // Run any utility functions
+}
+
+void App::startNetwork_() {
+    auto& settings = Settings::instance();
+    wifiClient_.begin("phoneexchange");
+    reportStatus_("WiFi", true, wifiClient_.isConnected() ? "connected" : "not connected");
+    provisioning_.begin(wifiClient_, "phoneexchange");
+    reportStatus_("Provisioning", true);
+    mqttClient_.begin();
+    reportStatus_("MQTT", settings.mqttEnabled, settings.mqttEnabled ? "enabled" : "disabled");
+    reportStatus_("WebServer", false, "waiting for WiFi IP");
+    Serial.println("App:                Deferring WebServer start until WiFi has IP");
+    networkStarted_ = true;
+}
+
+void App::reportStatus_(const char* name, bool running, const String& detail) {
+    String prefix = String(name) + ":";
+    const int targetWidth = 20;
+    while (prefix.length() < targetWidth) {
+      prefix += ' ';
+    }
+    String msg = prefix + (running ? "Running" : "Not running");
+    if (detail.length() > 0) {
+      msg += " (" + detail + ")";
+    }
+    Serial.println(msg);
+    util::UIConsole::log(msg, "App");
 }

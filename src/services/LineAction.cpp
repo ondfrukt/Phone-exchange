@@ -157,7 +157,7 @@ void LineAction::action(int index) {
       break;
     
     case LineStatus::Incoming:
-      //ringGenerator_.generateRingSignal(index);
+      ringGenerator_.generateRingSignal(static_cast<uint8_t>(index));
       lineManager_.setLineTimer(index, settings_.timer_incomming);
       break;
     
@@ -210,8 +210,8 @@ void LineAction::timerExpired(LineHandler& line) {
   LineStatus currentStatus = line.currentLineStatus;
 
   if (settings_.debugLALevel >= 1) {
-    Serial.println("LineAction: Timer expired for line " + String(index) + " in state " + model::LineStatusToString(currentStatus));
-    util::UIConsole::log("LineAction: Timer expired for line " + String(index) + " in state " + model::LineStatusToString(currentStatus), "LineAction");
+    Serial.println("LineAction:         Timer expired for line " + String(index) + " in state " + model::LineStatusToString(currentStatus));
+    util::UIConsole::log("LineAction:         Timer expired for line " + String(index) + " in state " + model::LineStatusToString(currentStatus), "LineAction");
   }
 
   switch (currentStatus) {
@@ -224,12 +224,12 @@ void LineAction::timerExpired(LineHandler& line) {
       
       int lineCalled = lineManager_.searchPhoneNumber(line.dialedDigits);
       if (settings_.debugLALevel >= 1) {
-        Serial.println("LineAction: ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled));
+        Serial.println("LineAction:         ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled));
         util::UIConsole::log("ToneDialing line " + String(index) + " dialed digits: " + line.dialedDigits + ", found lineCalled: " + String(lineCalled), "LineAction");
       }
       
       if (lineCalled == index){
-        Serial.println(RED "LineAction: Line " + String(index) + " dialed its own number. Setting to Fail." + COLOR_RESET);
+        Serial.println(RED "LineAction:         Line " + String(index) + " dialed its own number. Setting to Fail." + COLOR_RESET);
         lineManager_.setStatus(index, LineStatus::Fail);
         break;
       }
@@ -239,14 +239,14 @@ void LineAction::timerExpired(LineHandler& line) {
 
         // Check if the line that is being called is active
         if (!lineManager_.getLine(lineCalled).lineActive){
-          Serial.println(RED "LineAction: Line " + String(lineCalled) + " is not active. Setting to Fail." + COLOR_RESET);
+          Serial.println(RED "LineAction:         Line " + String(lineCalled) + " is not active. Setting to Fail." + COLOR_RESET);
           lineManager_.setStatus(index, LineStatus::Fail);
           return;
         }
         
         // Check if the called line is idle
         if (lineManager_.getLine(lineCalled).currentLineStatus != LineStatus::Idle){
-          Serial.println(RED "LineAction: Line " + String(lineCalled) + " is not idle. Setting line " + String(index) + " to Busy." + COLOR_RESET);
+          Serial.println(RED "LineAction:         Line " + String(lineCalled) + " is not idle. Setting line " + String(index) + " to Busy." + COLOR_RESET);
           lineManager_.setStatus(index, LineStatus::Busy);
           return;
         }
@@ -259,7 +259,7 @@ void LineAction::timerExpired(LineHandler& line) {
       }
       // No matching phone number found
       else {
-        Serial.println(RED "LineAction: No matching phone number found for line " + String(index) + " dialed digits: " + line.dialedDigits + COLOR_RESET);
+        Serial.println(RED "LineAction:         No matching phone number found for line " + String(index) + " dialed digits: " + line.dialedDigits + COLOR_RESET);
         lineManager_.setStatus(index, LineStatus::Fail);
       }
           
@@ -304,13 +304,13 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
   }
 
   if (settings_.debugLALevel >= 2) {
-    Serial.println("LineAction: Starting tone generator for line " + String(line.lineNumber) + " with toneId " + ToneIdToString(status));
+    Serial.println("LineAction:         Starting tone generator for line " + String(line.lineNumber) + " with toneId " + ToneIdToString(status));
     util::UIConsole::log("Starting tone generator for line " + String(line.lineNumber) + " with status " + ToneIdToString(status), "LineAction");
   }
 
   const uint8_t dac = toneGenerator_.startTone(status);
   if (dac == 0) {
-    Serial.println(RED "LineAction: All tone generators are busy! Cannot play tone for line " + String(line.lineNumber) + COLOR_RESET);
+    Serial.println(RED "LineAction:         All tone generators are busy! Cannot play tone for line " + String(line.lineNumber) + COLOR_RESET);
     util::UIConsole::log("All tone generators are busy! Cannot play tone for line " + String(line.lineNumber), "LineAction");
     return;
   }
@@ -319,7 +319,7 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
   connectionHandler_.connectAudioToLine(line.lineNumber, dac);
 
   if (settings_.debugLALevel >= 2) {
-    Serial.println("LineAction: Assigned DAC " + String(dac) + " to line " + String(line.lineNumber));
+    Serial.println("LineAction:         Assigned DAC " + String(dac) + " to line " + String(line.lineNumber));
     util::UIConsole::log("Assigned DAC " + String(dac) + " to line " + String(line.lineNumber), "LineAction");
   }
 }

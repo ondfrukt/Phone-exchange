@@ -13,7 +13,7 @@ void InterruptManager::collectInterrupts() {
 
     if (eventQueue_.size() >= MAX_QUEUE_SIZE) {
       if (settings_.debugIMLevel >= 1) {
-        Serial.println(F("InterruptManager: WARNING - Queue full, dropping MCP_MAIN event"));
+        Serial.println(F("InterruptManager:   WARNING - Queue full, dropping MCP_MAIN event"));
         util::UIConsole::log("WARNING - Queue full, dropping MCP_MAIN event", "InterruptManager");
       }
       break;
@@ -22,7 +22,7 @@ void InterruptManager::collectInterrupts() {
     eventQueue_.push(r);
     
     if (settings_.debugIMLevel >= 2) {
-      Serial.print(F("InterruptManager: Queued MCP_MAIN event - addr=0x"));
+      Serial.print(F("InterruptManager:   Queued MCP_MAIN event - addr=0x"));
       Serial.print(r.i2c_addr, HEX);
       Serial.print(F(" pin="));
       Serial.print(r.pin);
@@ -44,7 +44,7 @@ void InterruptManager::collectInterrupts() {
 
     if (eventQueue_.size() >= MAX_QUEUE_SIZE) {
       if (settings_.debugIMLevel >= 1) {
-        Serial.println(F("InterruptManager: WARNING - Queue full, dropping MCP_SLIC1 event"));
+        Serial.println(F("InterruptManager:   WARNING - Queue full, dropping MCP_SLIC1 event"));
         util::UIConsole::log("WARNING - Queue full, dropping MCP_SLIC1 event", "InterruptManager");
       }
       break;
@@ -53,7 +53,7 @@ void InterruptManager::collectInterrupts() {
     eventQueue_.push(r);
     
     if (settings_.debugIMLevel >= 2) {
-      Serial.print(F("InterruptManager: Queued MCP_SLIC1 event - addr=0x"));
+      Serial.print(F("InterruptManager:   Queued MCP_SLIC1 event - addr=0x"));
       Serial.print(r.i2c_addr, HEX);
       Serial.print(F(" pin="));
       Serial.print(r.pin);
@@ -76,7 +76,7 @@ void InterruptManager::collectInterrupts() {
     
     if (eventQueue_.size() >= MAX_QUEUE_SIZE) {
       if (settings_.debugIMLevel >= 1) {
-        Serial.println(F("InterruptManager: WARNING - Queue full, dropping MCP_SLIC2 event"));
+        Serial.println(F("InterruptManager:   WARNING - Queue full, dropping MCP_SLIC2 event"));
         util::UIConsole::log("WARNING - Queue full, dropping MCP_SLIC2 event", "InterruptManager");
       }
       break;
@@ -85,7 +85,7 @@ void InterruptManager::collectInterrupts() {
     eventQueue_.push(r);
     
     if (settings_.debugIMLevel >= 2) {
-      Serial.print(F("InterruptManager: Queued MCP_SLIC2 event - addr=0x"));
+      Serial.print(F("InterruptManager:   Queued MCP_SLIC2 event - addr=0x"));
       Serial.print(r.i2c_addr, HEX);
       Serial.print(F(" pin="));
       Serial.print(r.pin);
@@ -108,7 +108,7 @@ void InterruptManager::collectInterrupts() {
     
     if (eventQueue_.size() >= MAX_QUEUE_SIZE) {
       if (settings_.debugIMLevel >= 1) {
-        Serial.println(F("InterruptManager: WARNING - Queue full, dropping MCP_MT8816 event"));
+        Serial.println(F("InterruptManager:   WARNING - Queue full, dropping MCP_MT8816 event"));
         util::UIConsole::log("WARNING - Queue full, dropping MCP_MT8816 event", "InterruptManager");
       }
       break;
@@ -117,7 +117,7 @@ void InterruptManager::collectInterrupts() {
     eventQueue_.push(r);
     
     if (settings_.debugIMLevel >= 1) {
-      Serial.print(F("InterruptManager: Queued MCP_MT8816 event - addr=0x"));
+      Serial.print(F("InterruptManager:   Queued MCP_MT8816 event - addr=0x"));
       Serial.print(r.i2c_addr, HEX);
       Serial.print(F(" pin="));
       Serial.print(r.pin);
@@ -154,7 +154,7 @@ IntResult InterruptManager::pollEvent(uint8_t i2c_addr, uint8_t pin) {
       found = true;
       
       if (settings_.debugIMLevel >= 2) {
-        Serial.print(F("InterruptManager: Polled event - addr=0x"));
+        Serial.print(F("InterruptManager:   Polled event - addr=0x"));
         Serial.print(i2c_addr, HEX);
         Serial.print(F(" pin="));
         Serial.print(pin);
@@ -200,7 +200,7 @@ IntResult InterruptManager::pollEventByAddress(uint8_t i2c_addr) {
       found = true;
       
       if (settings_.debugIMLevel >= 2) {
-        Serial.print(F("InterruptManager: Polled event by address - addr=0x"));
+        Serial.print(F("InterruptManager:   Polled event by address - addr=0x"));
         Serial.print(i2c_addr, HEX);
         Serial.print(F(" pin="));
         Serial.print(foundEvent.pin);
@@ -236,7 +236,7 @@ IntResult InterruptManager::pollAnyEvent() {
   eventQueue_.pop();
 
   if (settings_.debugIMLevel >= 2) {
-    Serial.print(F("InterruptManager: Polled any event - addr=0x"));
+    Serial.print(F("InterruptManager:   Polled any event - addr=0x"));
     Serial.print(event.i2c_addr, HEX);
     Serial.print(F(" pin="));
     Serial.print(event.pin);
@@ -260,7 +260,7 @@ void InterruptManager::clearQueue() {
   }
 
   if (settings_.debugIMLevel >= 1 && clearedCount > 0) {
-    Serial.print(F("InterruptManager: Cleared "));
+    Serial.print(F("InterruptManager:   Cleared "));
     Serial.print(clearedCount);
     Serial.println(F(" events from queue"));
     util::UIConsole::log("Cleared " + String(clearedCount) + " events from queue", 

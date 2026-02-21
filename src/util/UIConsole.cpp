@@ -37,6 +37,18 @@ static String escapeJsonString(const String& s) {
   return out;
 }
 
+static String stripInlineSourcePrefix(const String& text, const char* source) {
+  if (!source || strlen(source) == 0) return text;
+  const String prefix = String(source) + ":";
+  if (!text.startsWith(prefix)) return text;
+
+  size_t i = prefix.length();
+  while (i < text.length() && text[i] == ' ') {
+    ++i;
+  }
+  return text.substring(i);
+}
+
 void UIConsole::init(size_t maxLines) {
   g_maxLines = maxLines ? maxLines : 100;
   if (!g_mutex) {
@@ -57,7 +69,8 @@ static void push_buffer_locked(const String& json) {
 // Bygg JSON och leverera antingen till sink eller buffra
 void UIConsole::log(const String& text, const char* source) {
   // skapa JSON
-  const String escText = escapeJsonString(text);
+  const String displayText = stripInlineSourcePrefix(text, source);
+  const String escText = escapeJsonString(displayText);
   String json = "{\"text\":\"" + escText + "\"";
   if (source && strlen(source) > 0) {
     const String escSrc = escapeJsonString(String(source));
@@ -66,7 +79,7 @@ void UIConsole::log(const String& text, const char* source) {
   
   // Använd verklig tid om tillgänglig, annars millis()
   struct tm timeinfo;
-  if (getLocalTime(&timeinfo, 0)) {
+  if (getLocalTime(&timeinfo, 1000)) {
     // Formatera som Unix timestamp (sekunder sedan 1970-01-01)
     time_t now;
     time(&now);

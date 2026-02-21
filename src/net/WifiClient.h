@@ -3,6 +3,7 @@
 #include <ESPmDNS.h>
 #include <Preferences.h>
 #include "util/UIConsole.h"
+#include "settings/settings.h"
 
 namespace net {
 
@@ -10,10 +11,10 @@ class WifiClient {
 public:
     WifiClient();
 
-    // Initiera med app-namn, anvÃ¤nds fÃ¶r mDNS/OTA
+    // Initiera med app-namn, används för mDNS/OTA
     void begin(const char* hostname = "phoneexchange");
 
-    // KÃ¶rs i din App::loop()
+    // Körs i din App::loop()
     void loop();
 
     // Status
@@ -22,7 +23,7 @@ public:
     String getHostname() const { return hostname_; }
     String getMac() const;
 
-    // Hantering av credentials (kan sÃ¤ttas av provisioning)
+    // Hantering av credentials (kan sättas av provisioning)
     void saveCredentials(const char* ssid, const char* password);
     bool loadCredentials(String& ssid, String& password);
 

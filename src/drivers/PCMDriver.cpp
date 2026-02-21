@@ -17,7 +17,7 @@ bool PCMDriver::setFormat(uint32_t sampleRateHz, uint8_t bitsPerSample, uint8_t 
     return begin(sampleRateHz, bitsPerSample, channels);
   }
   if (!isSupportedFormat_(bitsPerSample, channels)) {
-    Serial.println("PCMDriver: Unsupported format.");
+    Serial.println("PCMDriver:          Unsupported format.");
     return false;
   }
 
@@ -31,7 +31,7 @@ bool PCMDriver::setFormat(uint32_t sampleRateHz, uint8_t bitsPerSample, uint8_t 
   );
 
   if (res != ESP_OK) {
-    Serial.printf("PCMDriver: i2s_set_clk failed: %d\n", static_cast<int>(res));
+    Serial.printf("PCMDriver:          i2s_set_clk failed: %d\n", static_cast<int>(res));
     return false;
   }
 
@@ -78,7 +78,7 @@ void PCMDriver::stop() {
 
 bool PCMDriver::installDriver_(uint32_t sampleRateHz, uint8_t bitsPerSample, uint8_t channels) {
   if (!isSupportedFormat_(bitsPerSample, channels)) {
-    Serial.println("PCMDriver: Unsupported format.");
+    Serial.println("PCMDriver:          Unsupported format.");
     return false;
   }
 
@@ -107,13 +107,13 @@ bool PCMDriver::installDriver_(uint32_t sampleRateHz, uint8_t bitsPerSample, uin
 
   esp_err_t res = i2s_driver_install(port_, &cfg, 0, nullptr);
   if (res != ESP_OK) {
-    Serial.printf("PCMDriver: i2s_driver_install failed: %d\n", static_cast<int>(res));
+    Serial.printf("PCMDriver:          i2s_driver_install failed: %d\n", static_cast<int>(res));
     return false;
   }
 
   res = i2s_set_pin(port_, &pinCfg);
   if (res != ESP_OK) {
-    Serial.printf("PCMDriver: i2s_set_pin failed: %d\n", static_cast<int>(res));
+    Serial.printf("PCMDriver:          i2s_set_pin failed: %d\n", static_cast<int>(res));
     i2s_driver_uninstall(port_);
     return false;
   }
@@ -123,7 +123,7 @@ bool PCMDriver::installDriver_(uint32_t sampleRateHz, uint8_t bitsPerSample, uin
   channels_ = channels;
   started_ = true;
   i2s_zero_dma_buffer(port_);
-  Serial.printf("PCMDriver: I2S initialized for PCM5102 (format=%s, slotBits=%u).\n",
+  Serial.printf("PCMDriver:          I2S initialized for PCM5102 (format=%s, slotBits=%u).\n",
                 (commFormat_ == CommFormat::StandMSB) ? "STAND_MSB" : "STAND_I2S",
                 static_cast<unsigned>(effectiveBits));
   return true;

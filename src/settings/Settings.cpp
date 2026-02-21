@@ -38,6 +38,7 @@ void Settings::resetDefaults() {
   debugRGLevel          = 0; // Debug for RingGenerator
   debugIMLevel          = 0; // Debug for InterruptManager
   debugLAC              = 0; // Debug for LineAudioConnections
+  debugMQTTLevel        = 0; // Debug for MQTT client
 
   toneGeneratorEnabled  = true;
   pulseAdjustment       = 1;
@@ -134,6 +135,7 @@ bool Settings::load() {
     debugRGLevel          = prefs.getUChar ("debugRG",     debugRGLevel);
     debugIMLevel          = prefs.getUChar ("debugIM",     debugIMLevel);
     debugLAC              = prefs.getUChar ("debugLAC",    debugLAC);
+    debugMQTTLevel        = prefs.getUChar ("debugMQTT",   debugMQTTLevel);
   
 
     // --- Other settings ---    
@@ -219,6 +221,7 @@ void Settings::save() const {
   prefs.putUChar ("debugRG",              debugRGLevel);
   prefs.putUChar ("debugIM",              debugIMLevel);
   prefs.putUChar ("debugLAC",             debugLAC);
+  prefs.putUChar ("debugMQTT",            debugMQTTLevel);
 
   // --- Other settings ---
   prefs.putUInt ("burstTickMs",           burstTickMs);

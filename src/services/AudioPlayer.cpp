@@ -29,7 +29,7 @@ bool AudioPlayer::startPlayback(const String& filePath) {
   stop();
 
   if (!ensureFilesystemMounted_()) {
-    Serial.println("AudioPlayer: LittleFS is not mounted.");
+    Serial.println("AudioPlayer:        LittleFS is not mounted.");
     lastPlaybackSucceeded_ = false;
     return false;
   }
@@ -37,19 +37,19 @@ bool AudioPlayer::startPlayback(const String& filePath) {
   const String path = normalizePath_(filePath);
   currentFile_ = LittleFS.open(path, "r");
   if (!currentFile_) {
-    Serial.println("AudioPlayer: Could not open file: " + path);
+    Serial.println("AudioPlayer:        Could not open file: " + path);
     lastPlaybackSucceeded_ = false;
     return false;
   }
 
   if (!parseWavHeader_(currentFile_, currentInfo_)) {
-    Serial.println("AudioPlayer: Invalid or unsupported WAV file.");
+    Serial.println("AudioPlayer:        Invalid or unsupported WAV file.");
     currentFile_.close();
     lastPlaybackSucceeded_ = false;
     return false;
   }
 
-  Serial.printf("AudioPlayer: WAV %lu Hz, %u-bit, %u ch, %lu bytes\n",
+  Serial.printf("AudioPlayer:        WAV %lu Hz, %u-bit, %u ch, %lu bytes\n",
                 static_cast<unsigned long>(currentInfo_.sampleRate),
                 static_cast<unsigned>(currentInfo_.bitsPerSample),
                 static_cast<unsigned>(currentInfo_.channels),
@@ -59,14 +59,14 @@ bool AudioPlayer::startPlayback(const String& filePath) {
   pcmDriver_.setForce32BitSlots(true);
   pcmDriver_.setSampleWordMode(PCMDriver::SampleWordMode::Bits32High16);
   if (!pcmDriver_.setFormat(currentInfo_.sampleRate, 32, 2)) {
-    Serial.println("AudioPlayer: Failed to configure I2S format.");
+    Serial.println("AudioPlayer:        Failed to configure I2S format.");
     currentFile_.close();
     lastPlaybackSucceeded_ = false;
     return false;
   }
 
   if (!currentFile_.seek(currentInfo_.dataOffset)) {
-    Serial.println("AudioPlayer: Failed to seek to WAV data.");
+    Serial.println("AudioPlayer:        Failed to seek to WAV data.");
     currentFile_.close();
     lastPlaybackSucceeded_ = false;
     return false;
@@ -95,7 +95,7 @@ void AudioPlayer::updatePlayback(size_t maxChunkBytes) {
 
   const int bytesRead = currentFile_.read(readBuffer_, chunk);
   if (bytesRead <= 0) {
-    Serial.println("AudioPlayer: Unexpected end of WAV data.");
+    Serial.println("AudioPlayer:        Unexpected end of WAV data.");
     finalizePlayback_(false);
     return;
   }
@@ -206,7 +206,7 @@ bool AudioPlayer::processChunk_(uint8_t* readBuffer, size_t bytesRead, const Wav
     applyGainInPlace_(reinterpret_cast<int16_t*>(readBuffer), bytesRead / sizeof(int16_t));
     const size_t frames = bytesRead / (2u * sizeof(int16_t));
     if (!writeStereo16_(reinterpret_cast<const int16_t*>(readBuffer), frames)) {
-      Serial.println("AudioPlayer: I2S write failed (stereo).");
+      Serial.println("AudioPlayer:        I2S write failed (stereo).");
       return false;
     }
   } else {
@@ -218,7 +218,7 @@ bool AudioPlayer::processChunk_(uint8_t* readBuffer, size_t bytesRead, const Wav
     }
     applyGainInPlace_(stereoBuffer_, sampleCount * 2);
     if (!writeStereo16_(stereoBuffer_, sampleCount)) {
-      Serial.println("AudioPlayer: I2S write failed (mono->stereo).");
+      Serial.println("AudioPlayer:        I2S write failed (mono->stereo).");
       return false;
     }
   }

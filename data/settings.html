@@ -11,7 +11,7 @@
   <!-- Länk till extern JS -->
   <script src="settings.js" defer></script>
 </head>
-<body>
+<body class="settings-page">
   <main class="wrap">
     <div class="page-header">
       <h1>Settings & Debug</h1>
@@ -196,7 +196,7 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="dbg-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Update Debug Settings
+          Update
         </button>
         <div id="dbg-status" class="status"></div>
       </div>
@@ -232,7 +232,7 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="ring-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Update Ring Settings
+          Update
         </button>
         <div id="ring-settings-status" class="status"></div>
       </div>
@@ -269,7 +269,7 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="shk-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Update SHK Settings
+          Update
         </button>
         <div id="shk-settings-status" class="status"></div>
       </div>
@@ -314,7 +314,7 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="tonereader-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Update ToneReader Settings
+          Update
         </button>
         <div id="tonereader-status" class="status"></div>
       </div>
@@ -398,7 +398,7 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="timer-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Update Timer Settings
+          Update
         </button>
         <div id="timer-status" class="status"></div>
       </div>
@@ -481,7 +481,7 @@
 
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="mqtt-save" class="badge clickable" style="border:1px solid var(--accent)">
-          Update MQTT Settings
+          Update
         </button>
         <div id="mqtt-status" class="status"></div>
       </div>
@@ -490,11 +490,56 @@
     <!-- Device Control Section -->
     <section class="card">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Device Control</h2>
-      <div style="display:flex; gap:10px; margin-top:10px">
+      <p class="description">Device info and recovery actions</p>
+
+      <div class="row">
+        <span class="k">Hostname</span>
+        <span class="v" id="dev-hostname">-</span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">MAC Address</span>
+        <span class="v" id="dev-mac">-</span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">IP Address</span>
+        <span class="v" id="dev-ip">-</span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">WiFi Network (SSID)</span>
+        <span class="v" id="dev-ssid">-</span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">WiFi Status</span>
+        <span class="v" id="dev-wifi-status">-</span>
+        <span></span>
+      </div>
+
+      <div class="row">
+        <span class="k">MQTT Enabled</span>
+        <span class="v" id="dev-mqtt-status">-</span>
+        <span></span>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+        <button id="wifi-change-btn" class="badge clickable" style="border:1px solid var(--accent)">
+          Change WiFi Settings
+        </button>
+        <button id="factory-reset-btn" class="badge clickable" style="border:1px solid var(--no)">
+          Factory Reset
+        </button>
         <button id="dbg-restart" class="badge clickable" style="border:1px solid var(--no)">
           Restart Device
         </button>
       </div>
+      <div id="device-status" class="status"></div>
     </section>
 
     <!-- Console Section -->

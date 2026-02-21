@@ -110,7 +110,7 @@ void LineManager::setStatus(int index, LineStatus newStatus) {
   }
 
   if (settings_.debugLmLevel >= 0) {
-    Serial.print(BLUE "LineManager: Line ");
+    Serial.print(BLUE "LineManager:        Line ");
     Serial.print(index);
     Serial.print(" status changed to ");
     Serial.print(model::LineStatusToString(newStatus));
@@ -154,12 +154,12 @@ void LineManager::setLineTimer(int index, unsigned int limit) {
   } else {
     // Set timer end time
     if (settings_.debugLmLevel >= 1){
-      Serial.print("LineManager: Setting timer for line ");
+      Serial.print("LineManager:        Setting timer for line ");
       Serial.print(index);
       Serial.print(" with limit ");
       Serial.print(limit);
       Serial.println(" ms");
-      util::UIConsole::log("LineManager: Setting timer for line " + String(index) + 
+      util::UIConsole::log("LineManager:        Setting timer for line " + String(index) + 
                           " with limit " + String(limit) + " ms", "LineManager");
     }
     lines[index].lineTimerEnd = millis() + limit;
@@ -171,16 +171,16 @@ void LineManager::setLineTimer(int index, unsigned int limit) {
 void LineManager::resetLineTimer(int index) {
   if (index < 0 || index >= static_cast<int>(lines.size())) {
     if (settings_.debugLmLevel >= 1){
-      Serial.println("LineManager: resetLineTimer - invalid index");
-      util::UIConsole::log("LineManager: resetLineTimer - invalid index", "LineManager");
+      Serial.println("LineManager:        resetLineTimer - invalid index");
+      util::UIConsole::log("LineManager:        resetLineTimer - invalid index", "LineManager");
     }
     return;
   }
 
   if (settings_.debugLmLevel >= 1){
-    Serial.print("LineManager: Resetting timer for line ");
+    Serial.print("LineManager:        Resetting timer for line ");
     Serial.println(index);
-    util::UIConsole::log("LineManager: Resetting timer for line " + String(index), "LineManager");
+    util::UIConsole::log("LineManager:        Resetting timer for line " + String(index), "LineManager");
   }
   lines[index].lineTimerEnd = -1;
   activeTimersMask &= ~(1 << index); // Clear the timer active flag
@@ -233,10 +233,10 @@ int LineManager::searchPhoneNumber(const String& phoneNumber) {
   
   // Debug output for search
   if (settings_.debugLmLevel >= 1){
-    Serial.print("LineManager: Searching for phone number '");
+    Serial.print("LineManager:        Searching for phone number '");
     Serial.print(phoneNumber);
     Serial.println("'");
-    util::UIConsole::log("LineManager: Searching for phone number '" + phoneNumber + "'", "LineManager");
+    util::UIConsole::log("LineManager:        Searching for phone number '" + phoneNumber + "'", "LineManager");
   }
 
   // Trim the input phone number for searching
@@ -253,10 +253,10 @@ int LineManager::searchPhoneNumber(const String& phoneNumber) {
     if (lines[i].phoneNumber == searchNumber) {
       
       if (settings_.debugLmLevel >= 1){
-        Serial.print("LineManager: Found matching phone number on line ");
+        Serial.print("LineManager:        Found matching phone number on line ");
         Serial.print(i);
         Serial.println();
-        util::UIConsole::log("LineManager: Found matching phone number on line " + String(i), "LineManager");
+        util::UIConsole::log("LineManager:        Found matching phone number on line " + String(i), "LineManager");
       }
       return static_cast<int>(i);  // Return the line index
     }

@@ -126,8 +126,11 @@ void WebServer::setupLineManagerCallback_() {
   lineManager_.addStatusChangedCallback([this](int index, LineStatus status){
     // Only send SSE if there are connected clients
     if (events_.count() > 0) {
+      const auto& line = lineManager_.getLine(index);
       String json = "{\"line\":" + String(index) +
-                    ",\"status\":\"" + model::LineStatusToString(status) + "\"}";
+                    ",\"status\":\"" + model::LineStatusToString(status) + "\"" +
+                    ",\"incomingFrom\":" + String(line.incomingFrom) +
+                    ",\"outgoingTo\":" + String(line.outgoingTo) + "}";
       events_.send(json.c_str(), "lineStatus", millis());
     }
   });
@@ -229,6 +232,14 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
+    for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
+      char c = value.charAt(static_cast<unsigned int>(i));
+      if (c < '0' || c > '9') {
+        req->send(400, "application/json", "{\"error\":\"phone must contain digits only\"}");
+        return;
+      }
+    }
+
     bool hasControlChars = false;
     for (size_t i = 0; i < static_cast<size_t>(value.length()); ++i) {
       char c = value.charAt(static_cast<unsigned int>(i));
@@ -241,6 +252,19 @@ void WebServer::setupApiRoutes_() {
     if (hasControlChars) {
       req->send(400, "application/json", "{\"error\":\"invalid characters\"}");
       return;
+    }
+
+    if (value.length() > 0) {
+      for (int i = 0; i < 8; ++i) {
+        if (i == line) continue;
+        String existing = settings_.lineNames[i];
+        existing.trim();
+        if (existing.isEmpty()) continue;
+        if (existing.equalsIgnoreCase(value)) {
+          req->send(409, "application/json", "{\"error\":\"name already in use\"}");
+          return;
+        }
+      }
     }
 
     if (value.length() > 0) {

@@ -38,6 +38,7 @@ public:
   uint8_t debugRGLevel;           // 0=none, 1=low, 2=high Debug level for RingGenerator
   uint8_t debugIMLevel;           // 0=none, 1=low, 2=high Debug level for InterruptManager
   uint8_t debugLAC;               // 0=none, 1=low, 2=high Debug level for LineAudioConnections   
+  uint8_t debugMQTTLevel;         // 0=none, 1=low, 2=high Debug level for MQTT client
 
   uint8_t debugI2CLevel;         // 0=none, 1=low, 2=high
 

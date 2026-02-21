@@ -356,7 +356,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
 
   // Debug: Confirm interrupt flag was set
   if (basicDebug) {
-    Serial.print(F("MCPDriver: Processing interrupt for addr=0x"));
+    Serial.print(F("MCPDriver:          Processing interrupt for addr=0x"));
     Serial.println(addr, HEX);
     util::UIConsole::log("Processing interrupt for addr=0x" + String(addr, HEX),
                          "MCPDriver");
@@ -365,7 +365,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   uint16_t intf = 0;
   if (!readRegPair16_OK_(addr, REG_INTFA, intf)) {
     if (basicDebug) {
-      Serial.println(F("MCPDriver: Failed to read INTF register"));
+      Serial.println(F("MCPDriver:          Failed to read INTF register"));
       util::UIConsole::log("Failed to read INTF register", "MCPDriver");
     }
     return r;
@@ -373,7 +373,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
 
   // Debug: Show INTF register value
   if (verbose) {
-    Serial.print(F("MCPDriver: INTF=0b"));
+    Serial.print(F("MCPDriver:          INTF=0b"));
     Serial.println(intf, BIN);
     util::UIConsole::log("INTF=0b" + String(intf, BIN), "MCPDriver");
   }
@@ -384,7 +384,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
     uint16_t dummy = 0;
     (void)readRegPair16_OK_(addr, REG_GPIOA, dummy);
     if (verbose) {
-      Serial.print(F("MCPDriver: flag set men INTF=0 på 0x"));
+      Serial.print(F("MCPDriver:          flag set men INTF=0 på 0x"));
       Serial.println(addr, HEX);
       util::UIConsole::log("flag set men INTF=0 på 0x" + String(addr, HEX),
                            "MCPDriver");
@@ -395,7 +395,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   uint16_t intcap = 0;
   if (!readRegPair16_OK_(addr, REG_INTCAPA, intcap)) {
     if (basicDebug) {
-      Serial.println(F("MCPDriver: Failed to read INTCAP register"));
+      Serial.println(F("MCPDriver:          Failed to read INTCAP register"));
       util::UIConsole::log("Failed to read INTCAP register", "MCPDriver");
     }
     return r;
@@ -403,7 +403,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
 
   // Debug: Show INTCAP register value (after reading it)
   if (verbose) {
-    Serial.print(F("MCPDriver: INTCAP=0b"));
+    Serial.print(F("MCPDriver:          INTCAP=0b"));
     Serial.println(intcap, BIN);
     util::UIConsole::log("INTCAP=0b" + String(intcap, BIN), "MCPDriver");
   }
@@ -424,7 +424,7 @@ IntResult MCPDriver::handleInterrupt_(volatile bool& flag, Adafruit_MCP23X17& mc
   if (!r.hasEvent) return r;
 
   if (verbose) {
-    Serial.print(F("MCPDriver: INT addr=0x"));
+    Serial.print(F("MCPDriver:          INT addr=0x"));
     Serial.print(addr, HEX);
     Serial.print(F(" pin="));
     Serial.print(r.pin);
@@ -558,7 +558,7 @@ void MCPDriver::enableSlicShkInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp
   (void)mcp.readGPIOAB();
 
   if (settings.debugMCPLevel >= 1) {
-    Serial.printf("MCPDriver: SLIC 0x%02X SHK INT cfg GPINTEN(A/B)=0x%02X/0x%02X, GPPU(A/B)=0x%02X/0x%02X\n",
+    Serial.printf("MCPDriver:          SLIC 0x%02X SHK INT cfg GPINTEN(A/B)=0x%02X/0x%02X, GPPU(A/B)=0x%02X/0x%02X\n",
                   i2cAddr, gpintena, gpintenb, gppua, gppub);
     util::UIConsole::log("SLIC 0x" + String(i2cAddr, HEX) +
                          " SHK INT cfg GPINTEN(A/B)=0x" + String(gpintena, HEX) + "/0x" + String(gpintenb, HEX) +
@@ -572,7 +572,7 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   auto& settings = Settings::instance();
 
   if (settings.debugMCPLevel >= 1){
-    Serial.println(F("MCPDriver: Configuring MCP_MAIN interrupts..."));
+    Serial.println(F("MCPDriver:          Configuring MCP_MAIN interrupts..."));
     util::UIConsole::log("Configuring MCP_MAIN interrupts...", "MCPDriver");
   }
 
@@ -642,13 +642,13 @@ void MCPDriver::enableMainInterrupts_(uint8_t i2cAddr, Adafruit_MCP23X17& mcp) {
   writeReg8_(i2cAddr, REG_GPINTENB, gpintenb);
 
   if (settings.debugMCPLevel >= 2) {
-    Serial.println(F("MCPDriver: MCP_MAIN interrupt configuration:"));
+    Serial.println(F("MCPDriver:          MCP_MAIN interrupt configuration:"));
     util::UIConsole::log("MCP_MAIN interrupt configuration:", "MCPDriver");
-    Serial.print(F("MCPDriver: GPINTENA=0b"));
+    Serial.print(F("MCPDriver:          GPINTENA=0b"));
     Serial.print(gpintena, BIN);
     Serial.print(F(" GPINTENB=0b"));
     Serial.println(gpintenb, BIN);
-    Serial.print(F("MCPDriver: INTCONA=0b"));
+    Serial.print(F("MCPDriver:          INTCONA=0b"));
     Serial.print(intcona, BIN);
     Serial.print(F(" INTCONB=0b"));
     Serial.println(intconb, BIN);

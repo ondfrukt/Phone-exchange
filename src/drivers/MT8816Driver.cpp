@@ -6,10 +6,10 @@ MT8816Driver::MT8816Driver(MCPDriver& mcpDriver, Settings& settings) : mcpDriver
 }
 
 void MT8816Driver::begin(){
-	// Reset MCP
-	reset();
+  // Reset MCP
+  reset();
   if (settings_.debugMTLevel >= 1) {
-	Serial.println("MT8816: Initialized successfully.");
+    Serial.println("MT8816:             Initialized successfully.");
     util::UIConsole::log("Initialized successfully.", "MT8816Driver");
   }
 }
@@ -30,7 +30,7 @@ void MT8816Driver::setConnection(uint8_t x, uint8_t y, bool state) {
     mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::CS, LOW);
 
     if (settings_.debugMTLevel >= 2) {
-      Serial.print("MT8816: Set connection x=");
+      Serial.print("MT8816:             Set connection x=");
       Serial.print(x);
       Serial.print(" y=");
       Serial.print(y);
@@ -67,7 +67,7 @@ void MT8816Driver::reset()
   mcpDriver_.digitalWriteMCP(mcp::MCP_MT8816_ADDRESS, mcp::CS, LOW);
 
   if (settings_.debugMTLevel >= 1) {
-    Serial.println("MT8816: reset performed.");
+    Serial.println("MT8816:             reset performed.");
     util::UIConsole::log("Reset performed.", "MT8816Driver");
   }
 }

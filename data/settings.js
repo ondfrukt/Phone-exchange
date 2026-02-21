@@ -22,6 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dbgBtn = document.getElementById('dbg-save');
   const $dbgMsg = document.getElementById('dbg-status');
   const $restartBtn = document.getElementById('dbg-restart');
+  const $wifiChangeBtn = document.getElementById('wifi-change-btn');
+  const $factoryResetBtn = document.getElementById('factory-reset-btn');
+  const $deviceStatus = document.getElementById('device-status');
+  const $devHostname = document.getElementById('dev-hostname');
+  const $devMac = document.getElementById('dev-mac');
+  const $devIp = document.getElementById('dev-ip');
+  const $devSsid = document.getElementById('dev-ssid');
+  const $devWifiStatus = document.getElementById('dev-wifi-status');
+  const $devMqttStatus = document.getElementById('dev-mqtt-status');
 
   const $toneEnabled = document.getElementById('tone-enabled');
   const $toneEnabledLabel = document.getElementById('tone-enabled-label');
@@ -91,12 +100,116 @@ document.addEventListener('DOMContentLoaded', () => {
   const $mqttSaveBtn = document.getElementById('mqtt-save');
   const $mqttStatus = document.getElementById('mqtt-status');
 
+  function setupSettingsNavigation() {
+    const main = document.querySelector('main.wrap');
+    const header = document.querySelector('.page-header');
+    if (!main || !header) return;
+
+    const panels = Array.from(main.querySelectorAll('section.card'));
+    if (!panels.length) return;
+
+    const desiredOrder = [
+      'Device Control',
+      'Debug Levels',
+      'Ring Test',
+      'Ring Settings',
+      'Hook Detection & Burst',
+      'ToneReader Settings',
+      'Timer Settings',
+      'MQTT Settings',
+      'Console'
+    ];
+
+    const panelIdByTitle = {
+      'Debug Levels': 'panel-debug',
+      'Ring Test': 'panel-ring-test',
+      'Ring Settings': 'panel-ring-settings',
+      'Hook Detection & Burst': 'panel-hook-burst',
+      'ToneReader Settings': 'panel-tonereader',
+      'Timer Settings': 'panel-timers',
+      'MQTT Settings': 'panel-mqtt',
+      'Device Control': 'panel-device',
+      'Console': 'panel-console'
+    };
+
+    const byTitle = new Map();
+    panels.forEach((panel) => {
+      const heading = panel.querySelector('h2');
+      const title = (heading?.textContent || '').trim();
+      if (!title) return;
+      byTitle.set(title, panel);
+    });
+
+    const orderedPanels = [];
+    desiredOrder.forEach((title) => {
+      const panel = byTitle.get(title);
+      if (!panel) return;
+      panel.id = panelIdByTitle[title] || panel.id;
+      panel.classList.add('settings-panel');
+      orderedPanels.push({ title, panel });
+      byTitle.delete(title);
+    });
+
+    byTitle.forEach((panel, title) => {
+      panel.id = panel.id || `panel-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      panel.classList.add('settings-panel');
+      orderedPanels.push({ title, panel });
+    });
+
+    const layout = document.createElement('div');
+    layout.className = 'settings-layout';
+
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'settings-sidebar card';
+    const sidebarTitle = document.createElement('h2');
+    sidebarTitle.className = 'settings-sidebar-title';
+    sidebarTitle.textContent = 'Sections';
+    sidebar.appendChild(sidebarTitle);
+
+    const content = document.createElement('div');
+    content.className = 'settings-content';
+
+    orderedPanels.forEach(({ title, panel }) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'settings-tab';
+      tab.dataset.target = panel.id;
+      tab.textContent = title;
+      sidebar.appendChild(tab);
+      content.appendChild(panel);
+    });
+
+    layout.appendChild(sidebar);
+    layout.appendChild(content);
+    main.appendChild(layout);
+
+    function setActivePanel(targetId) {
+      const tabs = layout.querySelectorAll('.settings-tab');
+      const settingsPanels = layout.querySelectorAll('.settings-panel');
+      tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.target === targetId));
+      settingsPanels.forEach((panel) => panel.classList.toggle('active', panel.id === targetId));
+    }
+
+    layout.addEventListener('click', (event) => {
+      const tab = event.target.closest('.settings-tab');
+      if (!tab) return;
+      setActivePanel(tab.dataset.target);
+      history.replaceState(null, '', `#${tab.dataset.target}`);
+    });
+
+    const hashTarget = location.hash ? location.hash.replace('#', '') : '';
+    const firstId = orderedPanels[0]?.panel.id || '';
+    const initialId = orderedPanels.some(({ panel }) => panel.id === hashTarget) ? hashTarget : firstId;
+    if (initialId) setActivePanel(initialId);
+  }
+
   // Bitmask representing active/inactive lines (0..255)
   let activeMask = 0;
 
   // Helpers
   const isActive  = (id) => ((activeMask >> id) & 1) === 1;
   const setDbgMsg = (t) => { if ($dbgMsg) $dbgMsg.textContent = t; };
+  const setDeviceStatus = (t) => { if ($deviceStatus) $deviceStatus.textContent = t; };
   const setRingStatus = (t) => { if ($ringStatus) $ringStatus.textContent = t; };
   const setRingSettingsStatus = (t) => { if ($ringSettingsStatus) $ringSettingsStatus.textContent = t; };
   const setShkSettingsStatus = (t) => { if ($shkSettingsStatus) $shkSettingsStatus.textContent = t; };
@@ -518,13 +631,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Stop ring test
   async function stopRing() {
+    const line = $ringLineSelect.value;
+    if (!line || line === '') {
+      setRingStatus('Please select a line');
+      return;
+    }
+
     try {
       $ringStopBtn.classList.add('working');
       $ringStopBtn.disabled = true;
       setRingStatus('Stopping ring...');
       
+      const body = new URLSearchParams({ line }).toString();
       const r = await fetch('/api/ring/stop', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
       });
       
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -546,10 +668,53 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       const r = await fetch('/api/restart', { method:'POST' });
       if (!r.ok) throw new Error('HTTP '+r.status);
-      setDbgMsg('Restarting…');
+      setDeviceStatus('Restarting...');
     } catch(e){
-      setDbgMsg('Could not restart device');
+      setDeviceStatus('Could not restart device');
       console.warn(e);
+    }
+  }
+
+  async function loadDeviceInfo() {
+    try {
+      const r = await fetch('/api/info');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if ($devHostname) $devHostname.textContent = d.hostname || '-';
+      if ($devMac) $devMac.textContent = d.mac || '-';
+      if ($devIp) $devIp.textContent = d.ip || '-';
+      if ($devSsid) $devSsid.textContent = d.ssid || '(not connected)';
+      if ($devWifiStatus) $devWifiStatus.textContent = d.wifiConnected ? 'Connected' : 'Disconnected';
+      if ($devMqttStatus) $devMqttStatus.textContent = d.mqttEnabled ? 'Enabled' : 'Disabled';
+    } catch (e) {
+      console.warn('Could not read device info', e);
+      setDeviceStatus('Could not read device info');
+    }
+  }
+
+  async function changeWifiSettings() {
+    if (!confirm('This will erase WiFi credentials and restart the device. Continue?')) return;
+    try {
+      setDeviceStatus('Starting WiFi reset...');
+      const r = await fetch('/api/wifi/reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      setDeviceStatus('WiFi settings erased. Device restarting...');
+    } catch (e) {
+      console.warn(e);
+      setDeviceStatus('Failed to reset WiFi settings');
+    }
+  }
+
+  async function factoryReset() {
+    if (!confirm('Factory reset will erase all settings and WiFi credentials, then restart. Continue?')) return;
+    try {
+      setDeviceStatus('Starting factory reset...');
+      const r = await fetch('/api/factory-reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      setDeviceStatus('Factory reset started. Device restarting...');
+    } catch (e) {
+      console.warn(e);
+      setDeviceStatus('Failed to start factory reset');
     }
   }
 
@@ -597,6 +762,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listeners
   $dbgBtn?.addEventListener('click', saveDebug);
   $restartBtn?.addEventListener('click', restartDevice);
+  $wifiChangeBtn?.addEventListener('click', changeWifiSettings);
+  $factoryResetBtn?.addEventListener('click', factoryReset);
   $toneEnabled?.addEventListener('change', saveToneGenerator);
   $ringTestBtn?.addEventListener('click', testRing);
   $ringStopBtn?.addEventListener('click', stopRing);
@@ -671,6 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeunload', () => { try { es.close(); } catch {} });
 
   // Initial load
+  setupSettingsNavigation();
   loadDebug();
   loadToneGenerator();
   loadRingSettings();
@@ -678,4 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadToneReaderSettings();
   loadTimerSettings();
   loadMqttSettings();
+  loadDeviceInfo();
+  setInterval(loadDeviceInfo, 5000);
 });

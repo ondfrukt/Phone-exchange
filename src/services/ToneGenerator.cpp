@@ -1,5 +1,5 @@
 #include "ToneGenerator.h"
-#include "util/UIConsole.h"
+
 
 ToneGenerator::ToneGenerator(AD9833Driver& driver1, AD9833Driver& driver2, AD9833Driver& driver3) {
   channels_[0].driver = &driver1;
@@ -41,7 +41,7 @@ uint8_t ToneGenerator::startTone(model::ToneId sequence) {
   channel->stepStartTimeMs = millis();
 
   if (Settings::instance().debugTonGenLevel >= 1) {
-    Serial.println("ToneGenerator: Started tone sequence " + String(ToneIdToString(sequence)) + " on DAC " + String(channel->dac));
+    Serial.println("ToneGenerator:      Started tone sequence " + String(ToneIdToString(sequence)) + " on DAC " + String(channel->dac));
     util::UIConsole::log("Started tone sequence " + String(ToneIdToString(sequence)) + " on DAC " + String(channel->dac), "ToneGenerator");
   }
   return channel->dac;
@@ -55,7 +55,7 @@ void ToneGenerator::stopTone(uint8_t dac) {
   stopChannel_(*channel);
 
   if (Settings::instance().debugTonGenLevel >= 1) {
-    Serial.println("ToneGenerator: Stopped tone sequence on DAC " + String(dac));
+    Serial.println("ToneGenerator:      Stopped tone sequence on DAC " + String(dac));
     util::UIConsole::log("Stopped tone sequence on DAC " + String(dac), "ToneGenerator");
   }
 }

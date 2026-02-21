@@ -71,6 +71,7 @@ void Functions::updateStatusLeds_() {
 void Functions::restartDevice(uint32_t held) {
     if (held >= 5000) {
         Serial.println("Resetting settings and WiFi credentials...");
+        util::UIConsole::log("Resetting settings and WiFi credentials...", "Functions");
         
         // Clear all settings stored in Preferences under "myapp" namespace
         Preferences prefs;
@@ -87,6 +88,7 @@ void Functions::restartDevice(uint32_t held) {
         delay(1000);
         
         Serial.println("Settings and WiFi reset complete. Restarting...");
+        util::UIConsole::log("Settings and WiFi reset complete. Restarting...", "Functions");
         delay(1000);
         ESP.restart();
     } else {
@@ -98,7 +100,8 @@ void Functions::restartDevice(uint32_t held) {
 }
 
 void Functions::testRing() {
-    Serial.println("Functions: testRing()");
+    Serial.println("Functions:          testRing()");
+    util::UIConsole::log("testRing()", "Functions");
     
     int RM = cfg::mcp::RM_PINS[0];
     int FR = cfg::mcp::FR_PINS[0];

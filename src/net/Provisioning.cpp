@@ -29,7 +29,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
 
   // Om WifiClient redan har creds -> starta inte provisioning.
   if (wifi_->hasCredentials()) {
-    Serial.println("Provisioning: Saved SSID found. Skipping provisioning.");
+    Serial.println("Provisioning:       Saved SSID found. Skipping provisioning.");
     util::UIConsole::log("Saved SSID found. Skipping provisioning.", "Provisioning");
     return;
   }
@@ -38,7 +38,7 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   startedProvisioning_ = true;
   provisioningStartedAtMs_ = millis();
 
-  Serial.println("Provisioning: Open Espressif BLE Provisioning app to configure Wi-Fi.");
+  Serial.println("Provisioning:       Open Espressif BLE Provisioning app to configure Wi-Fi.");
   util::UIConsole::log("Open Espressif BLE Provisioning app to configure Wi-Fi.", "Provisioning");
   WiFiProv.beginProvision(
     WIFI_PROV_SCHEME_BLE,                 // Transport: BLE
@@ -60,11 +60,11 @@ void Provisioning::loop() {
   if (resetStatePending_ && (millis() - credFailAtMs_ >= kResetStateDelayMs)) {
     const esp_err_t err = wifi_prov_mgr_reset_sm_state_on_failure();
     if (err == ESP_OK) {
-      Serial.println("Provisioning: Reset to waiting state after credential failure.");
+      Serial.println("Provisioning:       Reset to waiting state after credential failure.");
       util::UIConsole::log("Reset to waiting state after credential failure.", "Provisioning");
       resetStatePending_ = false;
     } else {
-      Serial.printf("Provisioning: reset_sm_state_on_failure failed (%d), retrying...\n", static_cast<int>(err));
+      Serial.printf("Provisioning:       reset_sm_state_on_failure failed (%d), retrying...\n", static_cast<int>(err));
       util::UIConsole::log("reset_sm_state_on_failure failed, retrying...", "Provisioning");
       credFailAtMs_ = millis();
     }
@@ -72,7 +72,7 @@ void Provisioning::loop() {
 
   const unsigned long elapsed = millis() - provisioningStartedAtMs_;
   if (elapsed >= kProvisioningWindowMs) {
-    Serial.println("Provisioning: 5-minute provisioning window expired, stopping provisioning.");
+    Serial.println("Provisioning:       5-minute provisioning window expired, stopping provisioning.");
     util::UIConsole::log("5-minute provisioning window expired, stopping provisioning.", "Provisioning");
     stopProvisioning_();
   }
@@ -92,7 +92,7 @@ void Provisioning::stopProvisioning_() {
 }
 
 void Provisioning::factoryReset() {
-  Serial.println("Provisioning: Factory reset: erasing Wi-Fi creds (NVS) and restarting...");
+  Serial.println("Provisioning:       Factory reset: erasing Wi-Fi creds (NVS) and restarting...");
   util::UIConsole::log("Factory reset: erasing Wi-Fi creds (NVS) and restarting...", "Provisioning");
   
   // Rensa WifiClient credentials (Preferences)
@@ -111,14 +111,14 @@ void Provisioning::factoryReset() {
 void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
   switch (sys_event->event_id) {
     case ARDUINO_EVENT_PROV_START:
-      Serial.println("Provisioning: Provisioning started. Open Espressif BLE Provisioning app.");
+      Serial.println("Provisioning:       Provisioning started. Open Espressif BLE Provisioning app.");
       util::UIConsole::log("Provisioning started. Open Espressif BLE Provisioning app.", "Provisioning");
       break;
 
     case ARDUINO_EVENT_PROV_CRED_RECV: {
       const char* ssid = (const char*)sys_event->event_info.prov_cred_recv.ssid;
       const char* pwd  = (const char*)sys_event->event_info.prov_cred_recv.password;
-      Serial.printf("Provisioning: Received Wi-Fi creds. SSID=\"%s\"\n", ssid);
+      Serial.printf("Provisioning:       Received Wi-Fi creds. SSID=\"%s\"\n", ssid);
       util::UIConsole::log("Received Wi-Fi creds. SSID=\"" + String(ssid) + "\"", "Provisioning");
       pendingSsid_ = ssid ? ssid : "";
       pendingPassword_ = pwd ? pwd : "";
@@ -127,7 +127,7 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
     }
 
     case ARDUINO_EVENT_PROV_CRED_SUCCESS:
-      Serial.println("Provisioning: Credentials accepted.");
+      Serial.println("Provisioning:       Credentials accepted.");
       util::UIConsole::log("Credentials accepted.", "Provisioning");
       if (wifi_ && pendingSsid_.length() > 0 && !credentialsCommitted_) {
         wifi_->saveCredentials(pendingSsid_.c_str(), pendingPassword_.c_str());
@@ -136,7 +136,7 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
       break;
 
     case ARDUINO_EVENT_PROV_CRED_FAIL:
-      Serial.println("Provisioning: Credentials failed (wrong password or AP not found).");
+      Serial.println("Provisioning:       Credentials failed (wrong password or AP not found).");
       util::UIConsole::log("Credentials failed (wrong password or AP not found).", "Provisioning");
       pendingSsid_.clear();
       pendingPassword_.clear();
@@ -146,7 +146,7 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
       break;
 
     case ARDUINO_EVENT_PROV_END:
-      Serial.println("Provisioning: Provisioning finished.");
+      Serial.println("Provisioning:       Provisioning finished.");
       util::UIConsole::log("Provisioning finished.", "Provisioning");
       startedProvisioning_ = false;
       pendingSsid_.clear();
