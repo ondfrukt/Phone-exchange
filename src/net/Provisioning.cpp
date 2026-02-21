@@ -6,15 +6,9 @@ using namespace net;
 
 // Provisioning defaults
 static const char* kPop = "abcd1234";              // Proof of Possession (PIN)
-static const char* kServiceName = "PHONE_EXCHANGE";
-static const char* kServiceKey = nullptr;            // Used by SoftAP, ignored for BLE
+static const char* kServiceName = "PHONE_EXCHANGE";  // SoftAP SSID
+static const char* kServiceKey = nullptr;            // Optional SoftAP password (nullptr => open AP)
 static const bool kResetProv = false;                 // Keep provisioning-state unless explicit factory reset
-static const bool kUseBleProvisioning = true;         // Set false to force SoftAP provisioning
-
-static uint8_t kUuid[16] = {
-  0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
-  0xea, 0x41, 0xa9, 0xea, 0x12, 0x21, 0x2f, 0x88
-};
 
 void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   host_ = hostname;
@@ -37,32 +31,29 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
     return;
   }
 
+  if (provisioningTriedThisBoot_) {
+    Serial.println("Provisioning:       Already attempted this boot. Waiting for restart.");
+    util::UIConsole::log("Already attempted this boot. Waiting for restart.", "Provisioning");
+    return;
+  }
+
+  provisioningTriedThisBoot_ = true;
   startedProvisioning_ = true;
   provisioningStartedAtMs_ = millis();
 
-  if (kUseBleProvisioning) {
-    // Ensure STA stack is up before enabling BLE provisioning/coexistence.
-    WiFi.mode(WIFI_MODE_STA);
-    delay(50);
-    Serial.println("Provisioning:       Starting Wi-Fi provisioning (BLE).");
-    Serial.println("Provisioning:       Open Espressif BLE Provisioning app and use PoP abcd1234.");
-    util::UIConsole::log("Starting Wi-Fi provisioning (BLE).", "Provisioning");
-    util::UIConsole::log("Open Espressif BLE Provisioning app and use PoP abcd1234.", "Provisioning");
-  } else {
-    Serial.println("Provisioning:       Starting Wi-Fi provisioning (SoftAP).");
-    Serial.println("Provisioning:       Connect to AP PHONE_EXCHANGE and use PoP abcd1234.");
-    util::UIConsole::log("Starting Wi-Fi provisioning (SoftAP).", "Provisioning");
-    util::UIConsole::log("Connect to AP PHONE_EXCHANGE and use PoP abcd1234.", "Provisioning");
-  }
+  Serial.println("Provisioning:       Starting Wi-Fi provisioning (SoftAP).");
+  Serial.println("Provisioning:       Connect to AP PHONE_EXCHANGE and use PoP abcd1234.");
+  util::UIConsole::log("Starting Wi-Fi provisioning (SoftAP).", "Provisioning");
+  util::UIConsole::log("Connect to AP PHONE_EXCHANGE and use PoP abcd1234.", "Provisioning");
 
   WiFiProv.beginProvision(
-    kUseBleProvisioning ? WIFI_PROV_SCHEME_BLE : WIFI_PROV_SCHEME_SOFTAP,
-    kUseBleProvisioning ? WIFI_PROV_SCHEME_HANDLER_FREE_BTDM : WIFI_PROV_SCHEME_HANDLER_NONE,
+    WIFI_PROV_SCHEME_SOFTAP,
+    WIFI_PROV_SCHEME_HANDLER_NONE,
     WIFI_PROV_SECURITY_1,
     kPop,
     kServiceName,
     kServiceKey,
-    kUuid,
+    nullptr,
     kResetProv
   );
 }
@@ -110,12 +101,18 @@ void Provisioning::factoryReset() {
   Serial.println("Provisioning:       Factory reset: erasing Wi-Fi creds (NVS) and restarting...");
   util::UIConsole::log("Factory reset: erasing Wi-Fi creds (NVS) and restarting...", "Provisioning");
 
+  const esp_err_t provResetErr = wifi_prov_mgr_reset_provisioning();
+  if (provResetErr != ESP_OK) {
+    Serial.printf("Provisioning:       wifi_prov_mgr_reset_provisioning returned %d\n", static_cast<int>(provResetErr));
+  }
+
   Preferences prefs;
   prefs.begin("wifi", false);
   prefs.clear();
   prefs.end();
 
   WiFi.disconnect(true /*wifioff*/, true /*erase NVS*/);
+  esp_wifi_restore();
 
   delay(250);
   ESP.restart();
@@ -124,13 +121,8 @@ void Provisioning::factoryReset() {
 void Provisioning::onSysEvent_(arduino_event_t* sys_event) {
   switch (sys_event->event_id) {
     case ARDUINO_EVENT_PROV_START:
-      if (kUseBleProvisioning) {
-        Serial.println("Provisioning:       Provisioning started (BLE).");
-        util::UIConsole::log("Provisioning started (BLE).", "Provisioning");
-      } else {
-        Serial.println("Provisioning:       Provisioning started (SoftAP).");
-        util::UIConsole::log("Provisioning started (SoftAP).", "Provisioning");
-      }
+      Serial.println("Provisioning:       Provisioning started (SoftAP).");
+      util::UIConsole::log("Provisioning started (SoftAP).", "Provisioning");
       break;
 
     case ARDUINO_EVENT_PROV_CRED_RECV: {

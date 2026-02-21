@@ -32,6 +32,7 @@ private:
   static inline String pendingPassword_;
   static inline bool credentialsCommitted_ = false;
   static inline bool resetStatePending_ = false;
+  static inline bool provisioningTriedThisBoot_ = false;
   static constexpr unsigned long kResetStateDelayMs = 300;
   static constexpr unsigned long kProvisioningWindowMs = 5UL * 60UL * 1000UL;
 };
