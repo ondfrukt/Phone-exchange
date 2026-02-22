@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PhoneExchange - Settings & Debug</title>
 
-  <!-- Länk till extern CSS -->
+  <!-- Link to external CSS -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- Länk till extern JS -->
+  <!-- Link to external JS -->
   <script src="settings.js" defer></script>
 </head>
 <body>
@@ -16,12 +16,52 @@
     <div class="page-header">
       <h1>Settings & Debug</h1>
       <nav class="page-nav">
-        <a href="index.html" class="nav-link">← Back to Dashboard</a>
+        <a href="index.html" class="nav-link"><- Back to Dashboard</a>
       </nav>
     </div>
 
+    <div class="settings-layout">
+      <aside class="card settings-menu" aria-label="Settings menu">
+        <h2 class="settings-menu-title">Panels</h2>
+        <ul class="settings-menu-list">
+          <li><a href="#" class="settings-menu-link is-active" data-pad-target="device-control">Device Control</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="mqtt-settings">MQTT Settings</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="console">Console</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="ring-test">Test Ring</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="ring-settings">Ring Settings</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="hook-detection">Hook Detection</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="tone-reader">ToneReader</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="timer-settings">Timers</a></li>
+        </ul>
+      </aside>
+
+      <section class="settings-pane">
+        <section class="card settings-pad is-active" data-pad="device-control">
+          <h2 style="margin:0 0 12px; font-size:1.2rem">Device Control</h2>
+          <p class="description">System overview and device actions</p>
+
+          <table class="device-info-table" aria-label="Device information">
+            <tbody>
+              <tr><th scope="row">Hostname</th><td id="sys-hostname">-</td></tr>
+              <tr><th scope="row">IP Address</th><td id="sys-ip">-</td></tr>
+              <tr><th scope="row">MAC Address</th><td id="sys-mac">-</td></tr>
+              <tr><th scope="row">WiFi Status</th><td id="sys-wifi-status">-</td></tr>
+              <tr><th scope="row">Connected SSID</th><td id="sys-ssid">-</td></tr>
+              <tr><th scope="row">MQTT</th><td id="sys-mqtt-status">-</td></tr>
+              <tr><th scope="row">Active Lines</th><td id="sys-active-lines">-</td></tr>
+              <tr><th scope="row">Total Lines</th><td id="sys-total-lines">8</td></tr>
+            </tbody>
+          </table>
+
+          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+            <button id="sys-refresh" class="btn btn-primary btn-sm" type="button">Refresh Info</button>
+            <button id="dbg-restart" class="btn btn-danger btn-sm" type="button">Restart Device</button>
+          </div>
+          <div id="device-status" class="status"></div>
+        </section>
+
     <!-- Ring Test Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="ring-test">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Ring Test</h2>
       <p class="description">Test the ring function on a specific phone line</p>
       <div class="ring-test-controls">
@@ -36,16 +76,16 @@
     </section>
 
     <!-- Debug Levels Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="debug-levels">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Debug Levels</h2>
       
       <div class="row">
         <span class="k">SHKService</span>
         <span class="v">
           <select id="dbg-shk" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -55,9 +95,9 @@
         <span class="k">LineManager</span>
         <span class="v">
           <select id="dbg-lm" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -67,9 +107,9 @@
         <span class="k">WebServer</span>
         <span class="v">
           <select id="dbg-ws" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -79,9 +119,9 @@
         <span class="k">LineAction</span>
         <span class="v">
           <select id="dbg-la" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -91,9 +131,9 @@
         <span class="k">MT8816Driver</span>
         <span class="v">
           <select id="dbg-mt" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -103,9 +143,9 @@
         <span class="k">ToneReader</span>
         <span class="v">
           <select id="dbg-tr" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -115,9 +155,9 @@
         <span class="k">ToneGenerator</span>
         <span class="v">
           <select id="dbg-tg" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -127,9 +167,9 @@
         <span class="k">RingGenerator</span>
         <span class="v">
           <select id="dbg-rg" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -139,9 +179,9 @@
         <span class="k">MCPDriver</span>
         <span class="v">
           <select id="dbg-mcp" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -151,9 +191,9 @@
         <span class="k">I2C</span>
         <span class="v">
           <select id="dbg-i2c" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -163,9 +203,9 @@
         <span class="k">InterruptManager</span>
         <span class="v">
           <select id="dbg-im" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -186,9 +226,9 @@
         <span class="k">LineAudioConnections</span>
         <span class="v">
           <select id="dbg-lac" class="form-select">
-            <option value="0">0 – Off</option>
-            <option value="1">1 – Low</option>
-            <option value="2">2 – High</option>
+            <option value="0">0 - Off</option>
+            <option value="1">1 - Low</option>
+            <option value="2">2 - High</option>
           </select>
         </span>
         <span></span>
@@ -203,7 +243,7 @@
     </section>
 
     <!-- Ring Settings Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="ring-settings">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Ring Settings</h2>
       
       <div class="row">
@@ -239,7 +279,7 @@
     </section>
 
     <!-- SHK/Ring Detection Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="hook-detection">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Hook Detection & Burst</h2>
       <p class="description">Tune SHK sampling during ringing/off-hook detection</p>
 
@@ -276,7 +316,7 @@
     </section>
 
     <!-- ToneReader Settings Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="tone-reader">
       <h2 style="margin:0 0 12px; font-size:1.2rem">ToneReader Settings</h2>
       <p class="description">Tune DTMF detection and TMUX scanning sensitivity</p>
 
@@ -321,7 +361,7 @@
     </section>
 
     <!-- Timer Settings Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="timer-settings">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Timer Settings</h2>
       
       <div class="row">
@@ -405,7 +445,7 @@
     </section>
 
     <!-- MQTT Settings Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="mqtt-settings">
       <h2 style="margin:0 0 12px; font-size:1.2rem">MQTT Settings</h2>
       <p class="description">Configure broker connection and topic settings</p>
 
@@ -487,22 +527,19 @@
       </div>
     </section>
 
-    <!-- Device Control Section -->
-    <section class="card">
-      <h2 style="margin:0 0 12px; font-size:1.2rem">Device Control</h2>
-      <div style="display:flex; gap:10px; margin-top:10px">
-        <button id="dbg-restart" class="btn btn-danger btn-sm">
-          Restart Device
-        </button>
-      </div>
-    </section>
-
     <!-- Console Section -->
-    <section class="card">
+    <section class="card settings-pad" data-pad="console">
       <h2 style="margin:0 0 12px; font-size:1.2rem">Console</h2>
       <p class="description">System log messages</p>
       <pre id="console-log" class="console-log" aria-live="polite" role="log"></pre>
     </section>
+      </section>
+    </div>
   </main>
 </body>
 </html>
+
+
+
+
+
