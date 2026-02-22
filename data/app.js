@@ -102,14 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="name-editor">
             <input type="text" id="line-${lineId}-name" autocomplete="off"
                    placeholder="Name" maxlength="32" />
-            <button class="badge clickable" id="line-${lineId}-name-save" type="button">Save Name</button>
+            <button class="btn btn-primary btn-sm" id="line-${lineId}-name-save" type="button">Save Name</button>
           </div>
         </div>
         <span class="v" id="line-${lineId}-status"></span>
         <div class="phone-editor">
           <input type="text" id="line-${lineId}-phone" inputmode="tel" autocomplete="tel"
                  placeholder="Phone number" maxlength="32" />
-          <button class="badge clickable" id="line-${lineId}-save" type="button">Save</button>
+          <button class="btn btn-primary btn-sm" id="line-${lineId}-save" type="button">Save</button>
         </div>
         <button class="badge" id="line-${lineId}-active" type="button" title="Activate / Inactivate"></button>
       `;
