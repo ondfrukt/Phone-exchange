@@ -102,10 +102,12 @@ bool WifiClient::loadCredentials(String& ssid, String& password) {
 }
 
 void WifiClient::connect_() {
+  if (connecting_ || WiFi.status() == WL_CONNECTED) {
+    return;
+  }
   Serial.printf("WifiClient:         Connecting to %s... (host=%s)\n", ssid_.c_str(), hostname_.c_str());
   util::UIConsole::log("Connecting to " + ssid_ + "...", "WifiClient");
   WiFi.mode(WIFI_STA);
-  WiFi.disconnect(false, false);
   WiFi.begin(ssid_.c_str(), password_.c_str());
   lastConnectAttemptMs_ = millis();
   if (reconnectDelayMs_ == 0) {

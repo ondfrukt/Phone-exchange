@@ -1,6 +1,7 @@
 #include "util/Functions.h"
 #include "net/WifiClient.h"
 #include "net/MqttClient.h"
+#include "net/Provisioning.h"
 
 void Functions::begin() {
   initStatusLeds_();
@@ -79,18 +80,12 @@ void Functions::restartDevice(uint32_t held) {
         prefs.clear();
         prefs.end();
         delay(1000);
-        
-        // Clear WiFi credentials from NVS
-        WiFi.disconnect(true, true);
-        prefs.begin("wifi", false);
-        prefs.clear();
-        prefs.end();
-        delay(1000);
-        
-        Serial.println("Settings and WiFi reset complete. Restarting...");
-        util::UIConsole::log("Settings and WiFi reset complete. Restarting...", "Functions");
-        delay(1000);
-        ESP.restart();
+
+        // Use centralized Wi-Fi/provisioning reset path to clear all credential sources.
+        Serial.println("Settings reset complete. Clearing WiFi + provisioning state...");
+        util::UIConsole::log("Settings reset complete. Clearing WiFi + provisioning state...", "Functions");
+        delay(200);
+        net::Provisioning::factoryReset();
     } else {
         Serial.println("Restarting...");
         delay(1000);

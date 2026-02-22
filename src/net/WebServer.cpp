@@ -23,7 +23,7 @@ WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClie
 bool WebServer::begin() {
 
   setupFilesystem_();
-  Serial.printf("WebServer: LittleFS mount %s\n", fsMounted_ ? "OK" : "FAILED");
+  Serial.printf("WebServer:          LittleFS mount %s\n", fsMounted_ ? "OK" : "FAILED");
   // Initialize Console buffering (safe to call even if already init'd)
   util::UIConsole::init(200);
 
@@ -38,8 +38,8 @@ bool WebServer::begin() {
 
   server_.begin();
   serverStarted_ = true;
-  Serial.printf("WebServer: HTTP server started on port %u\n", 80u);
-  Serial.printf("WebServer: Current IP is %s\n", wifi_.getIp().c_str());
+  Serial.printf("WebServer:          HTTP server started on port %u\n", 80u);
+  Serial.printf("WebServer:          Current IP is %s\n", wifi_.getIp().c_str());
 
   // Bind console sink after server is started so messages are forwarded to SSE
   bindConsoleSink_();
@@ -52,22 +52,28 @@ void WebServer::update() {
     return;
   }
 
+  if (net::Provisioning::isActive()) {
+    return;
+  }
+
   if (!wifi_.isConnected()) {
     return;
   }
 
-  Serial.println("WebServer: WiFi connected, starting HTTP server...");
+  Serial.println("WebServer:          WiFi connected, starting HTTP server...");
+  util::UIConsole::log("WiFi connected, starting HTTP server...", "WebServer");
   const bool webReady = begin();
-  Serial.printf("WebServer: ready=%s (server+LittleFS)\n", webReady ? "true" : "false");
   if (!webReady) {
-    Serial.println("WebServer: Web UI may be unavailable. Check LittleFS upload.");
+    Serial.println("WebServer:          Web UI may be unavailable. Check LittleFS upload.");
+    util::UIConsole::log("Web UI may be unavailable. Check LittleFS upload.", "WebServer");
   }
 }
 
 void WebServer::listFS() {
   File root = LittleFS.open("/");
   for (File f = root.openNextFile(); f; f = root.openNextFile()) {
-    Serial.printf("WebServer: File: %s (%u bytes)\n", f.name(), (unsigned)f.size());
+    Serial.printf("WebServer:         File: %s (%u bytes)\n", f.name(), (unsigned)f.size());
+    util::UIConsole::log("File: " + String(f.name()) + " (" + String(f.size()) + " bytes)", "WebServer");
   }
 }
 
@@ -75,7 +81,10 @@ void WebServer::listFS() {
 
 void WebServer::setupFilesystem_() {
   fsMounted_ = LittleFS.begin(true);
-  if (!fsMounted_) Serial.println("WebServer: LittleFS mount misslyckades.");
+  if (!fsMounted_) {
+    Serial.println("WebServer:         LittleFS mount misslyckades.");
+    util::UIConsole::log("LittleFS mount misslyckades.", "WebServer");
+  }
 }
 
 void WebServer::initSse_() {
@@ -83,7 +92,7 @@ void WebServer::initSse_() {
   
   events_.onConnect([this](AsyncEventSourceClient* client){
     if (settings_.debugWSLevel >= 2) {
-      Serial.printf("WebServer: SSE connected (open streams=%u)\n", (unsigned)events_.count());
+      Serial.printf("WebServer:        SSE connected (open streams=%u)\n", (unsigned)events_.count());
       util::UIConsole::log("SSE connected (likely page load or page switch).", "WebServer");
     }
     // Skicka initial data till den nya klienten
@@ -97,7 +106,8 @@ void WebServer::initSse_() {
   });
   events_.onDisconnect([this](AsyncEventSourceClient*){
     if (settings_.debugWSLevel >= 2) {
-      Serial.printf("WebServer: SSE disconnected (open streams=%u)\n", (unsigned)events_.count());
+      Serial.printf("WebServer:        SSE disconnected (open streams=%u)\n", (unsigned)events_.count());
+      util::UIConsole::log("SSE disconnected (likely page unload or page switch).", "WebServer");
     }
   });
   server_.addHandler(&events_);
@@ -111,7 +121,8 @@ void WebServer::bindConsoleSink_() {
       events_.send(json.c_str(), "console", millis());
     }
     if (settings_.debugWSLevel >= 2) {
-      Serial.println("WebServer: forwarded console message to SSE");
+      Serial.println("WebServer:        forwarded console message to SSE");
+      util::UIConsole::log("Forwarded console message to SSE", "WebServer");
       // NOTE: Do NOT call util::UIConsole::log() here as it would cause infinite recursion
     }
   });
@@ -168,6 +179,7 @@ void WebServer::setupApiRoutes_() {
     }
     if (settings_.debugWSLevel >= 1) {
       Serial.printf("WebServer: API toggle line=%d\n", line);
+      util::UIConsole::log("API: Toggle active line " + String(line), "WebServer");
     }
     toggleLineActiveBit_(line);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
@@ -193,7 +205,8 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
-    Serial.printf("API: set line=%d active=%d\n", line, active);
+    Serial.printf("API:         set line=%d active=%d\n", line, active);
+    util::UIConsole::log("API: Set active line " + String(line) + " to " + String(active), "WebServer");
     setLineActiveBit_(line, active != 0);
     req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
   });
@@ -347,7 +360,7 @@ void WebServer::setupApiRoutes_() {
     sendFullStatusSse();
 
     if (settings_.debugWSLevel >= 1) {
-      Serial.printf("WebServer: Line %d name set to %s\n", line, value.c_str());
+      Serial.printf("WebServer:         Line %d name set to %s\n", line, value.c_str());
       util::UIConsole::log("Name for line " + String(line) + " updated", "WebServer");
     }
 
@@ -879,7 +892,7 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   sendActiveMaskSse();
 
   if (settings_.debugWSLevel >= 1) {
-    Serial.printf("WebServer: ActiveMask: 0x%02X -> 0x%02X\n", before, settings_.activeLinesMask);
+    Serial.printf("WebServer:     ActiveMask: 0x%02X -> 0x%02X\n", before, settings_.activeLinesMask);
     util::UIConsole::log("ActiveMask: 0x" + String(before, HEX) + " -> 0x" + String(settings_.activeLinesMask, HEX), "WebServer");
   }
 }
@@ -890,7 +903,7 @@ void WebServer::toggleLineActiveBit_(int line) {
   setLineActiveBit_(line, !wasActive);
 
   if (settings_.debugWSLevel >= 1) {
-    Serial.printf("WebServer: Toggle line %d: %d -> %d\n", line, wasActive ? 1 : 0, wasActive ? 0 : 1);
+    Serial.printf("WebServer:         Toggle line %d: %d -> %d\n", line, wasActive ? 1 : 0, wasActive ? 0 : 1);
     util::UIConsole::log("Toggle line " + String(line) + ": " + String(wasActive ? 1 : 0) + " -> " + String(wasActive ? 0 : 1), "WebServer");
   }
 
@@ -958,7 +971,7 @@ void WebServer::sendDebugSse() {
     const String json = buildDebugJson_();
     events_.send(json.c_str(), "debug", millis());
     if (settings_.debugWSLevel >= 1) {
-      Serial.println("WebServer: Debug levels skickade via SSE");
+      Serial.println("WebServer:         Debug levels skickade via SSE");
       util::UIConsole::log("Debug levels sent via SSE", "WebServer");
     }
   }
@@ -993,7 +1006,7 @@ void WebServer::sendToneGeneratorSse() {
     const String json = buildToneGeneratorJson_();
     events_.send(json.c_str(), "toneGen", millis());
     if (settings_.debugWSLevel >= 1) {
-      Serial.println("WebServer: Tone generator state skickad via SSE");
+      Serial.println("WebServer:         Tone generator state skickad via SSE");
       util::UIConsole::log("Tone generator state sent via SSE", "WebServer");
     }
   }
@@ -1006,7 +1019,7 @@ void WebServer::sendFullStatusSse() {
     events_.send(json.c_str(), nullptr, millis());
 
     if (settings_.debugWSLevel >= 1) {
-      Serial.println("WebServer: Full status skickad via SSE");
+      Serial.println("WebServer:         Full status skickad via SSE");
       util::UIConsole::log("Full status sent via SSE", "WebServer");
     }
   }
@@ -1018,7 +1031,7 @@ void WebServer::sendActiveMaskSse() {
     const String json = buildActiveJson_(settings_.activeLinesMask);
     events_.send(json.c_str(), "activeMask", millis());
     if (settings_.debugWSLevel >= 1) {
-      Serial.println("WebServer: Active mask skickad via SSE");
+      Serial.println("WebServer:         Active mask skickad via SSE");
       util::UIConsole::log("Active mask sent via SSE", "WebServer");
     }
   }
