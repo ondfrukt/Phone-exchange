@@ -28,7 +28,7 @@ public:
     bool loadCredentials(String& ssid, String& password);
 
     bool hasCredentials() const { return ssid_.length() > 0; }
-    void connectNow() { if (ssid_.length()) connect_(); }   // valfritt
+    void connectNow() { if (ssid_.length() && !connecting_ && WiFi.status() != WL_CONNECTED) connect_(); }   // optional
 
 private:
     void connect_();

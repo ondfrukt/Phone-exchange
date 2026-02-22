@@ -14,6 +14,7 @@ public:
   // OBS: passera in en referens till din WifiClient
   void begin(WifiClient& wifiClient, const char* hostname = "phoneexchange");
   void loop();
+  static bool isActive() { return startedProvisioning_; }
 
   // Rensa Wi-Fi-uppgifter i NVS och boota om (för att starta omprovisionering)
   static void factoryReset();

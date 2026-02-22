@@ -139,10 +139,8 @@ void Provisioning::onSysEvent_(arduino_event_t* sys_event) {
     case ARDUINO_EVENT_PROV_CRED_SUCCESS:
       Serial.println("Provisioning:       Credentials accepted.");
       util::UIConsole::log("Credentials accepted.", "Provisioning");
-      if (wifi_ && pendingSsid_.length() > 0 && !credentialsCommitted_) {
-        wifi_->saveCredentials(pendingSsid_.c_str(), pendingPassword_.c_str());
-        credentialsCommitted_ = true;
-      }
+      // Do not save/connect here. Let provisioning manager finish first (PROV_END)
+      // to avoid parallel WiFi.begin() attempts from WifiClient during provisioning.
       break;
 
     case ARDUINO_EVENT_PROV_CRED_FAIL:
@@ -158,16 +156,18 @@ void Provisioning::onSysEvent_(arduino_event_t* sys_event) {
     case ARDUINO_EVENT_PROV_END:
       Serial.println("Provisioning:       Provisioning finished.");
       util::UIConsole::log("Provisioning finished.", "Provisioning");
+
+      if (wifi_ && pendingSsid_.length() > 0 && !credentialsCommitted_) {
+        wifi_->saveCredentials(pendingSsid_.c_str(), pendingPassword_.c_str());
+        credentialsCommitted_ = true;
+      }
+
       startedProvisioning_ = false;
       pendingSsid_.clear();
       pendingPassword_.clear();
-      credentialsCommitted_ = false;
       resetStatePending_ = false;
 
-      if (wifi_) {
-        // Explicit reconnect after provisioning to avoid stale no-IP state.
-        wifi_->connectNow();
-      }
+      credentialsCommitted_ = false;
       break;
 
     default:
