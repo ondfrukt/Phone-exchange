@@ -104,7 +104,7 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 /* Line | Name | Phone | Status | Active */
 .row{
   display:grid;
-  grid-template-columns: 46px minmax(80px, .7fr) minmax(90px, .8fr) minmax(120px, .9fr) auto;
+  grid-template-columns: 46px minmax(80px, 1fr) minmax(90px, 1fr) minmax(120px, .9fr) var(--badge-w);
   gap:10px;
   align-items:center;
   padding:8px 0;
@@ -124,10 +124,13 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   text-transform: uppercase;
   letter-spacing: .04em;
   white-space: nowrap;
-  text-align: center;
 }
 
-.col-head-right {
+.col-head-left {
+  text-align: left;
+}
+
+.col-head-center {
   text-align: center;
 }
 
@@ -135,11 +138,14 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   color: var(--muted);
   font-weight: 600;
   text-align: center;
+  justify-self: center;
 }
 
 .name-editor,
 .phone-editor{
   min-width: 0;
+  width: 100%;
+  justify-self: stretch;
 }
 
 .name-editor input,
@@ -165,6 +171,7 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  justify-self: stretch;
 }
 
 .status{
@@ -193,7 +200,7 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 
 /* Placera sista badge (Active/Inactivate) längst till höger i raden */
 .row > .badge:last-child {
-  justify-self: end;
+  justify-self: center;
 }
 
 .badge.ok{ border-color:rgba(22,163,74,.4); background:rgba(22,163,74,.15) }

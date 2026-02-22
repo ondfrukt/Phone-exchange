@@ -35,11 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
     head.className = 'row row-head';
     head.id = 'line-header';
     head.innerHTML = `
-      <span class="col-head">Line</span>
-      <span class="col-head">Name</span>
-      <span class="col-head">Phone</span>
-      <span class="col-head">Status</span>
-      <span class="col-head col-head-right">Active</span>
+      <span class="col-head col-head-center">Line</span>
+      <span class="col-head col-head-left">Name</span>
+      <span class="col-head col-head-left">Phone</span>
+      <span class="col-head col-head-center">Status</span>
+      <span class="col-head col-head-center">Active</span>
     `;
     $lines.appendChild(head);
   }
