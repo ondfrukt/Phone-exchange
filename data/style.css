@@ -101,123 +101,79 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   box-shadow:0 6px 30px rgba(0,0,0,.25);
 }
 
-/* Namn | Status | Telefon | Aktiv-knapp */
+/* Line | Name | Phone | Status | Active */
 .row{
   display:grid;
-  grid-template-columns: 1fr auto minmax(calc(var(--badge-w) * 2 + 8px), 320px) auto;
+  grid-template-columns: 46px minmax(80px, .7fr) minmax(90px, .8fr) minmax(120px, .9fr) auto;
   gap:10px;
   align-items:center;
   padding:8px 0;
-  border-bottom:1px dashed rgba(255,255,255,.06)
+  border-bottom:1px dashed rgba(255,255,255,.06);
 }
 .row:last-child{ border-bottom:none }
 
-.row > .k,
-.row > .v {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.row-head {
+  padding-top: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.col-head {
+  color: var(--muted);
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
   white-space: nowrap;
+  text-align: center;
 }
 
-.row > .k { max-width: 200px; }       /* namn-kolumn */
-.row > .v { max-width: 140px; }       /* status-kolumn */
-
-.row > .k.line-col {
-  white-space: normal;
-  overflow: visible;
-  max-width: none;
+.col-head-right {
+  text-align: center;
 }
 
-.line-label {
-  display: block;
+.line-id {
+  color: var(--muted);
   font-weight: 600;
-  margin-bottom: 4px;
+  text-align: center;
 }
 
-.name-editor {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.name-editor input {
-  width: 120px;
-  min-width: 0;
-  padding: 4px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.04);
-  color: var(--fg);
-}
-
-.name-editor input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-.name-editor .badge {
-  min-width: 90px;
-  max-width: 90px;
-}
-
-/* Telefon-editor (tredje kolumn) */
+.name-editor,
 .phone-editor{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  /* Säkerställ att phone-editor inte växer för stort:
-     max-width = två badges + gap */
-  max-width: calc(var(--badge-w) * 2 + 8px);
-  /* Ge ett litet minne så den inte kollapsar helt */
-  min-width: calc(var(--badge-w) + 8px);
+  min-width: 0;
 }
 
-/* När vi "döljer" phone-editor vill vi reservera utrymmet så att layout inte hoppar.
-   Används istället för display:none i JS. */
-.phone-editor.hidden {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* FAST BREDD PÅ TELEFONFÄLTET
-   Vi använder CSS-variabeln --phone-input-w (se :root högst upp). Ändra där.
-   Inputen är nu en fast bredd (ingen flexibel växling) så den blir alltid exakt
-   den angivna bredden (100px som standard).
-*/
+.name-editor input,
 .phone-editor input{
-  /* Fixed width: change --phone-input-w in :root to alter this */
-  flex: 0 0 var(--phone-input-w);
-  width: var(--phone-input-w);
-  max-width: var(--phone-input-w);
-
+  width: 100%;
   min-width: 0;
   padding:4px 8px;
   border-radius:8px;
   border:1px solid var(--border);
   background:rgba(255,255,255,0.04);
   color:var(--fg);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
 }
 
+.name-editor input:focus,
 .phone-editor input:focus{
   outline:none;
   border-color:var(--accent);
   box-shadow:0 0 0 1px var(--accent);
 }
 
-.phone-editor .badge{
-  min-width:var(--badge-w);
-  max-width:var(--badge-w);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.row > .v {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
 }
 
-.status{ margin-top:10px; color:var(--muted); font-size:.9rem }
+.status{
+  margin-top:10px;
+  color:#f87171;
+  font-size:.95rem;
+  font-weight:600;
+  min-height:1.2em;
+}
 
 .badge{
   background: transparent;
@@ -484,4 +440,40 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   white-space:pre-wrap;
   word-break:break-word;
   margin:0;
+}
+
+@media (max-width: 700px) {
+  .row {
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "line name active"
+      "line phone status";
+    align-items: center;
+  }
+
+  .row-head {
+    display: none;
+  }
+
+  .row > .line-id {
+    grid-area: line;
+  }
+
+  .row > .name-editor {
+    grid-area: name;
+  }
+
+  .row > .phone-editor {
+    grid-area: phone;
+  }
+
+  .row > .v {
+    grid-area: status;
+    font-size: .85rem;
+  }
+
+  .row > .badge:last-child {
+    grid-area: active;
+    justify-self: end;
+  }
 }
