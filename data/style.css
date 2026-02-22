@@ -101,6 +101,110 @@ h1{ font-size:1.8rem; margin:0 0 16px }
   box-shadow:0 6px 30px rgba(0,0,0,.25);
 }
 
+/* Settings page split layout */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.settings-menu {
+  position: sticky;
+  top: 16px;
+  margin-bottom: 0;
+}
+
+.settings-menu-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.settings-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-menu-list li + li {
+  margin-top: 6px;
+}
+
+.settings-menu-link {
+  display: block;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+
+.settings-menu-link:hover {
+  color: var(--fg);
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.04);
+}
+
+.settings-menu-link.is-active {
+  color: #bfdbfe;
+  border-color: var(--accent);
+  background: rgba(96, 165, 250, 0.2);
+}
+
+.settings-pane .settings-pad {
+  display: none;
+}
+
+.settings-pane .settings-pad.is-active {
+  display: block;
+}
+
+.device-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.device-info-table th,
+.device-info-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.device-info-table tr:last-child th,
+.device-info-table tr:last-child td {
+  border-bottom: none;
+}
+
+.device-info-table th {
+  width: 45%;
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  background: rgba(255,255,255,.02);
+}
+
+.device-info-table td {
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Settings rows retain 3-column form layout */
+.settings-pane .row {
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.2fr) auto;
+}
+
+.settings-pane .row > .v {
+  text-align: left;
+}
+
+.settings-pane .row > .badge:last-child {
+  justify-self: end;
+}
+
 /* Line | Name | Phone | Status | Active */
 .row{
   display:grid;
@@ -450,6 +554,36 @@ h1{ font-size:1.8rem; margin:0 0 16px }
 }
 
 @media (max-width: 700px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-menu {
+    position: static;
+  }
+
+  .device-info-table th,
+  .device-info-table td {
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+
+  .device-info-table th {
+    padding-bottom: 2px;
+    border-bottom: 0;
+  }
+
+  .device-info-table td {
+    padding-top: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .settings-pane .row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
   .row {
     grid-template-columns: 46px minmax(0, 1fr) auto;
     grid-template-areas:

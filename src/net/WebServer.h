@@ -7,14 +7,17 @@
 #include "settings/settings.h"
 #include "services/LineAction.h"
 
-namespace net { class WifiClient; } 
+namespace net {
+  class WifiClient;
+  class MqttClient;
+}
 
 class LineManager;
 class RingGenerator;
 
 class WebServer {
 public:
-  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port = 80);
+  WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, net::MqttClient& mqtt, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port = 80);
   bool begin();
   void update();
   void listFS();
@@ -36,6 +39,7 @@ private:
   AsyncEventSource events_{"/events"};
   
   net::WifiClient& wifi_;
+  net::MqttClient& mqtt_;
 
 
   bool serverStarted_ = false;

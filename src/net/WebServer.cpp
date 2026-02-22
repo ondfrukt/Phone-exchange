@@ -1,4 +1,5 @@
 #include "WebServer.h"
+#include "net/MqttClient.h"
 #include "util/StatusSerializer.h"
 #include "services/LineManager.h"
 #include "services/RingGenerator.h"
@@ -17,8 +18,8 @@ String escapeJson(const String& in) {
 }
 } // namespace
 
-WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
-: settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, net::MqttClient& mqtt, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
+: settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), mqtt_(mqtt), server_(port) {}
 
 bool WebServer::begin() {
 
@@ -419,11 +420,26 @@ void WebServer::setupApiRoutes_() {
 
     String mac = wifi_.getMac();   // "AA:BB:CC:DD:EE:FF"
     String ip  = wifi_.getIp();
+    const bool wifiConnected = wifi_.isConnected();
+    const bool mqttEnabled = settings_.mqttEnabled;
+    const bool mqttConnected = mqtt_.isConnected();
+    String ssid = wifiConnected ? WiFi.SSID() : String("");
+
+    int activeLines = 0;
+    for (int i = 0; i < 8; ++i) {
+      if ((settings_.activeLinesMask >> i) & 0x01) activeLines++;
+    }
 
     String json = "{";
-    json += "\"hostname\":\"" + hn + "\",";
-    json += "\"ip\":\"" + ip + "\",";
-    json += "\"mac\":\"" + mac + "\"";
+    json += "\"hostname\":\"" + escapeJson(hn) + "\",";
+    json += "\"ip\":\"" + escapeJson(ip) + "\",";
+    json += "\"mac\":\"" + escapeJson(mac) + "\",";
+    json += "\"wifiConnected\":"; json += wifiConnected ? "true" : "false";
+    json += ",\"mqttEnabled\":"; json += mqttEnabled ? "true" : "false";
+    json += ",\"mqttConnected\":"; json += mqttConnected ? "true" : "false";
+    json += ",\"ssid\":\"" + escapeJson(ssid) + "\",";
+    json += "\"activeLines\":" + String(activeLines) + ",";
+    json += "\"totalLines\":8";
     json += "}";
 
     req->send(200, "application/json", json);

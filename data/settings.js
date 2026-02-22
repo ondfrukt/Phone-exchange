@@ -90,6 +90,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const $mqttRetainLabel = document.getElementById('mqtt-retain-label');
   const $mqttSaveBtn = document.getElementById('mqtt-save');
   const $mqttStatus = document.getElementById('mqtt-status');
+  const $sysRefreshBtn = document.getElementById('sys-refresh');
+  const $deviceStatus = document.getElementById('device-status');
+
+  const $sysHostname = document.getElementById('sys-hostname');
+  const $sysIp = document.getElementById('sys-ip');
+  const $sysMac = document.getElementById('sys-mac');
+  const $sysWifiStatus = document.getElementById('sys-wifi-status');
+  const $sysSsid = document.getElementById('sys-ssid');
+  const $sysMqttStatus = document.getElementById('sys-mqtt-status');
+  const $sysActiveLines = document.getElementById('sys-active-lines');
+  const $sysTotalLines = document.getElementById('sys-total-lines');
+
+  const $settingsMenuBtns = Array.from(document.querySelectorAll('.settings-menu-link'));
+  const $settingsPads = Array.from(document.querySelectorAll('.settings-pad'));
 
   // Bitmask representing active/inactive lines (0..255)
   let activeMask = 0;
@@ -103,6 +117,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const setToneReaderStatus = (t) => { if ($toneReaderStatus) $toneReaderStatus.textContent = t; };
   const setTimerStatus = (t) => { if ($timerStatus) $timerStatus.textContent = t; };
   const setMqttStatus = (t) => { if ($mqttStatus) $mqttStatus.textContent = t; };
+  const setDeviceStatus = (t) => { if ($deviceStatus) $deviceStatus.textContent = t; };
+
+  const activeLineCount = () => {
+    let c = 0;
+    for (let i = 0; i < 8; i++) if (isActive(i)) c++;
+    return c;
+  };
+
+  const updateActiveLineInfo = () => {
+    if ($sysActiveLines) $sysActiveLines.textContent = String(activeLineCount());
+    if ($sysTotalLines) $sysTotalLines.textContent = '8';
+  };
+
+  function setPad(target) {
+    if (!target) return;
+    $settingsPads.forEach((pad) => {
+      pad.classList.toggle('is-active', pad.getAttribute('data-pad') === target);
+    });
+    $settingsMenuBtns.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-pad-target') === target);
+    });
+  }
+
+  function initPadMenu() {
+    $settingsMenuBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setPad(btn.getAttribute('data-pad-target'));
+      });
+    });
+    setPad('device-control');
+  }
 
   const setToneEnabledUi = (enabled) => {
     if ($toneEnabled) $toneEnabled.checked = !!enabled;
@@ -114,7 +160,50 @@ document.addEventListener('DOMContentLoaded', () => {
     if ($mqttEnabledLabel) $mqttEnabledLabel.textContent = enabled ? 'Enabled' : 'Disabled';
     if ($mqttRetain) $mqttRetain.checked = !!retain;
     if ($mqttRetainLabel) $mqttRetainLabel.textContent = retain ? 'On' : 'Off';
+    if ($sysMqttStatus) $sysMqttStatus.textContent = enabled ? 'Enabled' : 'Disabled';
   };
+
+  async function loadSystemInfo(showFeedback = false) {
+    try {
+      if (showFeedback) setDeviceStatus('Loading system info...');
+      const [infoRes, mqttRes] = await Promise.all([
+        fetch('/api/info'),
+        fetch('/api/settings/mqtt')
+      ]);
+
+      if (!infoRes.ok) throw new Error('info HTTP ' + infoRes.status);
+      if (!mqttRes.ok) throw new Error('mqtt HTTP ' + mqttRes.status);
+
+      const info = await infoRes.json();
+      const mqtt = await mqttRes.json();
+
+      if ($sysHostname) $sysHostname.textContent = info.hostname || '-';
+      if ($sysIp) $sysIp.textContent = info.ip || '-';
+      if ($sysMac) $sysMac.textContent = info.mac || '-';
+      if ($sysWifiStatus) $sysWifiStatus.textContent = info.wifiConnected ? 'Connected' : 'Disconnected';
+      if ($sysSsid) $sysSsid.textContent = info.ssid || '-';
+      if ($sysMqttStatus) {
+        if (info && info.mqttEnabled && info.mqttConnected) $sysMqttStatus.textContent = 'Online';
+        else if (info && info.mqttEnabled) $sysMqttStatus.textContent = 'Enabled (offline)';
+        else if (mqtt && mqtt.enabled) $sysMqttStatus.textContent = 'Enabled (offline)';
+        else $sysMqttStatus.textContent = 'Disabled';
+      }
+
+      if (typeof info.activeLines === 'number') {
+        if ($sysActiveLines) $sysActiveLines.textContent = String(info.activeLines);
+      } else {
+        updateActiveLineInfo();
+      }
+      if (typeof info.totalLines === 'number' && $sysTotalLines) {
+        $sysTotalLines.textContent = String(info.totalLines);
+      }
+
+      if (showFeedback) setDeviceStatus('');
+    } catch (e) {
+      console.warn('Could not load system info', e);
+      setDeviceStatus('Could not load system info');
+    }
+  }
 
   // Update the ring line selector with active lines
   function updateRingLineSelector() {
@@ -145,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       if ($ringTestBtn) $ringTestBtn.disabled = false;
     }
+    updateActiveLineInfo();
   }
 
   // Load debug levels from server
@@ -478,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       $mqttSaveBtn.classList.remove('working');
       setTimeout(() => setMqttStatus(''), 1500);
+      loadSystemInfo(false);
     }
   }
 
@@ -605,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $toneReaderSaveBtn?.addEventListener('click', saveToneReaderSettings);
   $timerSaveBtn?.addEventListener('click', saveTimerSettings);
   $mqttSaveBtn?.addEventListener('click', saveMqttSettings);
+  $sysRefreshBtn?.addEventListener('click', () => loadSystemInfo(true));
   $mqttEnabled?.addEventListener('change', () => setMqttUiState($mqttEnabled.checked, $mqttRetain.checked));
   $mqttRetain?.addEventListener('change', () => setMqttUiState($mqttEnabled.checked, $mqttRetain.checked));
 
@@ -615,6 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d && typeof d.mask === 'number') {
         activeMask = d.mask|0;
         updateRingLineSelector();
+        updateActiveLineInfo();
       }
     })
     .catch(()=>{});
@@ -629,6 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof d.mask === 'number'){
         activeMask = d.mask|0;
         updateRingLineSelector();
+        updateActiveLineInfo();
       }
     } catch {}
   });
@@ -671,6 +765,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeunload', () => { try { es.close(); } catch {} });
 
   // Initial load
+  initPadMenu();
+  updateActiveLineInfo();
+  loadSystemInfo(false);
+  setInterval(() => { void loadSystemInfo(false); }, 15000);
   loadDebug();
   loadToneGenerator();
   loadRingSettings();
