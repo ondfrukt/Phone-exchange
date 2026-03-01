@@ -27,7 +27,9 @@ public:
     bool loadCredentials(String& ssid, String& password);
 
     bool hasCredentials() const { return ssid_.length() > 0; }
-    void connectNow() { if (ssid_.length()) connect_(); }   // valfritt
+    void connectNow();
+    void setProvisioningActive(bool active);
+    bool isProvisioningActive() const { return provisioningActive_; }
 
 private:
     void connect_();
@@ -41,6 +43,7 @@ private:
     String password_;
     String hostname_;
     bool connecting_;
+    bool provisioningActive_ = false;
     bool mdnsStarted_ = false; 
     unsigned long lastConnectAttemptMs_ = 0;
     unsigned long reconnectDelayMs_ = 0;

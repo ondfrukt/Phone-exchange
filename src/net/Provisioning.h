@@ -14,6 +14,11 @@ public:
   // OBS: passera in en referens till din WifiClient
   void begin(WifiClient& wifiClient, const char* hostname = "phoneexchange");
   void loop();
+  static bool isActive() { return startedProvisioning_; }
+  static bool isCoolingDown() {
+    return provisioningEndedAtMs_ != 0 &&
+           (millis() - provisioningEndedAtMs_ < kPostProvisioningCooldownMs);
+  }
 
   // Rensa Wi-Fi-uppgifter i NVS och boota om (för att starta omprovisionering)
   static void factoryReset();
@@ -32,8 +37,11 @@ private:
   static inline String pendingPassword_;
   static inline bool credentialsCommitted_ = false;
   static inline bool resetStatePending_ = false;
+  static inline unsigned long provisioningEndedAtMs_ = 0;
+  static inline bool postProvisioningCleanupPending_ = false;
   static constexpr unsigned long kResetStateDelayMs = 300;
   static constexpr unsigned long kProvisioningWindowMs = 5UL * 60UL * 1000UL;
+  static constexpr unsigned long kPostProvisioningCooldownMs = 2000;
 };
 
 } // namespace net

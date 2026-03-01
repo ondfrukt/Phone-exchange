@@ -53,7 +53,22 @@ void WebServer::update() {
     return;
   }
 
+  if (net::Provisioning::isActive()) {
+    return;
+  }
+  if (net::Provisioning::isCoolingDown()) {
+    return;
+  }
+
   if (!wifi_.isConnected()) {
+    return;
+  }
+
+  // Provisioning SoftAP can still hold port 80. Ensure we are in pure STA mode before binding HTTP.
+  const wifi_mode_t mode = WiFi.getMode();
+  if (mode != WIFI_MODE_STA) {
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
     return;
   }
 

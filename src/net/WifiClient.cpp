@@ -39,6 +39,10 @@ void WifiClient::begin(const char* hostname) {
 }
 
 void WifiClient::loop() {
+  if (provisioningActive_) {
+    return;
+  }
+
   const unsigned long now = millis();
 
   // If we are "connecting" for too long without a valid IP, force a reconnect.
@@ -54,6 +58,23 @@ void WifiClient::loop() {
       ((long)(now - lastConnectAttemptMs_) >= (long)reconnectDelayMs_);
   if (!isConnected() && !connecting_ && ssid_.length() > 0 && timeToRetry) {
     connect_();
+  }
+}
+
+void WifiClient::connectNow() {
+  if (provisioningActive_) {
+    return;
+  }
+  if (ssid_.length()) {
+    connect_();
+  }
+}
+
+void WifiClient::setProvisioningActive(bool active) {
+  provisioningActive_ = active;
+  if (active) {
+    // Prevent the local reconnect loop from racing the provisioning manager.
+    connecting_ = false;
   }
 }
 

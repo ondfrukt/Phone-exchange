@@ -6,12 +6,7 @@ using namespace net;
 static const char* kPop         = "abcd1234";         // Proof of Possession (PIN)
 static const char* kServiceName = "PHONE_EXCHANGE";   // Namn som syns i Espressifs app
 static const char* kServiceKey  = nullptr;            // Används bara för SoftAP
-static const bool  kResetProv   = false;              // Behåll provisioning-state; rensa bara vid explicit factory reset
-
-static uint8_t kUuid[16] = {
-  0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
-  0xea, 0x41, 0xa9, 0xea, 0x12, 0x21, 0x2f, 0x88
-};
+static const bool  kResetProv   = true;               // Rensa tidigare provisioning-state när SoftAP-provisioning startar
 
 void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   host_ = hostname;
@@ -22,6 +17,8 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   resetStatePending_ = false;
   credFailAtMs_ = 0;
   provisioningStartedAtMs_ = 0;
+  provisioningEndedAtMs_ = 0;
+  postProvisioningCleanupPending_ = false;
   startedProvisioning_ = false;
 
   // Lyssna på systemhändelser (Wi-Fi + provisioning)
@@ -29,30 +26,41 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
 
   // Om WifiClient redan har creds -> starta inte provisioning.
   if (wifi_->hasCredentials()) {
+    wifi_->setProvisioningActive(false);
     Serial.println("Provisioning: Saved SSID found. Skipping provisioning.");
     util::UIConsole::log("Saved SSID found. Skipping provisioning.", "Provisioning");
     return;
   }
 
-  // Annars startar vi BLE-provisionering så användaren kan mata in creds
+  // Annars startar vi SoftAP-provisioning så användaren kan mata in creds
   startedProvisioning_ = true;
   provisioningStartedAtMs_ = millis();
+  wifi_->setProvisioningActive(true);
 
-  Serial.println("Provisioning: Open Espressif BLE Provisioning app to configure Wi-Fi.");
-  util::UIConsole::log("Open Espressif BLE Provisioning app to configure Wi-Fi.", "Provisioning");
+  Serial.println("Provisioning: Start SoftAP provisioning.");
+  util::UIConsole::log("Start SoftAP provisioning.", "Provisioning");
   WiFiProv.beginProvision(
-    WIFI_PROV_SCHEME_BLE,                 // Transport: BLE
-    WIFI_PROV_SCHEME_HANDLER_FREE_BTDM,   // Frigör BT-minne efter provisioning
+    WIFI_PROV_SCHEME_SOFTAP,              // Transport: SoftAP
+    WIFI_PROV_SCHEME_HANDLER_NONE,        // No extra transport handler for SoftAP
     WIFI_PROV_SECURITY_1,                 // PoP/PIN-säkerhet
     kPop,                                 // PoP
-    kServiceName,                         // "PROV_..." gör det lätt för appen
-    kServiceKey,                          // ej använd för BLE
-    kUuid,                                // 16-byte UUID
-    kResetProv                            // true = rensa tidigare provisioning-state för stabil ny scan-session
+    kServiceName,                         // SoftAP SSID
+    kServiceKey,                          // SoftAP password if set, otherwise open
+    nullptr,                              // UUID not used in SoftAP provisioning
+    kResetProv
   );
 }
 
 void Provisioning::loop() {
+  if (postProvisioningCleanupPending_ && provisioningEndedAtMs_ != 0 &&
+      (millis() - provisioningEndedAtMs_ >= 250)) {
+    wifi_prov_mgr_stop_provisioning();
+    wifi_prov_mgr_deinit();
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+    postProvisioningCleanupPending_ = false;
+  }
+
   if (!startedProvisioning_) {
     return;
   }
@@ -83,8 +91,12 @@ void Provisioning::stopProvisioning_() {
     return;
   }
 
-  wifi_prov_mgr_stop_provisioning();
   startedProvisioning_ = false;
+  provisioningEndedAtMs_ = millis();
+  postProvisioningCleanupPending_ = true;
+  if (wifi_) {
+    wifi_->setProvisioningActive(false);
+  }
   pendingSsid_.clear();
   pendingPassword_.clear();
   credentialsCommitted_ = false;
@@ -111,8 +123,11 @@ void Provisioning::factoryReset() {
 void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
   switch (sys_event->event_id) {
     case ARDUINO_EVENT_PROV_START:
-      Serial.println("Provisioning: Provisioning started. Open Espressif BLE Provisioning app.");
-      util::UIConsole::log("Provisioning started. Open Espressif BLE Provisioning app.", "Provisioning");
+      if (wifi_) {
+        wifi_->setProvisioningActive(true);
+      }
+      Serial.println("Provisioning: Provisioning started (SoftAP mode).");
+      util::UIConsole::log("Provisioning started (SoftAP mode).", "Provisioning");
       break;
 
     case ARDUINO_EVENT_PROV_CRED_RECV: {
@@ -149,16 +164,15 @@ void Provisioning::onSysEvent_(arduino_event_t *sys_event) {
       Serial.println("Provisioning: Provisioning finished.");
       util::UIConsole::log("Provisioning finished.", "Provisioning");
       startedProvisioning_ = false;
+      provisioningEndedAtMs_ = millis();
+      postProvisioningCleanupPending_ = true;
+      if (wifi_) {
+        wifi_->setProvisioningActive(false);
+      }
       pendingSsid_.clear();
       pendingPassword_.clear();
       credentialsCommitted_ = false;
       resetStatePending_ = false;
-
-      if (wifi_) {
-        // Kicka en explicit connect efter provisioning så vi inte fastnar i
-        // "connected without valid IP"-läge tills manuell reboot.
-        wifi_->connectNow();
-      }
       break;
 
     // Rena Wi-Fi-händelser (för logg)
