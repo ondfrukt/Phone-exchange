@@ -76,4 +76,9 @@ private:
   uint32_t burstNextTickAtMs_ = 0;
   std::size_t maxPhysicalLines_ = 8;
 
+  // Tracks previous ring state per line to detect RingToggling→RingPause transitions.
+  // When that transition occurs the phone may have been picked up during the ring burst —
+  // those SHK events were suppressed by the interference filter, so we force a poll here.
+  model::RingState prevLineRingState_[cfg::mcp::SHK_LINE_COUNT] = {};
+
 };

@@ -88,10 +88,11 @@ The flowchart below shows how the statuses change based on the behavior of the p
 
 ## Challenges ##
 
-- **Identify DTMF-toned to a line**
+- **SHK interference during ring signal generation**
 
-It is quite difficult to identify which phone line is actually starting to tone dial. The lines and tones from them are all sent into the DTMF decoder on just one line, and if, for example, two phones have both gone off-hook and are ready to dial, how can you tell which one the tone is coming from?
-My solution to this is simply to assume that the last phone picked up is the one entering a DTMF number. I have a maximum of 8 lines in my project, so this approach works for me — but it’s not an ideal solution.
+The KS0835F SLIC's ring voltage (RM HIGH, FR toggling at 20 Hz) induces false SHK transitions, making it impossible to distinguish interference from a real pick-up. Simply ignoring SHK events during ringing suppresses the noise but also swallows genuine pick-ups — the interrupt is consumed and no new one fires during the pause, so the call never connects.
+
+**Workaround in `SHKService`:** SHK events during `RingToggling` are still suppressed. When a line transitions from `RingToggling` to `RingPause`, the SHK pin is immediately force-polled. The debounce filter then confirms the true state: a real pick-up keeps SHK HIGH and the call connects; interference has already cleared and no change is registered. Maximum detection delay equals one ring-burst length (default 1 s).
 
 
 

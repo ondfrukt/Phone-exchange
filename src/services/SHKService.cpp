@@ -150,7 +150,25 @@ void SHKService::update() {
     }
   }
 
+  // Detect RingToggling → RingPause transitions.
+  // SHK events fired during RingToggling are suppressed by the interference filter above,
+  // so a pick-up during a ring burst would be missed. When the burst ends and the ring
+  // enters its pause, we force a SHK poll for that line so the debounce filter can
+  // confirm whether the handset is genuinely off-hook.
   uint32_t nowMs = millis();
+  const uint32_t allowedLines = settings_.activeLinesMask & settings_.allowMask;
+  for (uint8_t i = 0; i < static_cast<uint8_t>(maxPhysicalLines_); ++i) {
+    model::RingState currentRingState = ringGenerator_.lineStates_[i].state;
+    if (prevLineRingState_[i] == model::RingState::RingToggling &&
+        currentRingState      == model::RingState::RingPause    &&
+        (allowedLines & (1u << i))) {
+      activeMask_        |= (1u << i);
+      burstActive_        = true;
+      burstNextTickAtMs_  = nowMs;   // Tick immediately
+    }
+    prevLineRingState_[i] = currentRingState;
+  }
+
   if (needsTick(nowMs)) {
     tick(nowMs); // Updates hook status and pulses.
   }
