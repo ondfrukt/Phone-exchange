@@ -163,7 +163,7 @@ void RingGenerator::update() {
           lineState.rmPinState = false;
 
           if (settings_.debugRGLevel >= 2) {
-            Serial.println("RingGenerator: Line " + String(lineNumber) + 
+            Serial.println("RingGenerator: Line " + String(lineNumber) +
                          " starting ring iteration " + String(lineState.currentIteration + 1));
           }
         }
