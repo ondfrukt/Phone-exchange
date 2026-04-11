@@ -41,11 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ringStopBtn = document.getElementById('ring-stop-btn');
   const $ringStatus = document.getElementById('ring-status');
 
+  // --- Audio Test UI ---
+  const $audioFileList = document.getElementById('audio-file-list');
+  const $audioStatus = document.getElementById('audio-status');
+
   // --- Ring Settings UI ---
   const $ringLength = document.getElementById('ring-length');
   const $ringPause = document.getElementById('ring-pause');
   const $ringIterations = document.getElementById('ring-iterations');
   const $ringSaveBtn = document.getElementById('ring-save');
+  const $ringResetBtn = document.getElementById('ring-reset');
   const $ringSettingsStatus = document.getElementById('ring-settings-status');
 
   // --- SHK/Ring Detection Settings UI ---
@@ -53,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $hookStableMs = document.getElementById('hook-stable-ms');
   const $hookStableConsec = document.getElementById('hook-stable-consec');
   const $shkSaveBtn = document.getElementById('shk-save');
+  const $shkResetBtn = document.getElementById('shk-reset');
   const $shkSettingsStatus = document.getElementById('shk-settings-status');
 
   // --- ToneReader Settings UI ---
@@ -61,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $dtmfStdStableMs = document.getElementById('dtmf-std-stable-ms');
   const $tmuxScanDwellMinMs = document.getElementById('tmux-scan-dwell-min-ms');
   const $toneReaderSaveBtn = document.getElementById('tonereader-save');
+  const $toneReaderResetBtn = document.getElementById('tonereader-reset');
   const $toneReaderStatus = document.getElementById('tonereader-status');
 
   // --- Timer Settings UI ---
@@ -74,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $timerTimeout = document.getElementById('timer-timeout');
   const $timerBusy = document.getElementById('timer-busy');
   const $timerSaveBtn = document.getElementById('timer-save');
+  const $timerResetBtn = document.getElementById('timer-reset');
   const $timerStatus = document.getElementById('timer-status');
 
   // --- MQTT Settings UI ---
@@ -89,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $mqttRetain = document.getElementById('mqtt-retain');
   const $mqttRetainLabel = document.getElementById('mqtt-retain-label');
   const $mqttSaveBtn = document.getElementById('mqtt-save');
+  const $mqttResetBtn = document.getElementById('mqtt-reset');
   const $mqttStatus = document.getElementById('mqtt-status');
   const $sysRefreshBtn = document.getElementById('sys-refresh');
   const $deviceStatus = document.getElementById('device-status');
@@ -138,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $settingsMenuBtns.forEach((btn) => {
       btn.classList.toggle('is-active', btn.getAttribute('data-pad-target') === target);
     });
+    if (target === 'audio-test') loadAudioFiles();
   }
 
   function initPadMenu() {
@@ -377,6 +387,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Reset ring settings to defaults
+  async function resetRingSettings() {
+    try {
+      $ringResetBtn.classList.add('working');
+      setRingSettingsStatus('Resetting…');
+      const r = await fetch('/api/settings/ring/reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (typeof d.ringLengthMs === 'number') $ringLength.value = msToSec(d.ringLengthMs);
+      if (typeof d.ringPauseMs === 'number') $ringPause.value = msToSec(d.ringPauseMs);
+      if (typeof d.ringIterations === 'number') $ringIterations.value = d.ringIterations;
+      setRingSettingsStatus('Reset.');
+    } catch (e) {
+      setRingSettingsStatus('Failed to reset.');
+      console.warn(e);
+    } finally {
+      $ringResetBtn.classList.remove('working');
+      setTimeout(() => setRingSettingsStatus(''), 1500);
+    }
+  }
+
   // Load SHK/ring-detection settings from server
   async function loadShkSettings() {
     try {
@@ -415,6 +446,27 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn(e);
     } finally {
       $shkSaveBtn.classList.remove('working');
+      setTimeout(() => setShkSettingsStatus(''), 1500);
+    }
+  }
+
+  // Reset SHK settings to defaults
+  async function resetShkSettings() {
+    try {
+      $shkResetBtn.classList.add('working');
+      setShkSettingsStatus('Resetting…');
+      const r = await fetch('/api/settings/shk/reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (typeof d.burstTickMs === 'number') $burstTickMs.value = msToSec(d.burstTickMs);
+      if (typeof d.hookStableMs === 'number') $hookStableMs.value = msToSec(d.hookStableMs);
+      if (typeof d.hookStableConsec === 'number') $hookStableConsec.value = d.hookStableConsec;
+      setShkSettingsStatus('Reset.');
+    } catch (e) {
+      setShkSettingsStatus('Failed to reset.');
+      console.warn(e);
+    } finally {
+      $shkResetBtn.classList.remove('working');
       setTimeout(() => setShkSettingsStatus(''), 1500);
     }
   }
@@ -459,6 +511,28 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn(e);
     } finally {
       $toneReaderSaveBtn.classList.remove('working');
+      setTimeout(() => setToneReaderStatus(''), 1500);
+    }
+  }
+
+  // Reset ToneReader settings to defaults
+  async function resetToneReaderSettings() {
+    try {
+      $toneReaderResetBtn.classList.add('working');
+      setToneReaderStatus('Resetting…');
+      const r = await fetch('/api/settings/tone-reader/reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (typeof d.dtmfDebounceMs === 'number') $dtmfDebounceMs.value = d.dtmfDebounceMs;
+      if (typeof d.dtmfMinToneDurationMs === 'number') $dtmfMinToneMs.value = d.dtmfMinToneDurationMs;
+      if (typeof d.dtmfStdStableMs === 'number') $dtmfStdStableMs.value = d.dtmfStdStableMs;
+      if (typeof d.tmuxScanDwellMinMs === 'number') $tmuxScanDwellMinMs.value = d.tmuxScanDwellMinMs;
+      setToneReaderStatus('Reset.');
+    } catch (e) {
+      setToneReaderStatus('Failed to reset.');
+      console.warn(e);
+    } finally {
+      $toneReaderResetBtn.classList.remove('working');
       setTimeout(() => setToneReaderStatus(''), 1500);
     }
   }
@@ -513,6 +587,24 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn(e);
     } finally {
       $timerSaveBtn.classList.remove('working');
+      setTimeout(() => setTimerStatus(''), 1500);
+    }
+  }
+
+  // Reset timer settings to defaults
+  async function resetTimerSettings() {
+    try {
+      $timerResetBtn.classList.add('working');
+      setTimerStatus('Resetting…');
+      const r = await fetch('/api/settings/timers/reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      await loadTimerSettings();
+      setTimerStatus('Reset.');
+    } catch (e) {
+      setTimerStatus('Failed to reset.');
+      console.warn(e);
+    } finally {
+      $timerResetBtn.classList.remove('working');
       setTimeout(() => setTimerStatus(''), 1500);
     }
   }
@@ -572,7 +664,133 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Test ring on selected line
+  // Reset MQTT settings to defaults
+  async function resetMqttSettings() {
+    try {
+      $mqttResetBtn.classList.add('working');
+      setMqttStatus('Resetting…');
+      const r = await fetch('/api/settings/mqtt/reset', { method: 'POST' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      setMqttUiState(!!d.enabled, !!d.retain);
+      if (typeof d.host === 'string') $mqttHost.value = d.host;
+      if (typeof d.port === 'number') $mqttPort.value = d.port;
+      if (typeof d.username === 'string') $mqttUsername.value = d.username;
+      if (typeof d.password === 'string') $mqttPassword.value = d.password;
+      if (typeof d.clientId === 'string') $mqttClientId.value = d.clientId;
+      if (typeof d.baseTopic === 'string') $mqttBaseTopic.value = d.baseTopic;
+      if (typeof d.qos === 'number') $mqttQos.value = String(d.qos);
+      setMqttStatus('Reset.');
+    } catch (e) {
+      setMqttStatus('Failed to reset.');
+      console.warn(e);
+    } finally {
+      $mqttResetBtn.classList.remove('working');
+      setTimeout(() => setMqttStatus(''), 1500);
+      loadSystemInfo(false);
+    }
+  }
+
+  // Audio Test functions
+  function setAudioStatus(msg) {
+    if ($audioStatus) $audioStatus.textContent = msg;
+  }
+
+  function buildAudioLineSelect() {
+    const sel = document.createElement('select');
+    sel.className = 'form-select audio-line-select';
+    sel.innerHTML = '<option value="">-- Line --</option>';
+    for (let i = 0; i < 8; i++) {
+      if (isActive(i)) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = 'Line ' + i;
+        sel.appendChild(opt);
+      }
+    }
+    return sel;
+  }
+
+  async function loadAudioFiles() {
+    if (!$audioFileList) return;
+    $audioFileList.innerHTML = '<p class="description">Loading…</p>';
+    try {
+      const r = await fetch('/api/audio/files');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const files = await r.json();
+
+      if (!files.length) {
+        $audioFileList.innerHTML = '<p class="description">No .wav files found in /audio/</p>';
+        return;
+      }
+
+      $audioFileList.innerHTML = '';
+      files.forEach(filePath => {
+        const name = filePath.split('/').pop();
+        const row = document.createElement('div');
+        row.className = 'audio-file-row';
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap';
+
+        const label = document.createElement('span');
+        label.className = 'audio-file-name';
+        label.style.cssText = 'flex:1;min-width:160px;word-break:break-all';
+        label.textContent = name;
+
+        const sel = buildAudioLineSelect();
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary btn-sm';
+        btn.textContent = 'Play';
+        btn.addEventListener('click', () => playAudioFile(filePath, sel, btn));
+
+        row.appendChild(label);
+        row.appendChild(sel);
+        row.appendChild(btn);
+        $audioFileList.appendChild(row);
+      });
+    } catch (e) {
+      $audioFileList.innerHTML = '<p class="description">Failed to load audio files: ' + e.message + '</p>';
+      console.warn(e);
+    }
+  }
+
+  async function playAudioFile(filePath, selectEl, btn) {
+    const line = selectEl.value;
+    if (!line && line !== '0') {
+      setAudioStatus('Please select a line');
+      setTimeout(() => setAudioStatus(''), 2000);
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.classList.add('working');
+      setAudioStatus('Starting playback on line ' + line + '…');
+
+      const body = new URLSearchParams({ file: filePath, line }).toString();
+      const r = await fetch('/api/audio/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error || 'HTTP ' + r.status);
+      }
+      setAudioStatus('Playing on line ' + line);
+      setTimeout(() => setAudioStatus(''), 8000);
+    } catch (e) {
+      setAudioStatus('Failed: ' + e.message);
+      setTimeout(() => setAudioStatus(''), 4000);
+      console.warn(e);
+    } finally {
+      btn.classList.remove('working');
+      btn.disabled = false;
+    }
+  }
+
+  // Test ring on selected line: rings 1s, waits 2s, then auto-resets to Idle
   async function testRing() {
     const line = $ringLineSelect.value;
     if (!line || line === '') {
@@ -583,27 +801,29 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       $ringTestBtn.classList.add('working');
       $ringTestBtn.disabled = true;
-      setRingStatus('Starting ring test...');
-      
+      $ringStopBtn.disabled = true;
+      setRingStatus(`Ringing line ${line}…`);
+
       const body = new URLSearchParams({ line }).toString();
       const r = await fetch('/api/ring/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body
       });
-      
+
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      const d = await r.json();
-      
-      setRingStatus(`Ring test started on line ${line}`);
-      $ringStopBtn.disabled = false;
+      $ringTestBtn.classList.remove('working');
+
+      setTimeout(() => setRingStatus('Waiting…'), 1000);
+      setTimeout(() => {
+        setRingStatus('');
+        $ringTestBtn.disabled = false;
+      }, 3000);
     } catch (e) {
       setRingStatus('Failed to start ring test: ' + e.message);
       console.warn(e);
-    } finally {
       $ringTestBtn.classList.remove('working');
       $ringTestBtn.disabled = false;
-      setTimeout(() => setRingStatus(''), 3000);
     }
   }
 
@@ -692,10 +912,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $ringTestBtn?.addEventListener('click', testRing);
   $ringStopBtn?.addEventListener('click', stopRing);
   $ringSaveBtn?.addEventListener('click', saveRingSettings);
+  $ringResetBtn?.addEventListener('click', resetRingSettings);
   $shkSaveBtn?.addEventListener('click', saveShkSettings);
+  $shkResetBtn?.addEventListener('click', resetShkSettings);
   $toneReaderSaveBtn?.addEventListener('click', saveToneReaderSettings);
+  $toneReaderResetBtn?.addEventListener('click', resetToneReaderSettings);
   $timerSaveBtn?.addEventListener('click', saveTimerSettings);
+  $timerResetBtn?.addEventListener('click', resetTimerSettings);
   $mqttSaveBtn?.addEventListener('click', saveMqttSettings);
+  $mqttResetBtn?.addEventListener('click', resetMqttSettings);
   $sysRefreshBtn?.addEventListener('click', () => loadSystemInfo(true));
   $mqttEnabled?.addEventListener('change', () => setMqttUiState($mqttEnabled.checked, $mqttRetain.checked));
   $mqttRetain?.addEventListener('change', () => setMqttUiState($mqttEnabled.checked, $mqttRetain.checked));

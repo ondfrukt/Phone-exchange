@@ -94,7 +94,7 @@ bool PCMDriver::installDriver_(uint32_t sampleRateHz, uint8_t bitsPerSample, uin
     : I2S_COMM_FORMAT_STAND_I2S;
   cfg.intr_alloc_flags = ESP_INTR_FLAG_LEVEL1;
   cfg.dma_buf_count = 8;
-  cfg.dma_buf_len = 256;
+  cfg.dma_buf_len = 512;
   cfg.use_apll = false;
   cfg.tx_desc_auto_clear = true;
   cfg.fixed_mclk = 0;

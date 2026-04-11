@@ -29,6 +29,7 @@
           <li><a href="#" class="settings-menu-link" data-pad-target="console">Console</a></li>
           <li><a href="#" class="settings-menu-link" data-pad-target="debug-levels">Debug</a></li>
           <li><a href="#" class="settings-menu-link" data-pad-target="ring-test">Test Ring</a></li>
+          <li><a href="#" class="settings-menu-link" data-pad-target="audio-test">Audio Test</a></li>
           <li><a href="#" class="settings-menu-link" data-pad-target="ring-settings">Ring Settings</a></li>
           <li><a href="#" class="settings-menu-link" data-pad-target="hook-detection">Hook Detection</a></li>
           <li><a href="#" class="settings-menu-link" data-pad-target="tone-reader">ToneReader</a></li>
@@ -74,6 +75,16 @@
         <button id="ring-stop-btn" class="btn btn-danger btn-sm" disabled>Stop Ring</button>
       </div>
       <div id="ring-status" class="status"></div>
+    </section>
+
+    <!-- Audio Test Section -->
+    <section class="card settings-pad" data-pad="audio-test">
+      <h2 style="margin:0 0 12px; font-size:1.2rem">Audio Test</h2>
+      <p class="description">Play audio files on an active (non-idle) phone line. Any tone playing on the line will be stopped first.</p>
+      <div id="audio-file-list">
+        <p class="description">Select the Audio Test tab to load files.</p>
+      </div>
+      <div id="audio-status" class="status"></div>
     </section>
 
     <!-- Debug Levels Section -->
@@ -275,6 +286,9 @@
         <button id="ring-save" class="btn btn-primary btn-sm">
           Update Ring Settings
         </button>
+        <button id="ring-reset" class="btn btn-secondary btn-sm">
+          Reset to Defaults
+        </button>
         <div id="ring-settings-status" class="status"></div>
       </div>
     </section>
@@ -311,6 +325,9 @@
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="shk-save" class="btn btn-primary btn-sm">
           Update SHK Settings
+        </button>
+        <button id="shk-reset" class="btn btn-secondary btn-sm">
+          Reset to Defaults
         </button>
         <div id="shk-settings-status" class="status"></div>
       </div>
@@ -356,6 +373,9 @@
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="tonereader-save" class="btn btn-primary btn-sm">
           Update ToneReader Settings
+        </button>
+        <button id="tonereader-reset" class="btn btn-secondary btn-sm">
+          Reset to Defaults
         </button>
         <div id="tonereader-status" class="status"></div>
       </div>
@@ -441,6 +461,9 @@
         <button id="timer-save" class="btn btn-primary btn-sm">
           Update Timer Settings
         </button>
+        <button id="timer-reset" class="btn btn-secondary btn-sm">
+          Reset to Defaults
+        </button>
         <div id="timer-status" class="status"></div>
       </div>
     </section>
@@ -523,6 +546,9 @@
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="mqtt-save" class="btn btn-primary btn-sm">
           Update MQTT Settings
+        </button>
+        <button id="mqtt-reset" class="btn btn-secondary btn-sm">
+          Reset to Defaults
         </button>
         <div id="mqtt-status" class="status"></div>
       </div>

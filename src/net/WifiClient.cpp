@@ -66,6 +66,7 @@ void WifiClient::connectNow() {
     return;
   }
   if (ssid_.length()) {
+    reconnectDelayMs_ = 0;  // Nollställ backoff så anslutning sker direkt
     connect_();
   }
 }

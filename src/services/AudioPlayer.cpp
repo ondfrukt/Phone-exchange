@@ -8,6 +8,7 @@ bool AudioPlayer::begin() {
   if (!ensureFilesystemMounted_()) {
     return false;
   }
+  pcmDriver_.setForce32BitSlots(false);
   return pcmDriver_.begin(16000, 16, 2);
 }
 
@@ -56,9 +57,9 @@ bool AudioPlayer::startPlayback(const String& filePath) {
                 static_cast<unsigned long>(currentInfo_.dataSize));
 
   pcmDriver_.setCommFormat(PCMDriver::CommFormat::StandardI2S);
-  pcmDriver_.setForce32BitSlots(true);
-  pcmDriver_.setSampleWordMode(PCMDriver::SampleWordMode::Bits32High16);
-  if (!pcmDriver_.setFormat(currentInfo_.sampleRate, 32, 2)) {
+  pcmDriver_.setForce32BitSlots(false);
+  pcmDriver_.setSampleWordMode(PCMDriver::SampleWordMode::Bits16);
+  if (!pcmDriver_.setFormat(currentInfo_.sampleRate, 16, 2)) {
     Serial.println("AudioPlayer: Failed to configure I2S format.");
     currentFile_.close();
     lastPlaybackSucceeded_ = false;

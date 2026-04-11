@@ -324,6 +324,11 @@ void LineAction::startToneGenForStatus(LineHandler& line, model::ToneId status) 
   }
 }
 
+void LineAction::stopToneForLine(int index) {
+  if (index < 0 || index >= 8) return;
+  turnOffToneGenIfUsed(lineManager_.getLine(index));
+}
+
 // Turn off tone generator if it is being used by the line
 void LineAction::turnOffToneGenIfUsed(LineHandler& line) {
   if (line.toneGenUsed == 0) {

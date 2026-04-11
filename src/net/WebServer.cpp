@@ -4,6 +4,7 @@
 #include "services/LineManager.h"
 #include "services/RingGenerator.h"
 #include "util/UIConsole.h"
+#include "config.h"
 
 namespace {
 String escapeJson(const String& in) {
@@ -18,8 +19,8 @@ String escapeJson(const String& in) {
 }
 } // namespace
 
-WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, net::MqttClient& mqtt, RingGenerator& ringGenerator, LineAction& lineAction, uint16_t port)
-: settings_ (settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), wifi_(wifi), mqtt_(mqtt), server_(port) {}
+WebServer::WebServer(Settings& settings, LineManager& lineManager, net::WifiClient& wifi, net::MqttClient& mqtt, RingGenerator& ringGenerator, LineAction& lineAction, AudioPlayer& audioPlayer, ConnectionHandler& connectionHandler, uint16_t port)
+: settings_(settings), lineManager_(lineManager), ringGenerator_(ringGenerator), lineAction_(lineAction), audioPlayer_(audioPlayer), connectionHandler_(connectionHandler), wifi_(wifi), mqtt_(mqtt), server_(port) {}
 
 bool WebServer::begin() {
 
@@ -489,6 +490,7 @@ void WebServer::setupApiRoutes_() {
     }, "wifiResetTask", 2048, nullptr, 1, nullptr);
   });
   // Ring test: POST /api/ring/test (body: line=3)
+  // Rings for 1s, keeps status Incoming for 2s more, then resets to Idle.
   server_.on("/api/ring/test", HTTP_POST, [this](AsyncWebServerRequest* req){
 
     int line = -1;
@@ -508,8 +510,21 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
-    lineManager_.setStatus(line, LineStatus::Incoming);
     req->send(200, "application/json", "{\"ok\":true}");
+
+    struct RingTestParams { LineManager* lm; RingGenerator* rg; int line; };
+    auto* p = new RingTestParams{&lineManager_, &ringGenerator_, line};
+    xTaskCreate([](void* arg) {
+      auto* p = static_cast<RingTestParams*>(arg);
+      p->lm->setStatus(p->line, LineStatus::Incoming);
+      p->lm->resetLineTimer(p->line); // Disable auto-timer so it doesn't interfere
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      p->rg->stopRingingLine(p->line);
+      vTaskDelay(pdMS_TO_TICKS(2000));
+      p->lm->setStatus(p->line, LineStatus::Idle);
+      delete p;
+      vTaskDelete(nullptr);
+    }, "ringTestTask", 2048, p, 1, nullptr);
 
     if (settings_.debugWSLevel >= 1) {
       Serial.printf("WebServer: Ring test started on line %d\n", line);
@@ -542,6 +557,75 @@ void WebServer::setupApiRoutes_() {
     if (settings_.debugWSLevel >= 1) {
       Serial.println("WebServer: Ring stopped");
       util::UIConsole::log("Ring stopped", "WebServer");
+    }
+  });
+  // Audio test: GET /api/audio/files — list WAV files in /audio/
+  server_.on("/api/audio/files", HTTP_GET, [](AsyncWebServerRequest* req){
+    String json = "[";
+    bool first = true;
+    File dir = LittleFS.open("/audio");
+    if (dir && dir.isDirectory()) {
+      File f = dir.openNextFile();
+      while (f) {
+        if (!f.isDirectory()) {
+          String name = f.name();
+          if (name.endsWith(".wav") || name.endsWith(".WAV")) {
+            if (!first) json += ",";
+            json += "\"" + String("/audio/") + name + "\"";
+            first = false;
+          }
+        }
+        f = dir.openNextFile();
+      }
+    }
+    json += "]";
+    req->send(200, "application/json", json);
+  });
+  // Audio test: POST /api/audio/play — play a WAV file on a line (must not be Idle)
+  server_.on("/api/audio/play", HTTP_POST, [this](AsyncWebServerRequest* req){
+    int line = -1;
+    String filePath;
+
+    if (req->hasParam("line", true)) line = req->getParam("line", true)->value().toInt();
+    else if (req->hasParam("line")) line = req->getParam("line")->value().toInt();
+
+    if (req->hasParam("file", true)) filePath = req->getParam("file", true)->value();
+    else if (req->hasParam("file")) filePath = req->getParam("file")->value();
+
+    if (line < 0 || line > 7) {
+      req->send(400, "application/json", "{\"error\":\"invalid line\"}");
+      return;
+    }
+    if (!settings_.isLineActive(line)) {
+      req->send(400, "application/json", "{\"error\":\"line not active\"}");
+      return;
+    }
+    if (lineManager_.getLine(line).currentLineStatus == LineStatus::Idle) {
+      req->send(400, "application/json", "{\"error\":\"line is idle\"}");
+      return;
+    }
+    if (filePath.isEmpty()) {
+      req->send(400, "application/json", "{\"error\":\"no file specified\"}");
+      return;
+    }
+
+    lineAction_.stopToneForLine(line);
+    req->send(200, "application/json", "{\"ok\":true}");
+
+    struct AudioPlayParams { AudioPlayer* player; ConnectionHandler* conn; String filePath; int line; };
+    auto* p = new AudioPlayParams{&audioPlayer_, &connectionHandler_, filePath, line};
+    xTaskCreate([](void* arg) {
+      auto* p = static_cast<AudioPlayParams*>(arg);
+      p->conn->connectAudioToLine(p->line, cfg::mt8816::D_OUTL);
+      p->player->playWav(p->filePath);
+      p->conn->disconnectAudioToLine(p->line, cfg::mt8816::D_OUTL);
+      delete p;
+      vTaskDelete(nullptr);
+    }, "audioPlayTask", 8192, p, 1, nullptr);
+
+    if (settings_.debugWSLevel >= 1) {
+      Serial.printf("WebServer: Audio play '%s' on line %d\n", filePath.c_str(), line);
+      util::UIConsole::log("Audio play '" + filePath + "' on line " + String(line), "WebServer");
     }
   });
   // Get ring settings: GET /api/settings/ring
@@ -846,6 +930,69 @@ void WebServer::setupApiRoutes_() {
     util::UIConsole::log("MQTT settings updated (reconfigure scheduled).", "WebServer");
 
     req->send(200, "application/json", buildMqttJson_());
+  });
+
+  // Reset ring settings: POST /api/settings/ring/reset
+  server_.on("/api/settings/ring/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    settings_.ringLengthMs   = 1000;
+    settings_.ringPauseMs    = 5000;
+    settings_.ringIterations = 5;
+    settings_.save();
+    String json = "{\"ringLengthMs\":1000,\"ringPauseMs\":5000,\"ringIterations\":5}";
+    req->send(200, "application/json", json);
+    util::UIConsole::log("Ring settings reset to defaults", "WebServer");
+  });
+  // Reset SHK settings: POST /api/settings/shk/reset
+  server_.on("/api/settings/shk/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    settings_.burstTickMs      = 2;
+    settings_.hookStableMs     = 50;
+    settings_.hookStableConsec = 10;
+    settings_.save();
+    String json = "{\"burstTickMs\":2,\"hookStableMs\":50,\"hookStableConsec\":10}";
+    req->send(200, "application/json", json);
+    util::UIConsole::log("SHK settings reset to defaults", "WebServer");
+  });
+  // Reset ToneReader settings: POST /api/settings/tone-reader/reset
+  server_.on("/api/settings/tone-reader/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    settings_.dtmfDebounceMs        = 100;
+    settings_.dtmfMinToneDurationMs = 25;
+    settings_.dtmfStdStableMs       = 15;
+    settings_.tmuxScanDwellMinMs    = 35;
+    settings_.save();
+    String json = "{\"dtmfDebounceMs\":100,\"dtmfMinToneDurationMs\":25,\"dtmfStdStableMs\":15,\"tmuxScanDwellMinMs\":35}";
+    req->send(200, "application/json", json);
+    util::UIConsole::log("ToneReader settings reset to defaults", "WebServer");
+  });
+  // Reset timer settings: POST /api/settings/timers/reset
+  server_.on("/api/settings/timers/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    settings_.timer_Ready        = 240000;
+    settings_.timer_Dialing      = 30000;
+    settings_.timer_Ringing      = 30000;
+    settings_.timer_pulsDialing  = 3000;
+    settings_.timer_toneDialing  = 3000;
+    settings_.timer_fail         = 30000;
+    settings_.timer_disconnected = 30000;
+    settings_.timer_timeout      = 30000;
+    settings_.timer_busy         = 30000;
+    settings_.save();
+    req->send(200, "application/json", "{\"ok\":true}");
+    util::UIConsole::log("Timer settings reset to defaults", "WebServer");
+  });
+  // Reset MQTT settings: POST /api/settings/mqtt/reset
+  server_.on("/api/settings/mqtt/reset", HTTP_POST, [this](AsyncWebServerRequest* req){
+    settings_.mqttEnabled     = false;
+    settings_.mqttHost        = "";
+    settings_.mqttPort        = 1883;
+    settings_.mqttUsername    = "";
+    settings_.mqttPassword    = "";
+    settings_.mqttClientId    = "phoneexchange";
+    settings_.mqttBaseTopic   = "phoneexchange";
+    settings_.mqttRetain      = true;
+    settings_.mqttQos         = 0;
+    settings_.mqttConfigDirty = true;
+    settings_.save();
+    req->send(200, "application/json", buildMqttJson_());
+    util::UIConsole::log("MQTT settings reset to defaults", "WebServer");
   });
 
   // Statisk filserver

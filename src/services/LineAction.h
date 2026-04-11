@@ -21,6 +21,7 @@ public:
   void begin();
   void update();
   void action(int index);
+  void stopToneForLine(int index);
 
 private:
   LineManager& lineManager_;

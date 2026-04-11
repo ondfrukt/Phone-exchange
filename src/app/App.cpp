@@ -17,6 +17,10 @@ App::App()
     ad9833Driver3_(cfg::ESP_PINS::CS3_PIN),
     toneGenerator_(ad9833Driver1_, ad9833Driver2_, ad9833Driver3_),
 
+    // ===== PCM audio =====
+    pcmDriver_(),
+    audioPlayer_(pcmDriver_),
+
     // ===== Telephony services =====
     lineManager_(Settings::instance()),
     toneReader_(interruptManager_, mcpDriver_, Settings::instance(), lineManager_),
@@ -31,7 +35,7 @@ App::App()
                 toneGenerator_, connectionHandler_, mqttClient_),
 
     // WebServer depends on line/ring/action + wifi.
-    webServer_(Settings::instance(), lineManager_, wifiClient_, mqttClient_, ringGenerator_, lineAction_, 80),
+    webServer_(Settings::instance(), lineManager_, wifiClient_, mqttClient_, ringGenerator_, lineAction_, audioPlayer_, connectionHandler_, 80),
     functions_(interruptManager_, mcpDriver_, wifiClient_, mqttClient_) {
     // Late wiring: optional callback dependency that cannot be injected in ctor
     // without circular include pressure.
@@ -69,6 +73,7 @@ void App::begin() {
     mcpDriver_.begin();
 		mt8816Driver_.begin();
     toneGenerator_.begin();
+    audioPlayer_.begin();
     Serial.println("----- Drivers initialized -----");
     
     //----- Service setup -----

@@ -37,6 +37,17 @@ void Provisioning::begin(WifiClient& wifiClient, const char* hostname) {
   provisioningStartedAtMs_ = millis();
   wifi_->setProvisioningActive(true);
 
+  // Sätt WiFi i AP+STA-läge och gör en pre-scan innan SoftAP startar.
+  // Med en enda radio delar SoftAP och scanning på kanaler, vilket kan bryta
+  // telefonens TCP-anslutning under scanning. Genom att scanna en gång i
+  // STA-läge först fylls driverns scan-cache, så att provisioneringsbiblioteket
+  // kan returnera resultat utan att störa SoftAP-anslutningen.
+  WiFi.mode(WIFI_AP_STA);
+  Serial.println("Provisioning: Pre-scanning networks before SoftAP start...");
+  util::UIConsole::log("Pre-scanning networks before SoftAP start...", "Provisioning");
+  WiFi.scanNetworks(false /*async=false*/, true /*show_hidden*/);
+  WiFi.scanDelete();  // Rensa resultaten – vi behöver dem inte, bara cache-effekten
+
   Serial.println("Provisioning: Start SoftAP provisioning.");
   util::UIConsole::log("Start SoftAP provisioning.", "Provisioning");
   WiFiProv.beginProvision(
@@ -59,6 +70,11 @@ void Provisioning::loop() {
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_STA);
     postProvisioningCleanupPending_ = false;
+    // Cleanup ovan kan orsaka ett STA-disconnect-event som sätter WifiClients
+    // backoff-timer. Kicla en omedelbar anslutning så vi inte väntar i onödan.
+    if (wifi_) {
+      wifi_->connectNow();
+    }
   }
 
   if (!startedProvisioning_) {

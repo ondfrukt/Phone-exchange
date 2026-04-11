@@ -14,6 +14,8 @@
 #include "services/ToneGenerator.h"
 #include "services/ToneReader.h"
 #include "services/RingGenerator.h"
+#include "drivers/PCMDriver.h"
+#include "services/AudioPlayer.h"
 
 #include "settings/settings.h"
 
@@ -54,6 +56,9 @@ private:
 
     // ===== Telephony services (owned by App, wired with references) =====
     // Each service stores references to shared dependencies passed in constructor.
+    PCMDriver pcmDriver_;
+    AudioPlayer audioPlayer_;
+
     LineManager lineManager_;
     ToneReader toneReader_;
     RingGenerator ringGenerator_;
