@@ -25,6 +25,34 @@
         "isDefault": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: OTA Upload Firmware",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\platformio.exe",
+      "args": [
+        "run",
+        "-e",
+        "devkitc_ota",
+        "-t",
+        "upload"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: OTA Upload Filesystem (UI)",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\platformio.exe",
+      "args": [
+        "run",
+        "-e",
+        "devkitc_ota",
+        "-t",
+        "uploadfs"
+      ],
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }

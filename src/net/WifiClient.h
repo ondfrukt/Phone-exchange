@@ -1,6 +1,7 @@
 #pragma once
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <ArduinoOTA.h>
 #include <Preferences.h>
 #include "util/UIConsole.h"
 
@@ -36,7 +37,8 @@ private:
     void forceReconnect_();
     void onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info);
     String makeDefaultHostname_();
-    void syncTime_(); 
+    void syncTime_();
+    void startOta_();
 
     Preferences prefs_;
     String ssid_;
@@ -44,7 +46,8 @@ private:
     String hostname_;
     bool connecting_;
     bool provisioningActive_ = false;
-    bool mdnsStarted_ = false; 
+    bool mdnsStarted_ = false;
+    bool otaStarted_ = false;
     unsigned long lastConnectAttemptMs_ = 0;
     unsigned long reconnectDelayMs_ = 0;
     static constexpr unsigned long kInitialReconnectDelayMs = 5000;

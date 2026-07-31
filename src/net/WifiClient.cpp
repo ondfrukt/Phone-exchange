@@ -39,6 +39,10 @@ void WifiClient::begin(const char* hostname) {
 }
 
 void WifiClient::loop() {
+  if (otaStarted_) {
+    ArduinoOTA.handle();
+  }
+
   if (provisioningActive_) {
     return;
   }
@@ -177,6 +181,11 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
           util::UIConsole::log("⚠️ MDNS.begin failed", "WifiClient");
         }
       }
+
+      // Starta OTA-uppdateringstjänsten (endast en gång)
+      if (!otaStarted_) {
+        startOta_();
+      }
       break;
     }
 
@@ -207,6 +216,46 @@ void WifiClient::onWiFiEvent_(WiFiEvent_t event, const WiFiEventInfo_t& info) {
     default:
       break;
   }
+}
+
+void WifiClient::startOta_() {
+  // mDNS annonseras redan av oss (se ovan), så låt inte ArduinoOTA starta en egen instans.
+  ArduinoOTA.setMdnsEnabled(false);
+  ArduinoOTA.setHostname(hostname_.c_str());
+
+  ArduinoOTA.onStart([]() {
+    const char* type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
+    Serial.printf("WifiClient: OTA update starting (%s)\n", type);
+    util::UIConsole::log(String("OTA update starting (") + type + ")", "WifiClient");
+  });
+
+  ArduinoOTA.onEnd([]() {
+    Serial.println("WifiClient: OTA update complete, restarting...");
+    util::UIConsole::log("OTA update complete, restarting...", "WifiClient");
+  });
+
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    static unsigned int lastPct = 101;
+    const unsigned int pct = total ? (progress * 100) / total : 0;
+    if (pct != lastPct) {
+      lastPct = pct;
+      Serial.printf("WifiClient: OTA progress: %u%%\n", pct);
+    }
+  });
+
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("WifiClient: OTA error [%u]\n", static_cast<unsigned int>(error));
+    util::UIConsole::log("OTA error: " + String(static_cast<int>(error)), "WifiClient");
+  });
+
+  ArduinoOTA.begin();
+  otaStarted_ = true;
+
+  // Annonsera OTA-tjänsten manuellt eftersom mDNS drivs av oss (se ovan).
+  MDNS.addService("arduino", "tcp", 3232);
+
+  Serial.printf("WifiClient: OTA update service ready on port 3232 (host=%s)\n", hostname_.c_str());
+  util::UIConsole::log("OTA update service ready on port 3232", "WifiClient");
 }
 
 String WifiClient::makeDefaultHostname_() {
