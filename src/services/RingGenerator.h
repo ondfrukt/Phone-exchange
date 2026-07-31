@@ -15,6 +15,14 @@ class RingGenerator {
     void stopRinging();
     void stopRingingLine(uint8_t lineNumber);
 
+    // Makes the next generateRingSignal() call on this line stop after a single
+    // ring iteration, regardless of settings_.ringIterations, and stay flagged
+    // as a test ring until the line stops ringing. Used by the UI's ring test
+    // so it doesn't keep ringing (and occupy the line) for the configured call
+    // duration.
+    void setSingleIterationTest(uint8_t lineNumber);
+    bool isTestRing(uint8_t lineNumber) const;
+
     MCPDriver& mcpDriver_;
     Settings& settings_;
     LineManager& lineManager_;
@@ -23,6 +31,8 @@ class RingGenerator {
     struct LineRingState {
       model::RingState state = model::RingState::RingIdle;
       uint32_t currentIteration = 0;
+      uint32_t maxIterations = 0;
+      bool isTestRing = false;
       unsigned long stateStartTime = 0;
       unsigned long lastFRToggleTime = 0;
       bool frPinState = false; // Current state of FR pin

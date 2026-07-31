@@ -508,6 +508,7 @@ void WebServer::setupApiRoutes_() {
       return;
     }
 
+    ringGenerator_.setSingleIterationTest(line);
     lineManager_.setStatus(line, LineStatus::Incoming);
     req->send(200, "application/json", "{\"ok\":true}");
 

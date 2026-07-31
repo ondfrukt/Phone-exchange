@@ -158,7 +158,13 @@ void LineAction::action(int index) {
     
     case LineStatus::Incoming:
       ringGenerator_.generateRingSignal(index);
-      lineManager_.setLineTimer(index, settings_.timer_incomming);
+      if (ringGenerator_.isTestRing(index)) {
+        // Test ring: only rings for a single iteration, so return the line to
+        // Idle shortly after instead of waiting for the full incoming timeout.
+        lineManager_.setLineTimer(index, settings_.ringLengthMs + 500);
+      } else {
+        lineManager_.setLineTimer(index, settings_.timer_incomming);
+      }
       break;
     
     case LineStatus::Connected:

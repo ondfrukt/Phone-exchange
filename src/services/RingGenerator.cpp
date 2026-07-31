@@ -25,6 +25,7 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   // Start ringing for the specified line
   auto& lineState = lineStates_[lineNumber];
   lineState.currentIteration = 0;
+  lineState.maxIterations = lineState.isTestRing ? 1 : settings_.ringIterations;
   lineState.state = model::RingState::RingToggling;
 
   if (settings_.debugRGLevel >= 2) {
@@ -45,6 +46,20 @@ void RingGenerator::generateRingSignal(uint8_t lineNumber) {
   }
 }
 
+void RingGenerator::setSingleIterationTest(uint8_t lineNumber) {
+  if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
+    return;
+  }
+  lineStates_[lineNumber].isTestRing = true;
+}
+
+bool RingGenerator::isTestRing(uint8_t lineNumber) const {
+  if (lineNumber >= cfg::mcp::SHK_LINE_COUNT) {
+    return false;
+  }
+  return lineStates_[lineNumber].isTestRing;
+}
+
 void RingGenerator::stopRinging() {
   // Stop all ringing lines
   for (uint8_t lineNumber = 0; lineNumber < cfg::mcp::SHK_LINE_COUNT; lineNumber++) {
@@ -59,6 +74,7 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
 
   auto& lineState = lineStates_[lineNumber];
   if (lineState.state == model::RingState::RingIdle) {
+    lineState.isTestRing = false;
     return;
   }
 
@@ -73,6 +89,7 @@ void RingGenerator::stopRingingLine(uint8_t lineNumber) {
   mcpDriver_.digitalWriteMCP(mcpAddr, rmPin, LOW);
 
   lineState.state = model::RingState::RingIdle;
+  lineState.isTestRing = false;
 
   if (settings_.debugRGLevel >= 1) {
     Serial.println("RingGenerator: Stopped ringing for line " + String(lineNumber));
@@ -131,12 +148,12 @@ void RingGenerator::update() {
 
           lineState.currentIteration++;
           
-          if (lineState.currentIteration >= settings_.ringIterations) {
+          if (lineState.currentIteration >= lineState.maxIterations) {
             // All iterations complete, stop ringing this line
             stopRingingLine(lineNumber);
             if (settings_.debugRGLevel >= 2) {
-              Serial.println("RingGenerator: Line " + String(lineNumber) + 
-                           " completed all " + String(settings_.ringIterations) + " ring iterations");
+              Serial.println("RingGenerator: Line " + String(lineNumber) +
+                           " completed all " + String(lineState.maxIterations) + " ring iterations");
             }
           } else {
             // Move to pause state
