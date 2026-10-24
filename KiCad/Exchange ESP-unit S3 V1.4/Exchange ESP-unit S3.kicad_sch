@@ -24120,10 +24120,9 @@
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "53113961-d8e6-4eda-9d72-ba0cb7488335")
 		(property "Reference" "U4"
-			(at 69.4533 115.57 0)
+			(at 52.07 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -24132,7 +24131,7 @@
 			)
 		)
 		(property "Value" "MCP23017"
-			(at 69.4533 118.11 0)
+			(at 62.23 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28736,10 +28735,9 @@
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "9dd91d85-666d-4dcf-b5eb-3d824fff9511")
 		(property "Reference" "U3"
-			(at 232.9881 109.22 0)
+			(at 214.63 113.03 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -28748,7 +28746,7 @@
 			)
 		)
 		(property "Value" "MCP23017"
-			(at 232.9881 111.76 0)
+			(at 224.79 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
