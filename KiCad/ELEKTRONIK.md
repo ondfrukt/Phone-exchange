@@ -1,15 +1,16 @@
 # ELEKTRONIK – dokumentation av kretskorten
 
-Underlag för framtida Claude-sessioner. **Källa: enbart `KiCad/`** (schemana, plus `.kicad_pro`/`.kicad_pcb` för några kortfakta). Firmware, `README.md` och `docs/` har inte använts.
+Underlag för framtida Claude-sessioner. **Källor:** `KiCad/` (schemana, plus `.kicad_pro`/`.kicad_pcb` för några kortfakta) för koppling, och databladen i `docs/datasheets/` för komponentbeteende (se avsnitt 14 för vilka). Firmware, `README.md` och `docs/` i övrigt har inte använts för faktapåståenden, med ett undantag: avsnitt 4.4 och 12 punkt 3 nämner hur firmware konfigurerar MCP-avbrotten, tydligt märkt.
 
-**Vid konflikt mellan detta dokument och schemat gäller schemat.** Se avsnitt 13 för hur man slår upp fakta direkt ur schemat.
+**Vid konflikt mellan detta dokument och schemat gäller schemat för koppling; databladet gäller för komponentbeteende.** Se avsnitt 13 för hur man slår upp fakta direkt ur schemat.
 
 Konventioner i dokumentet:
 
 - Referensbeteckningar, pinnar och nätnamn är exakt som i schemat (`U5.X15`, `/DAC1`). `ref.pinne` är en komponents pinne enligt nätlistan; pinnummer anges där de behövs.
 - Nätnamn med `/` framför är lokala nätetiketter i schemat. `{slash}` i SLIC-unit-nätnamn är KiCads kodning av `/` (nätet `/Ain_0{slash}4` heter `Ain_0/4` i schemat).
-- Det som inte går att belägga ur `KiCad/` står som **"Okänt – fråga Jonas"**.
-- "Härlett" = slutsats dragen ur kopplingen (eller ur MCP23017-standarden), inte något som står i schemat.
+- Det som inte går att belägga ur `KiCad/` eller databladen står som **"Okänt – fråga Jonas"**.
+- "Härlett" = slutsats dragen ur kopplingen, inte något som står i schemat eller i ett datablad.
+- **"Enligt datablad:"** = faktum från ett datablad i `docs/datasheets/`, med filnamn och **PDF-sida** (sidan i PDF-läsaren; för alla datablad utom MT8870D är den lika med sidtrycket – MT8870D trycker "4-12" ff. på PDF-sida 2 ff.). Bara det som står efter "Enligt datablad:" kommer från databladet; resten är schemafakta.
 - Pinntyper (in/ut) kommer från symbolernas pinntyp i schemat.
 
 ---
@@ -46,7 +47,7 @@ Arbetsfilerna (inte backup-zip:arna) har använts och antas vara aktuella (Jonas
 | U5 | MT8816AF1 | 16×8 analog kopplingsmatris |
 | U6, U7, U8 | AD9833-module ×3 | Tongeneratorer (SPI), utgång `/DAC1`, `/DAC2`, `/DAC3` |
 | U9 | MT8870DSR1 | DTMF-mottagare |
-| Y1 | Crystal, värde "3.579546 Hz" | Kristall för U9 OSC1/OSC2 (värdet är sannolikt skrivfel, se avsnitt 12) |
+| Y1 | Crystal, värde "3.579546 Hz" | Kristall för U9 OSC1/OSC2. Värdesträngen är ett skrivfel; rätt värde är 3,579545 MHz (avsnitt 8 och 12) |
 | U10 | PCM5102APW | I2S-DAC (ljud ut) |
 | U11 | TMUX4051 | 8:1 analog multiplexer för DTMF-lyssning |
 | D1 BLUE, D2 RED, D3 YELLOW | LED 0805 | Se avsnitt 11 |
@@ -182,13 +183,18 @@ Arbetsfilerna (inte backup-zip:arna) har använts och antas vara aktuella (Jonas
 
 SCK (pin 12), FMT (16), DEMP (10), FLT (11) ligger på GND; XSMT (17) på `+3V3`. Ingen MCLK från ESP.
 
+Enligt datablad: `PCM5101APWR.PDF` är databladet för hela familjen PCM5100A/PCM5101A/PCM5102A (s. 1–2, tabell 1 på s. 2: skillnaden är bara dynamikområde/SNR/THD), så det gäller U10 (PCM5102APW). Stiftkopplingen ovan är den databladet föreskriver: pinnummer enligt tabell 2 (s. 3); SCK på GND väljer internt PLL-läge, där PCM5102A skapar sin systemklocka ur BCK (s. 12 och typkretsen figur 41, s. 27); FMT låg = I2S, FLT låg = normal filterlatens, DEMP låg = de-emphasis av, XSMT hög = ej muteat (tabell 2, s. 3; XSMT-timing s. 22). XSMT permanent på `+3V3` betyder att DAC:en aldrig mutas via den pinnen. Logiknivåer: ingångarna är 3,3 V-kompatibla (VIH min 0,7·DVDD, s. 4), alltså direkt OK från ESP32 på 3,3 V.
+
 ### 4.4 Avbrottsnät (ESP-unit V1.4 och SLIC-unit V1.3)
 
 - **MCP-kretsarnas INTA och INTB är sammankopplade till ett nät per krets** (båda pinnarna på samma nät):
   - U3 INTA (pin 20) + INTB (pin 19) → `/MCP_MAIN_INT_PIN` → U2.IO18 (pin 11); R21 (10K) mot `+3V3`.
   - U4 INTA + INTB → `/MCP_MT8816_INT_PIN` → U2.IO17 (pin 10); inget motstånd.
   - SLIC-unit U1 INTA (pin 20) + INTB (pin 19) → `/MCP_SLIC_INT_1/2` → JP17 / JP18 (avsnitt 10).
-- **Observation (nivå):** U3 och U4 matas med `+5V` men deras avbrottsnät går direkt till 3,3 V-ESP:ns IO17/IO18 utan nivåväxlare. Inte nödvändigtvis fel (beror på MCP:ns utgångskonfiguration, som inte syns i schemat).
+- **Observation (nivå):** U3 och U4 matas med `+5V` men deras avbrottsnät går direkt till 3,3 V-ESP:ns IO17/IO18 utan nivåväxlare. Om detta är ett problem beror på MCP:ns utgångskonfiguration, som inte syns i schemat; bedömning nedan och i avsnitt 12 punkt 3.
+- **Enligt datablad (`MCP23017.pdf`):** INTA/INTB kan konfigureras som aktiv-hög, aktiv-låg eller öppen drain (tabell 1-1, s. 4; IOCON-bitarna ODR/INTPOL, s. 17–18). **Efter strömpåslag (IOCON = 0x00) är INT en push-pull-utgång, aktiv låg**, dvs. den driver `VDD` (här 5 V) som vilonivå (VOH min VDD−0,7 V vid 3 mA, s. 28). Med `IOCON.MIRROR = 0` är INTA och INTB oberoende utgångar (s. 17–18); att koppla ihop dem (som här) är bara tillåtet om båda alltid har samma nivå, dvs. `MIRROR = 1` (utgångarna OR:as internt, avsnitt 1.7.1.1) **eller** `ODR = 1` (öppen drain – då kan inget driva mot varandra). Annars kan en push-pull-utgång som är hög och en som är låg stå mot varandra. Det gäller U3, U4 och SLIC-unit U1.
+- **Enligt firmware (inte schema/datablad, kan ändras):** `src/drivers/MCPDriver.cpp` skriver `IOCON = 0x44` (MIRROR=1, ODR=1, aktiv låg, öppen drain) för U3 (MAIN) och SLIC-korten, och `0x4A` för U4 (MT8816): MIRROR=1, INTPOL=1 (aktiv hög), **ODR=0 = push-pull**. Konsekvens, härlett ur databladet ovan: U3:s avbrottsnät är öppen drain mot R21 → `+3V3`, så högnivån är 3,3 V (säkert för IO18). U4 är push-pull aktiv hög och driver 5 V på IO17 när ett avbrott är aktivt – men U4:s alla använda pinnar är utgångar och databladet säger att utgångspinnar inte kan ge avbrott (avsnitt 1.7.4); firmware aktiverar heller inga avbrott på U4 (`GPINTEN` sätts bara för MAIN och SLIC). U4:s INT ligger alltså i vila på låg nivå. Mellan strömpåslag och att firmware skrivit IOCON är dock både U3 och U4 push-pull aktiv låg, dvs. 5 V kan ligga på IO18/IO17 en kort stund vid uppstart.
+- **Gräns på ESP32-sidan, enligt datablad (`ESP32-S3-WROOM-1.PDF`):** VIH max = VDD+0,3 V (tabell 10, s. 14), dvs. 3,6 V vid 3,3 V matning; modulens datablad anger ingen egen absolut-maxgräns för IO-pinnar (tabell 8, s. 14, gäller bara matningen: max 3,6 V). 5 V på en IO-pinne ligger alltså utanför det databladet tillåter.
 - **SLIC-avbrott, väg in till ESP:** J4 pin 7 = `/MCP_SLIC_INT_1`, J4 pin 5 = `/MCP_SLIC_INT_2` → nivåväxlare → `/MCP_SLIC_INT_1_3V` → U2.IO11 (pin 19), `/MCP_SLIC_INT_2_3V` → U2.IO14 (pin 22).
 - **De sex oannoterade delarna (2 st `Q?`, 4 st `R?`) är verkliga komponenter** (Jonas bekräftat: ännu utan löpnummer). I nätlistan slås alla `Q?` ihop till en komponent och alla `R?` till en. Därför har de skiljts åt genom att läsa symbolerna i `.kicad_sch` (en tillfällig omnumrerad kopia exporterades; originalet är orört). Resultat, med symbolernas positioner i `Exchange ESP-unit S3.kicad_sch` (mm):
 
@@ -214,7 +220,9 @@ SCK (pin 12), FMT (16), DEMP (10), FLT (11) ligger på GND; XSMT (17) på `+3V3`
 
 ## 5. MCP23017-tabeller
 
-I2C-adress härleds ur MCP23017-standarden 0x20 + (A2·4 + A1·2 + A0) – **härledd, inte verifierad mot något annat än A0–A2-kopplingen**. Pinne → pinnummer (samma på alla tre kretsar): GPA0–7 = 21–28, GPB0–7 = 1–8; A0/A1/A2 = pin 15/16/17; ~RESET = pin 18; INTB = 19, INTA = 20.
+**Enligt datablad (`MCP23017.pdf`):** 7-bitars I2C-adress = `0100 A2 A1 A0`, dvs. 0x20 + (A2·4 + A1·2 + A0) (avsnitt 1.4, figur 1-2, s. 8). Adresspinnarna och ~RESET ska vara externt biaserade (tabell 1-1, s. 4) – uppfyllt här genom pull-ups/GND-koppling. Pinnummer (PDIP/SOIC/SSOP-kolumnen, tabell 1-1, s. 4; samma på alla tre kretsar): GPB0–7 = 1–8, SCL = 12, SDA = 13, A0/A1/A2 = 15/16/17, ~RESET = 18, INTB = 19, INTA = 20, GPA0–7 = 21–28 – allt stämmer med schemat. Adresserna nedan är alltså härledda ur kopplingen av A0–A2 enligt den formeln; att de är de som faktiskt svarar på bussen är inte kontrollerat (kräver hårdvarutest).
+
+Avbrottsutgångarnas natur (push-pull/öppen drain, hopkoppling av INTA/INTB): se avsnitt 4.4.
 
 ### 5.1 ESP-unit U3 (MAIN)
 
@@ -266,7 +274,7 @@ Avbrott: INTA+INTB → `/MCP_MT8816_INT_PIN` → U2.IO17.
 ### 5.3 SLIC-unit U1
 
 - A2/A1/A0 hålls höga av R2/R3/R4 (10k mot `+5V`) och dras låga av stängda JP19/JP20/JP21 (se avsnitt 10). Standardläge (alla jumprar öppna) ⇒ härledd adress **0x27**. ~RESET via R1 (10k) mot `+5V`.
-- Alla 16 pinnar används. Ut/in enligt KS0835F-symbolens pinntyper (SHK = utgång på KS0835F ⇒ ingång på MCP; RM, FR, ~PD = ingångar på KS0835F ⇒ utgångar på MCP).
+- Alla 16 pinnar används. Ut/in enligt KS0835F-symbolens pinntyper (SHK = utgång på KS0835F ⇒ ingång på MCP; RM, FR, ~PD = ingångar på KS0835F ⇒ utgångar på MCP). **Enligt datablad (`KS0835F.pdf`, pinntabell s. 6) stämmer riktningarna:** F/R, RM och PD är ingångar på SLIC:en, SHK är dess utgång (hög = telefonen är avlyft). SHK ska avstuderas (debounce) 10 ms i styrprocessorn (s. 8). PD: låg nivå stänger av DC/DC-omvandlaren och databladet säger "DO NOT put logic (H) on this pin" (s. 6) – därför ligger dioderna D22–D25 (K mot MCP) i serie med ~PD: MCP-utgång låg drar ~PD låg via dioden, MCP-utgång hög spärras av dioden och ~PD blir flytande i stället för att drivas hög (typkretsen s. 7 har samma 1N4148/BAS16-diod). Att ~PD då är aktivt (ej avstängd) när det flyter är härlett ur typkretsen, inte uttryckt i texten.
 
 | Pinne | Nät (lokal linje) | KS0835F-pinne | Riktning (MCP) |
 |-------|-------------------|---------------|-----------------|
@@ -322,28 +330,36 @@ Detalj `Aout_n` → X/TMUX-S/J4: `Aout_0` X0 (31) / S0 (13) / J4.20; `Aout_1` X1
 
 **Styrpinnar (alla insignaler på U5, från U4 – avsnitt 5.2):** RESET (42) ← U4.GPA0, DATA (36) ← GPA1, STROBE (14) ← GPA2, CS (34) ← GPA3, AX0 (44) ← GPB0, AX1 (18) ← GPB1, AX2 (19) ← GPB2, AX3 (43) ← GPB3, AY0 (20) ← GPB4, AY1 (21) ← GPB5, AY2 (40) ← GPB6. **Matning:** VDD (38) = `+5V`; VSS (12) och VEE (16) = GND. N.C.-pinnar (1, 11, 22, 23, 33, 41) oanslutna.
 
+**Enligt datablad (`MT8816AF1.pdf`, TQFP-44-kolumnen i pinntabellen s. 3–4 och pinfiguren s. 2):** alla pinnummer ovan stämmer (X0–X5 = 31–26, X6–X11 = 4–9, X12/X13 = 25/24, X14/X15 = 2/3, Y0–Y7 = 32/35/37/39/17/15/13/10, AX0–AX3 = 44/18/19/43, AY0–AY2 = 20/21/40, RESET 42, DATA 36, STROBE 14, CS 34, VDD 38, VSS 12, VEE 16, N.C. 1/11/22/23/33/41). Matrisen är 16 rader (X) × 8 kolumner (Y) (s. 5), så "X = Aout/DAC, Y = Ain" i tabellerna ovan är en korrekt läsning av chippets uppbyggnad. Skrivning (s. 5): ställ in adress (AX/AY) och DATA, sätt CS hög, pulsa STROBE hög→låg; DATA 1 = sluten, 0 = öppen; DATA måste vara stabil på STROBE:s fallande flank; RESET hög öppnar alla kontakter oberoende av CS och måste vara låg vid skrivning. Alla styrsignaler är aktivt höga. Matning: VDD 4,5–13,2 V (s. 7) – 5 V är inom området. VSS är digital jordreferens och VEE den negativa analoga matningen: **analogsignaler ska ligga mellan VEE och VDD** (s. 5 och 7; absolut max VDD+0,3 V). Här är VEE = VSS = GND, dvs. analogt område 0–5 V; se avsnitt 12 punkt 11. Digitala ingångsnivåer (VIL/VIH, s. 7): har inte bedömts – tabellen är otydlig och styrsignalerna kommer från MCP23017 på 5 V, inte direkt från ESP32.
+
 ---
 
 ## 7. Toner och ljud-in (ESP-unit V1.4)
 
-- **AD9833 ×3** (U6, U7, U8; moduler med pinnarna 1 VCC, 2 DGND, 3 SDATA, 4 SCLK, 5 FSYNC, 6 AGND, 7 OUT): VCC = `+3V3`, DGND/AGND = GND, SPI-nät enligt avsnitt 4.2. Utgångar: U6.OUT → `/DAC1` → U5.X15; U7.OUT → `/DAC2` → U5.X14; U8.OUT → `/DAC3` → U5.X13. Chip select: U6 `/CS1`, U7 `/CS2`, U8 `/CS3`.
-- **PCM5102APW** (U10): I2S enligt 4.3. `OUTL` (pin 6) → `/D_OUTL` → U5.X12, C23 (2,2 nF → GND) och J2 pin 1. `OUTR` (pin 7) → `/D_OUTR` → C24 (2,2 nF → GND) och J2 pin 2. Stödkomponenter: C21 (CAPP–CAPM), C22 (VNEG–CPGND), C25 + C26 på LDOO (pin 18). Observation om CPGND i avsnitt 12.
+- **AD9833 ×3** (U6, U7, U8; moduler med pinnarna 1 VCC, 2 DGND, 3 SDATA, 4 SCLK, 5 FSYNC, 6 AGND, 7 OUT): VCC = `+3V3`, DGND/AGND = GND, SPI-nät enligt avsnitt 4.2. **Enligt datablad (`AD9833SRMZ-EP-RL7.PDF`) – gäller chippet, inte modulens kortlayout:** AD9833 är ett 10-poligt MSOP-chip med pinnarna 1 COMP, 2 VDD, 3 CAP/2.5V, 4 DGND, 5 MCLK, 6 SDATA, 7 SCLK, 8 FSYNC, 9 AGND, 10 VOUT (s. 6). Modulens 7-poliga pinordning (1–7 ovan) går därför **inte** att belägga ur databladet – den följer inte chippets pinnummer; MCLK-källan (klockkrets på modulen) och COMP/CAP-kondensatorerna ligger på modulen. **Modulens pinordning och klocka: Okänt – fråga Jonas.** Det databladet kan bekräfta: signalnamnen och deras funktion (SDATA = seriell data, SCLK = klockan, data klockas in på fallande SCLK-flank, FSYNC aktivt låg = ny 16-bitars ord; s. 6), matning 2,3–5,5 V (s. 3, alltså `+3V3` OK), logikingångar VIH min 2,0 V vid 2,7–3,6 V matning (s. 3, alltså direkt OK från ESP32 på 3,3 V), och att FSYNC är aktivt låg stämmer med pull-ups R41–R43 mot `+3V3` (inaktiv i vila). VOUT har max 0,65 V och min 38 mV (s. 3); härlett: utsignalen ligger då över 0 V och passar MT8816:s analoga område (avsnitt 6). Utgångar: U6.OUT → `/DAC1` → U5.X15; U7.OUT → `/DAC2` → U5.X14; U8.OUT → `/DAC3` → U5.X13. Chip select: U6 `/CS1`, U7 `/CS2`, U8 `/CS3`.
+- **PCM5102APW** (U10): I2S enligt 4.3. `OUTL` (pin 6) → `/D_OUTL` → U5.X12, C23 (2,2 nF → GND) och J2 pin 1. `OUTR` (pin 7) → `/D_OUTR` → C24 (2,2 nF → GND) och J2 pin 2. Stödkomponenter: C21 (CAPP–CAPM), C22 (VNEG–CPGND), C25 + C26 på LDOO (pin 18). **Enligt datablad (`PCM5101APWR.PDF`, typkrets figur 41, s. 27):** flygkondensatorn (2,2 µF mellan CAPP–CAPM) och VNEG-kondensatorn (2,2 µF mellan VNEG och **GND** via CPGND) stämmer med schemats C21/C22 till värde och plats. Figur 41 visar dessutom 0,1 µF på CPVDD, DVDD och LDOO samt 10 µF + 0,1 µF på AVDD; någon jämförelse av dessa avkopplingar mot schemat (C25/C26 på LDOO m.fl.) är inte gjord. **CPGND (pin 3, "Charge pump ground", tabell 2 s. 3) ska ligga på GND** – i schemat gör den inte det, se avsnitt 12 punkt 5. Utgången är ground-centrerad (±, 2,1 Vrms, s. 1–2), dvs. har en negativ halva – se avsnitt 12 punkt 11. Databladets rekommenderade utgångsfilter (figur 43, s. 28) är 470 Ω i serie + 2,2 nF mot GND per kanal; schemat har 2,2 nF (C23/C24) men **ingen serieresistor** på `/D_OUTL`/`/D_OUTR` enligt nätlistan (inga andra komponenter än C23, J2, U5.X12 på `/D_OUTL`). Det är en avvikelse från rekommendationen, inte nödvändigtvis ett fel.
 
 ---
 
 ## 8. DTMF-mottagning (ESP-unit V1.4)
 
 - **TMUX4051 (U11):** S0–S7 = `/Aout_0..7` (pin 13, 14, 15, 12, 1, 5, 2, 4); adress A0/A1/A2 (pin 11/10/9) ← U3 GPA0/GPA1/GPA2 (`/TM_A0..2`); D (pin 3) → `/DTMF`; EN (pin 6), VSS (7), GND (8) = GND; VDD (16) = `+5V`. TMUX är alltså en "lyssna på linje n"-väljare som ligger parallellt med X0–X7 på matrisen.
+  - **Enligt datablad (`TMUX4051.pdf`):** alla pinnummer ovan stämmer (S0 13, S1 14, S2 15, S3 12, S4 1, S5 5, S6 2, S7 4, D 3, EN 6, VSS 7, GND 8, A2/A1/A0 = 9/10/11, VDD 16; tabell 5-1, s. 4). **EN är aktivt låg** ("När EN är hög är alla switchar av", s. 4) – EN på GND betyder alltså att multiplexern alltid är på. Adressering (tabell 8-1, s. 23): A2A1A0 = 000 → S0, 001 → S1, … 111 → S7, så `/TM_A0..2` = linjenumret 0–7 direkt. Matning: VDD−VSS ska vara 5–24 V (s. 8), alltså är 5 V (VSS = GND) precis lägsta tillåtna spänning; VSS är signalgolvet. Signalen på S/D ska ligga mellan VSS och VDD (s. 8); här är VSS = GND (0–5 V), se avsnitt 12 punkt 11. Adress-/EN-ingångar: VIH min 1,35 V, VIL max 0,8 V (s. 10) – MCP23017 på 5 V klarar det.
 - **MT8870 (U9)** ingångskrets: `/DTMF` → C14 (0,1 µF) → `Net-(C14-Pad1)` → R30 (100K) → `Net-(U9-IN-)` (IN−, pin 2); R32 (100K) mellan IN− och GS (pin 3); IN+ (pin 1) kopplad till VREF (pin 4) via `Net-(U9-IN+)`.
 - **Övrigt U9:** EST (16) ← R31 (390K) → ST/GT (17) ← C15 (0,1 µF) mot `+5V`; OSC1 (7) / OSC2 (8) ← Y1; TOE (10) = `+5V`; INH (5) = GND; VDD (18) = `+5V`; VSS (9) = GND; PWDN (6) ← U3.GPB2.
 - **Utgångar:** Q1 (11) → U3.GPB7, Q2 (12) → GPB6, Q3 (13) → GPB5, Q4 (14) → GPB4, STD (15) → U3.GPB3.
-- **Y1:** värde "3.579546 Hz" (se avsnitt 12), pin 1 → OSC1, pin 2 → OSC2.
+- **Y1:** värde i schemat "3.579546 Hz" (skrivfel, se avsnitt 12), pin 1 → OSC1, pin 2 → OSC2.
+- **Enligt datablad (`MT8870D.pdf`, 18-poligt SOIC = MT8870DS):** pinnummer stämmer med schemat (IN+ 1, IN− 2, GS 3, VRef 4, INH 5, PWDN 6, OSC1 7, OSC2 8, VSS 9, TOE 10, Q1–Q4 11–14, StD 15, ESt 16, St/GT 17, VDD 18; pinfigur och pinntabell s. 2). Kristall: **3,579545 MHz** (s. 2 och 5; typkrets figur 10, s. 10: "X-tal = 3.579545 MHz ±0,1 %"; tillåten klockfrekvens 3,5759–3,5831 MHz, s. 10) – schemats symbolvärde "3.579546 Hz" ska alltså läsas som 3,579545 MHz (komponentens egen artikelnummerlänk i schemat, Raltron AS-3.579545-18, pekar på samma värde). Singel-ändad ingång (figur 10, s. 10): signal → C1 (100 nF) → R1 (100 k) → IN−, R2 (100 k) mellan IN− och GS (förstärkning 1), IN+ till VRef – samma som schemats C14, R30, R32 och IN+–VRef. Steering (figur 10): R3 mellan ESt och St/GT, C2 (100 nF) från St/GT till VDD – samma uppbyggnad som R31/C15, men **R31 är 390 k, typkretsen har 300 k** (±1 %); ett större R ger längre skyddstid (tGTP/tGTA = R·C-baserad, s. 3–4), så detta är en avvikelse i värde, inte i koppling. Funktion: PWDN hög = avstängd (intern pull-down), INH hög blockerar A–D (intern pull-down; INH på GND = A–D tillåtna), TOE hög = utgångarna Q1–Q4 aktiva (intern pull-up; TOE på `+5V` är alltså alltid aktiv) (s. 2, tabell 1 s. 4). StD går hög när en ton registrerats; Q1–Q4 är giltiga då.
 
 ---
 
 ## 9. SLIC-unit per linje (V1.3)
 
 **KS0835F-pinnar** (U2–U5): 1 RING, 2 TIP, 3 F/R (in), 4 RM (in), 5 SHK (ut), 6 Audio_in (in), 7 Audio_out (ut), 8 N.C. (oansluten), 9 GND, 10 +VDC (`+5V`), 11 ~PD (in).
+
+**Enligt datablad (`KS0835F.pdf`):** pinfunktion och riktning enligt pinntabellen (s. 6) – 1 RING, 2 TIP, 3 F/R (in), 4 RM (in), 5 SHK (ut), 6 VR (= schemats Audio_in, "Audio In Negative": analog insignal från codec som kommer ut på Tip/Ring), 7 VX (= Audio_out, analog signal från Tip/Ring till codec), 8 NC ("Do not connect"), 9 GND, 10 +VDC (3,3–5 V; matning 3,2–5,5 V, s. 2 och 4), 11 PD (låg = avstängd) – **stämmer helt med schemat**. Databladet kallar pin 11 "PD" (aktivt låg avstängning), schemat ~PD. Ringning (s. 7): sätt RM hög, växla F/R med önskad frekvens och kadens; databladet anger 20–25 Hz och en 75 V-batterinivå under ringning, ringsignalen är 130 Vp-p; exempelkadensen i figuren är 1 s ring / 4 s paus. F/R-polaritet: pinntabellen (s. 6) säger att hög F/R *vänder* polariteten, avsnittet "Polarity Reversal" (s. 8) säger tvärtom ("F/R hög = Forward") – **databladet är internt motsägande**, så logiknivåns betydelse för enbart polaritet är oviss; för ringning spelar det ingen roll eftersom pinnen växlas. SHK-signalen ska debounce:as 10 ms (s. 8). Under ringning känner SLIC:en av slingströmmen (ring-trip) och visar avlyft på SHK (s. 8).
+
+**Typkretsen (s. 7) jämfört med schemat:** typkretsen har en TVS (P6KE82/P6KE75, D1), en diodbrygga eller 1N4004-dioder (D2), PTC-säkringar i serie på båda ledarna (JK250-120U, valfria), 1 MΩ "extern DC-biasresistor" (R1) tvärs över linjen, tyristorskydd P3100SC (D6–D8, valfria) och ett 1N4148/BAS16 på PD, 0,1 µF på Audio_in/Audio_out, samt 0,1 µF + 1000 µF/10 V på matningen. Schemat har **samma byggstenar** (polyfuse F, 1 MΩ R6–R9, tyristorer RV, 0,1 µF C3–C10, diod i PD) men: (a) dioderna D2–D17 (M4) är kopplade på ett eget sätt på RING-noden (två mot GND, två mot en TVS) i stället för en brygga över både TIP och RING; (b) TVS:en är **P6KE51A** i stället för databladets P6KE82/P6KE75 – 51 V är lägre än batterinivån 75 V under ringning (databladet s. 3, 7), men eftersom TVS:en ligger bakom dioderna är det inte klart om detta ger problem – **kan ej avgöras utan TVS-datablad (inte i `docs/datasheets/`) och mätning, Okänt – fråga Jonas**; (c) de polariserade kondensatorerna på `+5V` är 10 µF (C15–C18, avsnitt 2.2), inte databladets 1000 µF/10 V per SLIC – databladets typkrets visar 1000 µF/10 V, och matningsströmmen per linje är hög: typiskt 40 mA (5 V, på-lur), **270 mA (5 V, avlyft)** och 180 mA under ringning, vid 3,3 V 50/320/220 mA (s. 4) – fyra linjer avlyfta ger alltså ca 1 A från `+5V` via J2 pin 9/10. Om 10 µF räcker som lokal buffert är inte bedömt; flaggas som observation i avsnitt 12 punkt 12.
 
 | Lokal linje | 0 (ESP-linje 0 eller 4) | 1 (1 / 5) | 2 (2 / 6) | 3 (3 / 7) |
 |-------------|-------------------------|-----------|-----------|-----------|
@@ -437,15 +453,26 @@ Alla 21 jumprar är `SolderJumper_2_Open` (öppna som standard enligt symbolen).
 Rättas inte här, bara flaggas.
 
 1. **Annotationsvarning:** `kicad-cli` ger "schematic has annotation errors". Orsak: ESP-unit har 2 symboler `Q?` (BSS138) och 4 symboler `R?` (10K) utan löpnummer. De är verkliga delar i SLIC-avbrottens nivåväxling (avsnitt 4.4), ej ritfel. Nätlistan slår ihop dem; läs symbolerna ur `.kicad_sch` för att skilja dem åt.
-2. **Y1 värde "3.579546 Hz"** – sannolikt skrivfel för MHz (en MT8870-kristall är normalt 3,579545 MHz; databladsuppgift utanför `KiCad/`).
-3. **MCP-avbrott 5 V → 3,3 V:** U3/U4 (matade från `+5V`) går direkt till U2.IO18 / IO17 utan nivåväxlare (avsnitt 4.4). Observation.
-4. **R19/R20** går från `+3V3` till 5 V-sidan av SLIC-avbrotten (inte till `..._3V`-näten), parallellt med pull-ups mot `+5V` (avsnitt 4.4). Avsikt: Okänt – fråga Jonas.
-5. **PCM5102 CPGND (U10 pin 3):** nätet `Net-(U10-CPGND)` har bara C22 och U10.3 – pinnen är inte ansluten till GND i schemat. Kan vara ett fel eller avsiktligt; verifiera mot PCM5102A-databladet (utanför `KiCad/`).
+2. **Y1 värde "3.579546 Hz"** – **utfall: skrivfel, bekräftat mot datablad.** Rätt värde är 3,579545 MHz: MT8870D-databladet anger 3,579545 MHz ±0,1 % (`MT8870D.pdf` s. 2, 5 och figur 10 s. 10), och komponentens egen artikelnummerlänk i schemat (Raltron AS-3.579545-18) har samma värde. Förslag (görs inte här): rätta symbolvärdet i schemat.
+3. **MCP-avbrott 5 V → 3,3 V:** U3/U4 (matade från `+5V`) går direkt till U2.IO18 / IO17 utan nivåväxlare (avsnitt 4.4). **Utfall: ofarligt i nuvarande firmware under drift, men beror på programvara och har ett uppstartsfönster.**
+   - Enligt datablad är INT efter strömpåslag push-pull aktiv låg och driver då ~5 V (`MCP23017.pdf` s. 4, 17–18, 28), vilket överskrider ESP32:s VIH max VDD+0,3 V = 3,6 V (`ESP32-S3-WROOM-1.PDF` tabell 10, s. 14).
+   - Firmware (`src/drivers/MCPDriver.cpp`) sätter U3 till öppen drain mot R21 → `+3V3` (högnivå 3,3 V, säkert), och U4 till push-pull aktiv hög utan att några avbrott är aktiverade (vila = låg, 0 V). Under drift kommer alltså aldrig 5 V till IO17/IO18.
+   - **Kvarvarande risk:** (a) mellan strömpåslag och att firmware skrivit IOCON ligger U3/U4:s INT push-pull aktiv låg = ~5 V på IO18/IO17; (b) om någon ändrar firmware så att U4:s avbrott aktiveras får IO17 5 V när det är aktivt; (c) en MCP som tappar sin konfiguration (t.ex. brownout/reset på bara MCP) faller tillbaka till push-pull. Hur länge/ofta (a) inträffar och om ESP32-pinnen tål det: kan ej avgöras ur databladen (ingen absolut-maxgräns för IO-pinnar i modulens datablad). Tillräckligt för en egen issue om Jonas vill ha det robust (nivåväxlare eller serieresistor).
+   - **Hopkoppling av INTA/INTB:** tillåten endast om `MIRROR=1` eller `ODR=1` (avsnitt 4.4); firmware sätter båda för U3/SLIC och `MIRROR=1` för U4. Utan det skulle utgångarna kunna stå mot varandra.
+4. **R19/R20** går från `+3V3` till 5 V-sidan av SLIC-avbrotten (inte till `..._3V`-näten), parallellt med pull-ups mot `+5V` (avsnitt 4.4). **Utfall: kan ej avgöras (avsikt okänd), men ofarligt som kopplat.** Vilonivån på 5 V-sidan blir en spänningsdelning mellan två 10 k-pull-ups, ca 4,15 V (härlett). SLIC-kortets INT-utgång är enligt firmware öppen drain, så den drar bara ner nätet, och 4,15 V ligger under MCP23017:s 5 V-matning (absolut max VDD+0,6 V, `MCP23017.pdf` s. 27). Nätet går bara till BSS138-nivåväxlarens drain (källan ligger på 3,3 V-sidan med egen pull-up, gate = `+3V3`, så transistorn är avstängd i vila – härlett ur kopplingen, BSS138-datablad finns inte i `docs/datasheets/`). Effekten av R19/R20 är alltså bara en något lägre vilonivå och lite extra ström när MCP drar ner nätet. Avsikten med att pull-upen går till `+3V3` på 5 V-sidan förblir **Okänt – fråga Jonas**.
+5. **PCM5102 CPGND (U10 pin 3):** nätet `Net-(U10-CPGND)` har bara C22 och U10.3 – pinnen är inte ansluten till GND i schemat (kontrollerat mot ny nätlista) och inte heller i PCB-filen (pad 3 ligger på nätet `Net-(U10-CPGND)`, alla andra GND-pinnar på `GND`). **Utfall: fel mot datablad.** PCM510xA-databladet beskriver pin 3 som "Charge pump ground" (`PCM5101APWR.PDF` tabell 2, s. 3) och typkretsen (figur 41, s. 27) visar CPGND ihopkopplad med GND, med VNEG-kondensatorn (2,2 µF) mellan VNEG och GND. Med CPGND flytande saknar den inbyggda laddningspumpen sin jordreferens, och den negativa matningen VNEG (ska vara −3,3 V) blir osäker – ljudutgången kan bli förvrängd, tyst eller instabil. (Hur chippet beter sig i detalj är inte beskrivet i databladet; slutsatsen att kopplingen är fel bygger på att databladets typkrets och pinnbeskrivning kräver GND.) Rättning kräver ändring av schema och PCB och ligger utanför den här issuen.
 6. **`GNDPWR`** på SLIC-unit är skilt från `GND` i schemat; D2–D17 (diodskydden) går mot `GND`, tyristorerna mot `GNDPWR` (avsnitt 3.2 och 9). Fysisk koppling: Okänt – fråga Jonas.
-7. **Oanslutna pinnar:** ESP-unit: U2 IO3/6/7/8/15/16/21/38/45/46 + RXD0/TXD0, U3.GPB0, U4.GPA4–7 och GPB7, U5 X8–X11 och N.C., J5 pin 3, J6 pin 9, J7 SBU1/SBU2. SLIC-unit: J3 pin 1, KS0835F pin 8 (N.C.) på U2–U5.
+7. **Oanslutna pinnar:** ESP-unit: U2 IO3/6/7/8/15/16/21/38/45/46 + RXD0/TXD0, U3.GPB0, U4.GPA4–7 och GPB7, U5 X8–X11 och N.C., J5 pin 3, J6 pin 9, J7 SBU1/SBU2. SLIC-unit: J3 pin 1, KS0835F pin 8 (N.C.) på U2–U5. **Utfall för strapping-pinnarna (`ESP32-S3-WROOM-1.PDF` s. 11–13):** modulen har fyra strapping-pinnar: IO0, IO3, IO45 och IO46. Av de oanslutna är IO3, IO45 och IO46 strapping.
+   - **IO0** är ansluten (R7 pull-up + SW2) och därmed definierad: hög = SPI-boot, SW2 nedtryckt = download-läge (tabell 5, s. 12). Inte oansluten.
+   - **IO45** (väljer VDD_SPI-spänning): irrelevant för den här modulen. N16R2 har ESP32-S3R2 som är fabriksinställd till 3,3 V (tabell 6, s. 13) – strapping-värdet används då inte. **Ofarligt.**
+   - **IO46** (boot-läge/ROM-logg): har intern pull-down och får sitta oansluten (s. 11); kombinationen IO46 = 1 och IO0 = 0 är ogiltig (tabell 5 not 1, s. 12) – IO46 flyter låg, så den uppstår inte. **Ofarligt.**
+   - **IO3** (JTAG-källa och ROM-meddelanden på UART0): har **ingen** intern pull – databladet säger att den är flytande som standard och att dess värde "styrs av extern krets som inte får vara högimpedant" (s. 11). Effekten är begränsad: JTAG-källan bestäms bara av IO3 när eFuse `EFUSE_STRAP_JTAG_SEL` är satt (tabell 4–5, s. 12); utan det används USB Serial/JTAG-kontrollern oavsett (J7 på IO19/IO20). **Kan ej avgöras ur databladet** om eFuse-värdet är satt på just den här modulen; flaggas som en lös ände, men sannolikt ofarlig för normal drift. Förslag: om J6 (JTAG på IO39–42) ska användas på det sättet, dra IO3 till en definierad nivå.
+   - IO35–IO37 (I2S) är fria på N16R2: bara moduler med OSPI-PSRAM (R8) använder dem internt (fotnot b, s. 11); N16R2 har quad-PSRAM (R2). **Stämmer.**
 8. **Stale nätklassmönster i `.kicad_pro` (ESP-unit):** mönster som `/MCP1_INT`, `/MCP2_INT`, `/MCP1_INT_3V`, `/MCP2_INT_3V`, `/Test_button`, `/LED_L0..L7`, `/Audio_SLIC` matchar inga nät i dagens schema (äldre namn). `/WiFi_LED` ligger i klassen `Audio` medan `/MQTT_LED` ligger i `Signal`. Nätklasser (ESP-unit): Default, Audio, Power, Signal (spårbredd 0,2 mm; Power 0,5 mm). SLIC-unit har även klassen Tip/Ring (0,3 mm) och Power med 0,4 mm clearance.
 9. **Duplicerade/olika pull-ups:** SDA_3V/SCL_3V har två pull-ups var med olika värden (4,7K ‖ 10K ≈ 3,2 kΩ). Avsikt: Okänt.
 10. **SLIC-unit saknar titelblock** i schemat (ingen revision/datum att läsa ut).
+11. **Analogt signalområde i MT8816 (U5) och TMUX4051 (U11), upptäckt vid databladsgranskningen – utfall: misstänkt problem, kan ej avgöras utan mätning.** Enligt datablad ska analogsignaler ligga mellan VEE och VDD (`MT8816AF1.pdf` s. 5, 7; absolut max VDD+0,3 V) respektive VSS och VDD (`TMUX4051.pdf` s. 8). I schemat är VEE/VSS = GND och VDD = `+5V`, dvs. 0–5 V, och ingen DC-bias syns i nätlistan på `/Aout_n`, `/Ain_n`, `/D_OUTL` eller `/DAC1–3`. Linjeljudet går via 0,1 µF-kondensatorer (SLIC-unit C3–C10, ger AC-koppling utan bias) och PCM5102A ger en ground-centrerad utsignal ±2,1 Vrms, direkt på U5.X12 (`PCM5101APWR.PDF` s. 1–2). En signal som svänger under 0 V går då utanför det databladen anger. Vad KS0835F:s VX-utgång har för DC-nivå, och hur U5:s ingångsskydd reagerar i praktiken, står inte i databladen (**Okänt**). AD9833-utgången (0–0,65 V) är inte ett problem. Mät `Aout_n` och `/D_OUTL` med oscilloskop innan slutsats dras.
+12. **KS0835F-matning och TVS, observationer från databladsjämförelsen** (`KS0835F.pdf` s. 3–4, 7): (a) typkretsen har 1000 µF/10 V på +VDC per SLIC, schemat 10 µF-kondensatorer (C15–C18) – och strömmen är 270 mA/linje avlyft; (b) TVS P6KE51A (D18–D21) mot databladets P6KE82/75 och 75 V batterinivå under ringning – hur dioderna D2–D17 ändrar bilden kan inte avgöras utan TVS-datablad. Dessa är observationer; om de är fel i praktiken avgörs av test (ringning på flera linjer, spänningsfall på `+5V`).
 
 ---
 
@@ -489,3 +516,24 @@ Dokumentet kan ligga efter schemat – **vid konflikt gäller schemat.**
    Exempel: `python -I nl.py ut.net DAC2` ger `/DAC2 :: U5.2(X14) U7.7(OUT)`.
 
 3. För de oannoterade `Q?`/`R?` på ESP-unit: kopiera `.kicad_sch` till en temporär mapp, ge de sex symbolerna unika referenser (t.ex. Q91, Q92, R91–R94, både `(property "Reference" …)` och `(reference …)` under `(instances …)`) och exportera nätlistan från kopian. Originalet ska inte ändras.
+
+---
+
+## 14. Datablad som använts
+
+Alla i `docs/datasheets/`. "Enligt datablad:" i dokumentet syftar på dessa; sidnummer är PDF-sidor (avsnitt "Konventioner" överst). Kontrollen gjordes mot nätlistor exporterade med `kicad-cli` (avsnitt 13) och mot `.kicad_pcb` för CPGND.
+
+| Fil | Komponent i schemat | Täcker rätt variant? | Använd för |
+|-----|---------------------|----------------------|------------|
+| `MCP23017.pdf` | U3, U4 (ESP-unit), U1 (SLIC-unit) | Ja (MCP23017/MCP23S17, DS21952B) | Pinnummer, I2C-adress, INT-utgångar (avsnitt 4.4, 5, 12) |
+| `KS0835F.pdf` | U2–U5 (SLIC-unit) | Ja (KS0835F, V1.3) | Pinfunktion/riktning, typkrets, ringning (avsnitt 5.3, 9, 12) |
+| `PCM5101APWR.PDF` | U10 (PCM5102APW) | Ja – databladet SLAS859A gäller PCM5100A/5101A/5102A | Pinnar, CPGND, typkrets, utgångsfilter (avsnitt 4.3, 7, 12) |
+| `MT8816AF1.pdf` | U5 | Ja (MT8816AF1 = 44-poligt TQFP) | Pinnar, skrivprotokoll, matning/analogt område (avsnitt 6, 12) |
+| `MT8870D.pdf` | U9 | Ja (MT8870D, 18-poligt SOIC) | Pinnar, kristall, typkrets (avsnitt 8, 12) |
+| `TMUX4051.pdf` | U11 | Ja | Pinnar, EN-polaritet, adressering (avsnitt 8) |
+| `AD9833SRMZ-EP-RL7.PDF` | U6–U8 (AD9833-moduler) | **Bara chippet**, inte modulen | Funktion/nivåer; modulens pinordning är **Okänd** (avsnitt 7) |
+| `ESP32-S3-WROOM-1.PDF` | U2 (N16R2) | Ja (N16R2 finns i ordertabellen) | Modulpinnar, strapping, VIH (avsnitt 4.4, 11, 12) |
+
+Inget datablad finns för LM1117, BSS138, PMEG4050EP, TVS-dioderna, P3100SC, MF-R025 och 1N4148WS; fakta om dem är oförändrade (schema eller härlett).
+
+**ESP32-pinnarna i avsnitt 4 och 11** (IO-nummer ↔ modulpinne) kontrollerades mot `ESP32-S3-WROOM-1.PDF` tabell 3 (s. 10–11) och stämmer: IO0 27, IO1 39, IO2 38, IO4 4, IO5 5, IO9 17, IO10 18, IO11 19, IO12 20, IO13 21, IO14 22, IO17 10, IO18 11, IO19 13, IO20 14, IO35 28, IO36 29, IO37 30, IO47 24, IO48 25. (IO39–IO42 = pin 32–35 anges inte i avsnitten ovan.)
