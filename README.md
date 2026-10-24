@@ -2,7 +2,7 @@
 
 ## Thanks to! ##
 
-First of all, I want to thank my partner Amanda, who has beed som patiant whit me - spending countless hours and weekends by my computer while I, for example, trying to figure out a way to capture pulses from rotary phones, or comforting during mental breakdowns when I was sodering without realizing I was using to low temperatur. If you are reading this - which you might not, since you're probebly so tierd of this project - I just want to say that i love you, and do that even more for standing out with me and my stupid phones.
+First of all, I want to thank my partner Amanda, who has been som patiant whit me - spending countless hours and weekends by my computer while I, for example, trying to figure out a way to capture pulses from rotary phones, or comforting during mental breakdowns when I was sodering without realizing I was using to low temperatur. If you are reading this - which you might not, since you're probebly so tierd of this project - I just want to say that i love you, and do that even more for standing out with me and my stupid phones.
 
 I would also like to thank two GitHub members from whom I’ve drawn a lot of inspiration.
 
