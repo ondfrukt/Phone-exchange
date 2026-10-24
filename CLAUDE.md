@@ -30,6 +30,7 @@ Syftet är att Jonas ska kunna se om issue-granskaren är lagom — varken över
 - `main` = stabil, `develop` = integrationsgren. PR:er går feature-gren → `develop` → `main`.
 - Gren för en issue: `issue-<N>-<kort-slug>` från `develop`. PR mot `develop`, skriv `Closes #N` i beskrivningen.
 - Committa/pusha bara när Jonas ber om det.
+- **Avslut av en issue:** när en issue är klar och Jonas ger ok (efter hårdvarutest och färdigrapport) betyder det att du committar, pushar och stänger branchen: skapa PR mot `develop` med `Closes #N` om det saknas, merga den, ta bort feature-grenen (lokalt och på GitHub) och **stäng issuen direkt med `gh issue close N`** med en kommentar som pekar på PR:en. `Closes #N` stänger nämligen bara automatiskt vid merge till standardgrenen `main`, inte vid merge till `develop` — så issuen är klar när den är mergad till `develop`. Ok på själva arbetet räcker alltså — fråga inte om varje delsteg.
 - `gh` (GitHub CLI) används för issues/PR. Repo: `ondfrukt/Phone-exchange`.
 
 ## Bygga och ladda upp
@@ -64,6 +65,8 @@ PlatformIO, Arduino-ramverket, `gnu++17`. `pio` ligger inte i PATH — använd f
 | `KiCad/` | Kretskort (ESP-unit, SLIC-unit) |
 
 Kärnflöde: hårdvaruavbrott från MCP23017 → `InterruptManager` köar → `SHKService`/`ToneReader` tolkar → `LineManager::setStatus()` → callback → `LineAction` styr toner, ring, kopplingsmatris och MQTT.
+
+**Läs [docs/CODEMAP.md](docs/CODEMAP.md) först** för att hitta berörd kod (uppgift → fil/funktion, vem som sätter vilken status, datavägar, fallgropar). Uppdatera kartan när filer/funktioner flyttas eller nya tjänster/endpoints läggs till.
 
 ## Konventioner och fallgropar
 
