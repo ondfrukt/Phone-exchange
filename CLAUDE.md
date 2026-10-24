@@ -71,5 +71,6 @@ Kärnflöde: hårdvaruavbrott från MCP23017 → `InterruptManager` köar → `S
 - Debugloggning styrs per tjänst av `settings.debugXxLevel` (0/1/2). Följ samma mönster; logga via `Serial` och/eller `util::UIConsole`.
 - Linjeindex 0–7. Aktiva linjer styrs av `Settings.activeLinesMask`.
 - SHK-störningar under ringning är ett känt problem med en medveten workaround — läs avsnittet *Challenges* i [README.md](README.md) innan du ändrar `SHKService` eller `RingGenerator`.
+- Elektroniken (kort, pinnar, MCP-tabeller, MT8816-matris, SLIC, jumprar) är dokumenterad i [KiCad/ELEKTRONIK.md](KiCad/ELEKTRONIK.md) — läs den före ändringar som rör pinnar, MCP, matris, SLIC, toner eller kretskort. Vid konflikt gäller schemat för elektrik.
 - README:er under `src/` och `docs/` kan vara inaktuella (t.ex. defaultvärden). Koden är sanningen.
 - Kommentarer i koden blandar svenska och engelska; följ den omgivande filens stil.
