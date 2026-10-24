@@ -1,1 +1,0 @@
-Här läggs små funktioner som används enstaka tillfälle vid exempelvis uppstart. i2C-scanner exempelvis eller uppstartsmeddelanden.
