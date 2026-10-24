@@ -1,5 +1,7 @@
 # Services
 
+> Not exhaustive — missing e.g. `RingGenerator`, `ToneGenerator`, `ConnectionHandler`, `AudioPlayer`. See `docs/CODEMAP.md` when #102 is done.
+
 ## 🟦 LineHandler
 **Responsibility:**  
 Represents ONE physical/logical phone line. Holds all mutable state for that line (status, hook, timers, dialing progress, call endpoints).
@@ -32,7 +34,7 @@ Owns all `LineHandler` objects (currently 0–7). Provides safe access, updates 
 - Exposes a per-line timer helper: `setLineTimer(index, limit)` (indirectly via handler)
 - Notifies observers: `setStatusChangedCallback(cb)`
 - Tracks changed lines: `lineChangeFlag` bitmask
-- Maintains active line timers bitmask: `activeLineTimers` (planned/used for timers)
+- Maintains active line timers bitmask: `activeTimersMask`
 
 **Key API:**
 ```cpp
@@ -56,7 +58,7 @@ Out-of-range index → logs and returns first line (in `getLine`) or early retur
 
 ## 🟥 Action (e.g. `LineAction`)
 
-In work
+Reacts to hook/status changes and timer expiry, and drives tones, ringing, the connection matrix and MQTT. See `LineAction.cpp` (`update`, `action`, `timerExpired`).
 
 ---
 
@@ -98,10 +100,12 @@ Monitors the MT8870 DTMF decoder chip and converts detected tones into digits fo
 3. **Debounce Time** (`dtmfDebounceMs`): Prevents duplicate detection of the same digit within a configurable time window
 
 **Configurable settings (in Settings class):**
-- `dtmfDebounceMs` (default: 150ms) - Time between same digit detections
-- `dtmfMinToneDurationMs` (default: 40ms) - Minimum valid tone duration
-- `dtmfStdStableMs` (default: 5ms) - STD signal stability requirement
+- `dtmfDebounceMs` - Time between same digit detections
+- `dtmfMinToneDurationMs` - Minimum valid tone duration
+- `dtmfStdStableMs` - STD signal stability requirement
 - `debugTRLevel` (0-2) - Debug verbosity level
+
+Default values: see `Settings.cpp`.
 
 **Typical flow:**
 1. Phone goes off-hook → line status becomes `Ready`

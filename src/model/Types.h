@@ -23,8 +23,8 @@ namespace model {
 
   // Enum representing all possible statuses of the hook
   enum class HookStatus : uint8_t {
-    On,            // Hook is off (off-hook)
-    Off,             // Hook is on (on-hook)
+    On,            // Hook is on (on-hook, handset resting, idle)
+    Off,             // Hook is off (off-hook, handset lifted)
     Disconnected    // Hook is disconnected
   };
 
