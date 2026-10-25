@@ -7,13 +7,10 @@ LineManager::LineManager(Settings& settings)
 :settings_(settings){
   lines.reserve(8);
 
-  auto& s = Settings::instance();   // singleton
+  // Name, number and active flag are loaded from Settings in begin(): this constructor runs
+  // before Settings::load(), so Settings only holds defaults here.
   for (int i = 0; i < 8; ++i) {
     lines.emplace_back(i);
-    lines.back().phoneNumber = s.linePhoneNumbers[i];
-    lines.back().lineName = s.lineNames[i];
-    bool isActive = ((s.activeLinesMask >> i) & 0x01) != 0;
-    lines.back().lineActive = isActive;
   }
   lineStatusChangeFlag = 0;     // Intiate to zero (no changes)
   lineHookChangeFlag = 0;       // Intiate to zero (no hook changes)
@@ -24,15 +21,24 @@ LineManager::LineManager(Settings& settings)
 }
 
 void LineManager::begin() {
+  syncFromSettings_();
   for (auto& line : lines) {
     line.lineIdle();
   }
 }
 
+// Copy persisted per-line data from Settings into the line handlers.
+// Must run after Settings::load() and Settings::adjustActiveLines().
+void LineManager::syncFromSettings_() {
+  for (size_t i = 0; i < lines.size(); ++i) {
+    lines[i].phoneNumber = settings_.linePhoneNumbers[i];
+    lines[i].lineName = settings_.lineNames[i];
+    syncLineActive(i);
+  }
+}
+
 void LineManager::syncLineActive(size_t i) {
-  auto& settings_ = Settings::instance();
-  bool isActive = ((settings_.activeLinesMask >> i) & 0x01) != 0;
-  lines[i].lineActive = isActive;
+  lines[i].lineActive = settings_.isLineActive(static_cast<uint8_t>(i));
 }
 
 // Returns a reference to the LineHandler object for the specified line index

@@ -70,7 +70,9 @@ Alla `LineManager::setStatus` (`src/services/LineManager.cpp`). Anrop utanför `
 - **`AudioPlayer`** (`src/services/AudioPlayer.*`) är inte kopplad — instansieras inte i `App`.
 - **Filnamn:** `settings.h` (gemener) men `Settings.cpp` (versal).
 - **Stavning i kod:** `hookStatusCangeCheck`, `timer_incomming` är felstavade men korrekta namn — grep:a med dem.
-- **Linjeindex** är 0–7; aktiva linjer styrs av `Settings.activeLinesMask`.
+- **Linjeindex** är 0–7; aktiva linjer styrs av `Settings.activeLinesMask` (rå, sparad mask). Använd `Settings::effectiveActiveMask()` / `isLineActive()` i logik, UI och MQTT — de filtrerar med `allowMask` (vilka SLIC som finns). Skriv aldrig tillbaka den filtrerade masken till `activeLinesMask`; `adjustActiveLines()` sätter bara `allowMask`.
+- **Initieringsordning:** `LineManager` konstrueras i `App`-konstruktorn, *före* `Settings::load()`. Namn, nummer och aktiv-flagga läses därför in i `LineManager::begin()` (`syncFromSettings_`), som körs efter `load()` och `adjustActiveLines()` i `App::begin()`. Läs aldrig `Settings` i en konstruktor.
+- **Okänd NVS-version:** `Settings::load()` skriver inte över NVS med defaults om `ver` är okänd (≠ 0); första uppstart utan data sparar defaults.
 - **`src/ota/`** är tom; OTA sker via `ArduinoOTA` i `WifiClient`.
 
 Se även: `docs/StatusflowChart.drawio.svg` (statusflöde), `KiCad/ELEKTRONIK.md` (elektronik), `README.md` *Challenges*.

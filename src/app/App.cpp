@@ -55,8 +55,8 @@ void App::begin() {
       Serial.println("App: Settings loaded from NVS.");
       util::UIConsole::log("Settings loaded from NVS.", "App");
     } else {
-      Serial.println("App: Using default settings (stored to NVS if needed).");
-      util::UIConsole::log("Using default settings (stored to NVS if needed).", "App");
+      Serial.println("App: Using default settings (see Settings log for whether NVS was written).");
+      util::UIConsole::log("Using default settings (see Settings log for whether NVS was written).", "App");
     }
 
 		// ---- I2C ----
@@ -72,9 +72,11 @@ void App::begin() {
     Serial.println("----- Drivers initialized -----");
     
     //----- Service setup -----
+    // allowMask depends on detected MCPs (set in mcpDriver_.begin()) and must be known
+    // before LineManager reads the effective active mask.
+    settings.adjustActiveLines();
     lineAction_.begin();
-    lineManager_.begin();
-    settings.adjustActiveLines(); // säkerställ att minst en linje är aktiv
+    lineManager_.begin();   // loads names, numbers and active flags from the (already loaded) Settings
     Serial.println("----- Services initialized -----");
 
     // ----- Net applications -----

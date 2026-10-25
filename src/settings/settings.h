@@ -12,7 +12,7 @@ public:
     return s;
   }
 
-  // Adjust activeLinesMask to account for physical MCP connections
+  // Sets allowMask from physical MCP connections (does not modify activeLinesMask)
   void adjustActiveLines();
 
   // Global members
@@ -96,13 +96,19 @@ public:
   unsigned long timer_timeout;
   unsigned long timer_busy;
 
+  // activeLinesMask is the raw mask the user saved (only used by load()/save() and toggles).
+  // effectiveActiveMask() is what applies in logic, UI and MQTT: the raw mask limited to
+  // lines whose SLIC is physically present (allowMask). Never write it back to activeLinesMask,
+  // otherwise a SLIC missing at boot would shrink the saved mask permanently.
+  inline uint8_t effectiveActiveMask() const { return activeLinesMask & allowMask; }
+
   inline uint8_t activeLinesCount() const {
-    uint8_t x = activeLinesMask, c = 0;
+    uint8_t x = effectiveActiveMask(), c = 0;
     while (x) { c += (x & 1u); x >>= 1; }
     return c;
   }
 
-  inline bool isLineActive(uint8_t i) const { return (activeLinesMask >> i) & 1u; }
+  inline bool isLineActive(uint8_t i) const { return (effectiveActiveMask() >> i) & 1u; }
 
 private:
   // === Singleton protection ===

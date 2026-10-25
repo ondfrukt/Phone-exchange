@@ -41,6 +41,8 @@ public:
   int lastLineReady;   // Most recent line that became Ready (for toneReader)
 
 private:
+  void syncFromSettings_();
+
   // The vector that holds all LineHandler instances
   std::vector<LineHandler> lines;
   

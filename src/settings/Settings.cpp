@@ -5,8 +5,8 @@ Settings::Settings() {
 }
 
 void Settings::adjustActiveLines() {
-  // Adjust activeLinesMask to take physical MCP connections into account
-  uint8_t userMask = activeLinesMask;
+  // Derive allowMask from physical MCP connections. activeLinesMask is left untouched
+  // (see effectiveActiveMask() in settings.h).
   if (mcpSlic1Present && !mcpSlic2Present) {
     // Only SLIC1 exists: allow only lines 0–3
     allowMask = 0b00001111;
@@ -17,13 +17,12 @@ void Settings::adjustActiveLines() {
     // Both exist: allow all lines
     allowMask = 0b11111111;
   }
-  // Mask the user's mask so disallowed lines are always inactive
-  activeLinesMask = userMask & allowMask;
 }
 
 void Settings::resetDefaults() {
   // Save only *settings*, not runtime status
   activeLinesMask       = 0b11111111;
+  allowMask             = 0b11111111; // narrowed by adjustActiveLines() once MCPs are detected
 
   // -- Debug levels ---
   debugSHKLevel         = 0; // Debug for SHKService
@@ -113,7 +112,7 @@ bool Settings::load() {
     return false;
   }
   uint16_t v = prefs.getUShort("ver", 0);
-  const bool supportedVersion = (v == kVersion || v == 4 || v == 3);
+  const bool supportedVersion = (v >= 3 && v <= kVersion);
   const bool needsUpgrade = (v != kVersion) && supportedVersion;
   bool ok = supportedVersion;
   if (ok) {
@@ -192,6 +191,14 @@ bool Settings::load() {
     if (mqttClientId.length() == 0) mqttClientId = "phoneexchange";
   }
   prefs.end();
+  if (!ok && v != 0) {
+    // Stored data from an unknown version (e.g. older firmware flashed after a newer one).
+    // Run on in-memory defaults but leave NVS untouched until the user saves something,
+    // so a matching firmware can still read the stored values.
+    Serial.printf("Settings: Unknown NVS version %u, using defaults without overwriting NVS.\n", (unsigned)v);
+    util::UIConsole::log("Unknown NVS version " + String(v) + ", using defaults without overwriting NVS.", "Settings");
+    return false;
+  }
   if (!ok || needsUpgrade) save();
   return ok;
 }

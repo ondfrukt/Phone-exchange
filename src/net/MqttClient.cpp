@@ -156,7 +156,7 @@ void MqttClient::publishFullSnapshot() {
   mqtt_.publish(linesTopic.c_str(), linesJson.c_str(), settings_.mqttRetain);
 
   const String activeTopic = makeTopic_("active");
-  String activeJson = "{\"mask\":" + String(settings_.activeLinesMask) + "}";
+  String activeJson = "{\"mask\":" + String(settings_.effectiveActiveMask()) + "}";
   mqtt_.publish(activeTopic.c_str(), activeJson.c_str(), settings_.mqttRetain);
 }
 

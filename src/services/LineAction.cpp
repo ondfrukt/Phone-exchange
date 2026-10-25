@@ -27,7 +27,7 @@ void LineAction::update() {
 void LineAction::hookStatusCangeCheck() {
 
   if(lineManager_.lineHookChangeFlag != 0){
-    uint8_t hookChanges = lineManager_.lineHookChangeFlag & settings_.activeLinesMask;
+    uint8_t hookChanges = lineManager_.lineHookChangeFlag & settings_.effectiveActiveMask();
 
     // loop through lines with hook status changes and update line status accordingly
     for (int index = 0; index < 8; ++index)
@@ -94,7 +94,7 @@ void LineAction::hookStatusCangeCheck() {
 // Check for line status changes and handle actions
 void LineAction::statusChangeCheck() {
   if(lineManager_.lineStatusChangeFlag != 0){
-    uint8_t changes = lineManager_.lineStatusChangeFlag & settings_.activeLinesMask;
+    uint8_t changes = lineManager_.lineStatusChangeFlag & settings_.effectiveActiveMask();
     for (int index = 0; index < 8; ++index)
       if (changes & (1 << index)) {
         lineManager_.clearChangeFlag(index); // Clear the change flag
@@ -108,7 +108,7 @@ void LineAction::statusChangeCheck() {
 void LineAction::timerExpiredCheck() {
   if(lineManager_.activeTimersMask != 0){
     unsigned long currentTime = millis();
-    uint8_t timers = lineManager_.activeTimersMask & settings_.activeLinesMask;
+    uint8_t timers = lineManager_.activeTimersMask & settings_.effectiveActiveMask();
 
     for (int index = 0; index < 8; ++index)
         if (timers & (1 << index)) {

@@ -104,7 +104,7 @@ void WebServer::initSse_() {
     }
     // Skicka initial data till den nya klienten
     client->send(buildStatusJson_().c_str(), nullptr, millis());
-    client->send(buildActiveJson_(settings_.activeLinesMask).c_str(), "activeMask", millis());
+    client->send(buildActiveJson_(settings_.effectiveActiveMask()).c_str(), "activeMask", millis());
     client->send(buildDebugJson_().c_str(), "debug", millis());
     client->send(buildToneGeneratorJson_().c_str(), "toneGen", millis());
     util::UIConsole::forEachBuffered([client](const String& json) {
@@ -163,7 +163,7 @@ void WebServer::setupApiRoutes_() {
   });
   // Aktiva linjer som JSON
   server_.on("/api/active", HTTP_GET, [this](AsyncWebServerRequest *req){
-    req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
+    req->send(200, "application/json", buildActiveJson_(settings_.effectiveActiveMask()));
   });
   // Toggle: POST /api/active/toggle  (body: line=3)
   server_.on("/api/active/toggle", HTTP_POST, [this](AsyncWebServerRequest* req){
@@ -183,7 +183,7 @@ void WebServer::setupApiRoutes_() {
       Serial.printf("WebServer: API toggle line=%d\n", line);
     }
     toggleLineActiveBit_(line);
-    req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
+    req->send(200, "application/json", buildActiveJson_(settings_.effectiveActiveMask()));
   });
   // Set: POST /api/active/set  (body: line=3&active=1)
   server_.on("/api/active/set", HTTP_POST, [this](AsyncWebServerRequest* req){
@@ -208,7 +208,7 @@ void WebServer::setupApiRoutes_() {
 
     Serial.printf("API: set line=%d active=%d\n", line, active);
     setLineActiveBit_(line, active != 0);
-    req->send(200, "application/json", buildActiveJson_(settings_.activeLinesMask));
+    req->send(200, "application/json", buildActiveJson_(settings_.effectiveActiveMask()));
   });
   // Set phone number: POST /api/line/phone  (body: line=3&phone=123456789)
   server_.on("/api/line/phone", HTTP_POST, [this](AsyncWebServerRequest* req){
@@ -440,10 +440,7 @@ void WebServer::setupApiRoutes_() {
     const bool mqttConnected = mqtt_.isConnected();
     String ssid = wifiConnected ? WiFi.SSID() : String("");
 
-    int activeLines = 0;
-    for (int i = 0; i < 8; ++i) {
-      if ((settings_.activeLinesMask >> i) & 0x01) activeLines++;
-    }
+    const int activeLines = settings_.activeLinesCount();
 
     String json = "{";
     json += "\"hostname\":\"" + escapeJson(hn) + "\",";
@@ -874,10 +871,8 @@ void WebServer::setLineActiveBit_(int line, bool makeActive) {
   if (makeActive) settings_.activeLinesMask |=  (1u << line);
   else            settings_.activeLinesMask &= ~(1u << line);
 
-  // Respektera tillåtna linjer (SLIC1/SLIC2 närvaro)
-  settings_.adjustActiveLines();
-
-  // Spara till NVS
+  // Spara den ofiltrerade användarmasken till NVS. Närvaro av SLIC1/SLIC2 (allowMask)
+  // filtreras vid användning via effectiveActiveMask(), inte här.
   settings_.save();
 
   // Spegla in masken i LineManager direkt (så UI och logik följer med)
@@ -1023,7 +1018,7 @@ void WebServer::sendFullStatusSse() {
 void WebServer::sendActiveMaskSse() {
   // Only send SSE if there are connected clients
   if (events_.count() > 0) {
-    const String json = buildActiveJson_(settings_.activeLinesMask);
+    const String json = buildActiveJson_(settings_.effectiveActiveMask());
     events_.send(json.c_str(), "activeMask", millis());
     if (settings_.debugWSLevel >= 1) {
       Serial.println("WebServer: Active mask skickad via SSE");
